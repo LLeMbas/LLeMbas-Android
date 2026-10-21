@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="ask"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/tile_ask">
+        <intent
+            android:action="android.intent.action.ASSIST"
+            android:targetPackage="eu.llembas.android"
+            android:targetClass="eu.llembas.android.assist.AssistActivity" />
+    </shortcut>
+</shortcuts>

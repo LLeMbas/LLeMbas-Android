@@ -1,0 +1,16 @@
+# Gradle and Android build output
+.gradle/
+build/
+/app/build/
+local.properties
+*.apk
+*.aab
+# A release key never goes in the repository (CI writes it from secrets)
+*.jks
+*.keystore
+# IDEs
+.idea/
+*.iml
+.kotlin/
+# Python
+__pycache__/

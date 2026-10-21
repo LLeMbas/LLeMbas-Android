@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The `full` build updates itself from llembas.eu; the `fdroid` build has none of this. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <application>
+        <receiver
+            android:name="eu.llembas.android.update.InstallStatusReceiver"
+            android:exported="false" />
+    </application>
+</manifest>

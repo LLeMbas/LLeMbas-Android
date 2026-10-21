@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Nothing private in the repository
+        run: scripts/hygiene.sh
+
+      - name: Generated files match their sources
+        run: |
+          python3 scripts/fetch-tokens.py      # Tokens.kt matches tokens.lock.json
+          python3 scripts/fetch-contract.py    # contract/ matches contract/lock.json
+          python3 scripts/gen-strings.py --check
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: ktlint (signature-checked)
+        run: |
+          curl -sSfL -o ktlint https://github.com/pinterest/ktlint/releases/download/1.8.0/ktlint
+          echo "a3fd620207d5c40da6ca789b95e7f823c54e854b7fade7f613e91096a3706d75  ktlint" | sha256sum -c
+          chmod +x ktlint
+          ./ktlint "app/src/**/*.kt" "*.kts" "app/*.kts"
+
+      - uses: gradle/actions/wrapper-validation@v4
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Unit tests and both builds
+        run: ./gradlew --no-daemon testFullDebugUnitTest assembleFullDebug assembleFdroidDebug
+
+      - name: Android lint (report only, for now)
+        run: ./gradlew --no-daemon lintFullDebug
+        continue-on-error: true
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: llembas-android-debug
+          path: app/build/outputs/apk/*/debug/*.apk
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: reports
+          path: |
+            app/build/reports/
+            app/build/test-results/
+          if-no-files-found: ignore

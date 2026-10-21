@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The window behind Compose. Compose draws everything; this only sets the first frame. -->
+    <style name="Theme.Lembas" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/launcher_background</item>
+    </style>
+
+    <!-- The assistant's sheet: see-through, so the app it opened over stays visible. -->
+    <style name="Theme.Lembas.Sheet" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowAnimationStyle">@android:style/Animation.InputMethod</item>
+        <item name="android:backgroundDimEnabled">false</item>
+    </style>
+</resources>

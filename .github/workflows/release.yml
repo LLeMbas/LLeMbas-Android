@@ -1,0 +1,76 @@
+name: Release
+
+# A signed tag `vX.Y.Z` builds both flavours, signed with the release key from the secrets,
+# and publishes them with SHA256SUMS as the GitHub Release. The release notes are the tag's
+# message. The key never touches the repository: it is written to a temporary file here and
+# deleted with the runner.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag to build
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    env:
+      TAG: ${{ github.event.inputs.tag || github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+
+      - name: The tag object, for its message
+        run: git fetch --force origin "refs/tags/$TAG:refs/tags/$TAG"
+
+      - name: The version is the tag
+        run: |
+          version="$(sed -n -E 's/^ *versionName = "([^"]+)".*/\1/p' app/build.gradle.kts)"
+          [ "v$version" = "$TAG" ] || { echo "versionName $version is not $TAG" >&2; exit 1; }
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+
+      - run: scripts/hygiene.sh
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/wrapper-validation@v4
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Build, signed
+        env:
+          KEYSTORE_B64: ${{ secrets.LEMBAS_KEYSTORE_B64 }}
+          LEMBAS_KEYSTORE_PASSWORD: ${{ secrets.LEMBAS_KEYSTORE_PASSWORD }}
+          LEMBAS_KEY_ALIAS: ${{ secrets.LEMBAS_KEY_ALIAS }}
+          LEMBAS_KEY_PASSWORD: ${{ secrets.LEMBAS_KEY_PASSWORD }}
+        run: |
+          [ -n "$KEYSTORE_B64" ] || { echo "no release key in the secrets" >&2; exit 1; }
+          export LEMBAS_KEYSTORE="$RUNNER_TEMP/release.jks"
+          echo "$KEYSTORE_B64" | base64 -d > "$LEMBAS_KEYSTORE"
+          ./gradlew --no-daemon testFullReleaseUnitTest assembleFullRelease assembleFdroidRelease
+          rm -f "$LEMBAS_KEYSTORE"
+
+      - name: Name the files and sum them
+        run: |
+          mkdir dist
+          cp app/build/outputs/apk/full/release/app-full-release.apk "dist/llembas-android-$VERSION.apk"
+          cp app/build/outputs/apk/fdroid/release/app-fdroid-release.apk "dist/llembas-android-$VERSION-fdroid.apk"
+          { echo "# llembas-android $VERSION"; (cd dist && sha256sum *.apk); } > SHA256SUMS
+          mv SHA256SUMS dist/
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git tag -l --format='%(contents)' "$TAG" | sed '/-----BEGIN SSH SIGNATURE-----/,$d' > notes.md
+          gh release create "$TAG" --verify-tag --title "LLeMbas for Android $VERSION" --notes-file notes.md dist/*

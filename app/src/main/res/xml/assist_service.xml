@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android rejects a voice-interaction service without both a session and a recognition
+     service. No hotwordDetectionService: that needs a privileged permission third-party apps
+     cannot hold. -->
+<voice-interaction-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:sessionService="eu.llembas.android.assist.LembasAssistSessionService"
+    android:recognitionService="eu.llembas.android.assist.LembasRecognitionService"
+    android:settingsActivity="eu.llembas.android.MainActivity"
+    android:supportsAssist="true"
+    android:supportsLaunchVoiceAssistFromKeyguard="true"
+    android:supportsLocalInteraction="false" />
