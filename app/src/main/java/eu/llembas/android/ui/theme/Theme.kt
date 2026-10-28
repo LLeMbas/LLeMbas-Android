@@ -1,6 +1,8 @@
 package eu.llembas.android.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.text.selection.LocalTextSelectionColors
+import androidx.compose.foundation.text.selection.TextSelectionColors
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
@@ -55,6 +57,10 @@ fun LembasTheme(choice: String = "", content: @Composable () -> Unit) {
     }
     val palette = if (dark) Moria else Shire
     CompositionLocalProvider(LocalPalette provides palette) {
-        MaterialTheme(colorScheme = scheme(palette, dark), content = content)
+        MaterialTheme(colorScheme = scheme(palette, dark)) {
+            // The web UI's `--selection`: selected text is a tint you can find, not Material's default.
+            val selection = TextSelectionColors(handleColor = palette.accent, backgroundColor = palette.selection)
+            CompositionLocalProvider(LocalTextSelectionColors provides selection, content = content)
+        }
     }
 }

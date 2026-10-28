@@ -33,7 +33,7 @@ LOCK = ROOT / "tokens.lock.json"
 NAMES = (
     "bg", "bg-sunken", "surface", "surface-raised", "surface-hover", "surface-active",
     "border", "border-strong", "ink", "ink-muted", "ink-faint", "ink-inverse",
-    "accent", "accent-hover", "accent-ink", "accent-soft", "leaf", "danger", "danger-soft",
+    "accent", "accent-hover", "accent-ink", "accent-soft", "selection", "leaf", "danger", "danger-soft",
     "success", "success-soft", "warning", "warning-soft", "bubble-user", "code-bg", "code-border",
 )
 

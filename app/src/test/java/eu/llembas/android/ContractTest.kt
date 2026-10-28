@@ -36,6 +36,14 @@ class ContractTest {
     }
 
     @Test
+    fun theTwoPointOhContractHasNoCanvas() {
+        // LLeMbas 2.0 removed the canvas: no `canvas` frame, so no fixture for one. A stream
+        // that still sends it (a 1.x server) is ignored frame by frame, as any unknown event is.
+        assertNull(javaClass.classLoader!!.getResource("event_canvas.json"))
+        assertEquals(LiveReply("m"), LiveReply("m").apply("canvas", """{"tabs": [], "active": ""}"""))
+    }
+
+    @Test
     fun aChatAndAnAgentChat() {
         val chat = read("chat", Chat.serializer())
         assertEquals("Waybread", chat.title)
