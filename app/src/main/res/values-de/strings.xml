@@ -11,7 +11,7 @@
     <string name="signin_open_browser">Im Browser öffnen</string>
     <string name="signin_denied">Die Anmeldung wurde abgelehnt.</string>
     <string name="signin_expired">Der Code ist abgelaufen, bevor er bestätigt wurde. Versuchen Sie es erneut.</string>
-    <string name="signin_too_old">Diese Instanz hat noch keine App-API. Sie braucht LLeMbas 1.7.0 oder neuer.</string>
+    <string name="signin_too_old">Auf dieser Instanz läuft ein älteres LLeMbas. Diese App braucht LLeMbas 2.0 oder neuer.</string>
     <string name="signin_too_new">Diese Instanz spricht eine neuere App-API als diese App. Aktualisieren Sie die App.</string>
     <string name="new_chat">Neuer Chat</string>
     <string name="tab_chats">Chats</string>
@@ -58,6 +58,14 @@
     <string name="plan_revise">Überarbeiten</string>
     <string name="plan_what_to_change">Was soll sich ändern?</string>
     <string name="plan_carry_out">Plan ausführen</string>
+    <string name="shown">Angezeigt</string>
+    <string name="viewer_open">Öffnen</string>
+    <string name="viewer_open_browser">Im Browser öffnen</string>
+    <string name="viewer_copy">Kopieren</string>
+    <string name="viewer_html_source">Das ist der Quelltext der Seite. Die Seite selbst sehen Sie im Browser.</string>
+    <string name="viewer_long_markdown">Eine lange Datei, daher wird sie als reiner Text angezeigt.</string>
+    <string name="viewer_unavailable">Dieser Server kann die Datei der App noch nicht übergeben. Öffnen Sie sie stattdessen im Browser.</string>
+    <string name="viewer_too_large">Diese Datei ist zu groß zum Anzeigen; höchstens 1 MB kann angezeigt werden.</string>
     <string name="settings">Einstellungen</string>
     <string name="settings_instances">Instanzen</string>
     <string name="sign_out">Abmelden</string>
@@ -74,7 +82,6 @@
     <string name="push_failed">Es wurde kein Distributor gewählt, daher sind die Benachrichtigungen noch ausgeschaltet.</string>
     <string name="channel_replies">Antworten</string>
     <string name="channel_asks">Fragen und Bestätigungen</string>
-    <string name="channel_reports">Berichte</string>
     <string name="settings_assistant">Assistent</string>
     <string name="assistant_explained">Machen Sie LLeMbas zum digitalen Assistenten des Telefons: Wählen Sie ihn unter Standard-Apps › Digitaler Assistent. Das Halten der Einschalttaste, die Assistenzgeste oder die Verknüpfung auf dem Sperrbildschirm öffnet ihn dann über allem, was gerade angezeigt wird.</string>
     <string name="assistant_open_settings">Assistenten-Einstellungen öffnen</string>

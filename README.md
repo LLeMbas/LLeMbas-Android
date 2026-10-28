@@ -17,7 +17,8 @@ digital assistant -- hold the power button and ask.
 
 Download the APK from the [latest release](https://github.com/LLeMbas/LLeMbas-Android/releases/latest)
 and check it against `SHA256SUMS`. The `full` APK updates itself from llembas.eu; the `-fdroid`
-one does not. Android 10 or newer; the instance must run LLeMbas server 1.7.0 or newer.
+one does not. Android 10 or newer; the instance must run LLeMbas server 2.0 or newer (an older
+one is refused at sign-in, with a sentence saying so).
 
 If your instance uses a certificate from your own certificate authority, install that CA on the
 phone first (Settings › Security › Encryption & credentials › Install a certificate › CA
@@ -40,13 +41,14 @@ preinstalled assistant; no app from outside can use it.
 Builds run on GitHub Actions (`.github/workflows/ci.yml`); locally it is the usual
 `./gradlew assembleFullDebug` with JDK 17 and the Android SDK.
 
-Three things are generated from the server and pinned, each with a lock file CI checks:
+Three things are generated from the server at one ref; the first two are pinned with a lock
+file CI checks, and CI checks the strings against the code:
 
 | What | Script | From the server |
 |---|---|---|
 | `ui/theme/Tokens.kt` | `scripts/fetch-tokens.py <server-ref>` | `tokens.css` |
 | `contract/*.json` | `scripts/fetch-contract.py <server-ref>` | `tests/fixtures/api_v2/` |
-| `res/values*/strings.xml` | `scripts/gen-strings.py` | the translation catalogues |
+| `res/values*/strings.xml` | `scripts/gen-strings.py <server-ref>` | the translation catalogues |
 
 The icons come from the server's pixel leaf (`scripts/gen-icons.py`).
 

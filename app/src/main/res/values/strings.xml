@@ -12,7 +12,7 @@
     <string name="signin_open_browser">Open in the browser</string>
     <string name="signin_denied">The sign-in was refused.</string>
     <string name="signin_expired">The code expired before it was approved. Try again.</string>
-    <string name="signin_too_old">This instance has no app API yet. It needs LLeMbas 1.7.0 or newer.</string>
+    <string name="signin_too_old">This instance runs an older LLeMbas. This app needs LLeMbas 2.0 or newer.</string>
     <string name="signin_too_new">This instance speaks a newer app API than this app. Update the app.</string>
     <string name="new_chat">New chat</string>
     <string name="tab_chats">Chats</string>
@@ -59,6 +59,14 @@
     <string name="plan_revise">Revise</string>
     <string name="plan_what_to_change">What should change?</string>
     <string name="plan_carry_out">Carry out the plan</string>
+    <string name="shown">Shown</string>
+    <string name="viewer_open">Open</string>
+    <string name="viewer_open_browser">Open in the browser</string>
+    <string name="viewer_copy">Copy</string>
+    <string name="viewer_html_source">This is the page\'s source. Open it in the browser to see the page itself.</string>
+    <string name="viewer_long_markdown">A long file, so it is shown as plain text.</string>
+    <string name="viewer_unavailable">This server cannot hand the file to the app yet. Open it in the browser instead.</string>
+    <string name="viewer_too_large">This file is too large to show here; at most 1 MB can be shown.</string>
     <string name="settings">Settings</string>
     <string name="settings_instances">Instances</string>
     <string name="sign_out">Sign out</string>
@@ -75,7 +83,6 @@
     <string name="push_failed">No distributor was chosen, so notifications are still off.</string>
     <string name="channel_replies">Replies</string>
     <string name="channel_asks">Questions and approvals</string>
-    <string name="channel_reports">Reports</string>
     <string name="settings_assistant">Assistant</string>
     <string name="assistant_explained">Make LLeMbas the phone\'s digital assistant: choose it under Default apps › Digital assistant app. Then holding the power button, the assist gesture or the lock screen\'s shortcut opens it over whatever is on screen.</string>
     <string name="assistant_open_settings">Open the assistant settings</string>

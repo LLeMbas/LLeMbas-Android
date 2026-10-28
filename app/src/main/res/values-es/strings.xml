@@ -11,7 +11,7 @@
     <string name="signin_open_browser">Abrir en el navegador</string>
     <string name="signin_denied">El inicio de sesión fue rechazado.</string>
     <string name="signin_expired">El código caducó antes de ser aprobado. Inténtelo de nuevo.</string>
-    <string name="signin_too_old">Esta instancia aún no tiene API para aplicaciones. Necesita LLeMbas 1.7.0 o una versión posterior.</string>
+    <string name="signin_too_old">Esta instancia usa una versión anterior de LLeMbas. Esta aplicación necesita LLeMbas 2.0 o posterior.</string>
     <string name="signin_too_new">Esta instancia habla una API de aplicaciones más reciente que esta aplicación. Actualice la aplicación.</string>
     <string name="new_chat">Nuevo chat</string>
     <string name="tab_chats">Chats</string>
@@ -58,6 +58,14 @@
     <string name="plan_revise">Revisar</string>
     <string name="plan_what_to_change">¿Qué debería cambiar?</string>
     <string name="plan_carry_out">Llevar a cabo el plan</string>
+    <string name="shown">Mostrado</string>
+    <string name="viewer_open">Abrir</string>
+    <string name="viewer_open_browser">Abrir en el navegador</string>
+    <string name="viewer_copy">Copiar</string>
+    <string name="viewer_html_source">Este es el código fuente de la página. Ábrala en el navegador para ver la página.</string>
+    <string name="viewer_long_markdown">Un archivo largo, por eso se muestra como texto sin formato.</string>
+    <string name="viewer_unavailable">Este servidor todavía no puede entregar el archivo a la aplicación. Ábralo en el navegador.</string>
+    <string name="viewer_too_large">Este archivo es demasiado grande para mostrarlo; se puede mostrar como máximo 1 MB.</string>
     <string name="settings">Ajustes</string>
     <string name="settings_instances">Instancias</string>
     <string name="sign_out">Cerrar sesión</string>
@@ -74,7 +82,6 @@
     <string name="push_failed">No se eligió ningún distribuidor, así que las notificaciones siguen desactivadas.</string>
     <string name="channel_replies">Respuestas</string>
     <string name="channel_asks">Preguntas y aprobaciones</string>
-    <string name="channel_reports">Informes</string>
     <string name="settings_assistant">Asistente</string>
     <string name="assistant_explained">Convierta LLeMbas en el asistente digital del teléfono: elíjalo en Aplicaciones predeterminadas › App de asistencia digital. Mantener pulsado el botón de encendido, el gesto de asistencia o el acceso directo de la pantalla de bloqueo lo abrirá entonces sobre lo que haya en pantalla.</string>
     <string name="assistant_open_settings">Abrir los ajustes del asistente</string>

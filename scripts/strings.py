@@ -23,7 +23,7 @@ STRINGS: dict[str, str] = {
     "signin_open_browser": "Open in the browser",
     "signin_denied": "The sign-in was refused.",
     "signin_expired": "The code expired before it was approved. Try again.",
-    "signin_too_old": "This instance has no app API yet. It needs LLeMbas 1.7.0 or newer.",
+    "signin_too_old": "This instance runs an older LLeMbas. This app needs LLeMbas 2.0 or newer.",
     "signin_too_new": "This instance speaks a newer app API than this app. Update the app.",
     # Chats
     "new_chat": "New chat",
@@ -72,6 +72,15 @@ STRINGS: dict[str, str] = {
     "plan_revise": "Revise",
     "plan_what_to_change": "What should change?",
     "plan_carry_out": "Carry out the plan",
+    # The file viewer (a `show` card)
+    "shown": "Shown",
+    "viewer_open": "Open",
+    "viewer_open_browser": "Open in the browser",
+    "viewer_copy": "Copy",
+    "viewer_html_source": "This is the page's source. Open it in the browser to see the page itself.",
+    "viewer_long_markdown": "A long file, so it is shown as plain text.",
+    "viewer_unavailable": "This server cannot hand the file to the app yet. Open it in the browser instead.",
+    "viewer_too_large": "This file is too large to show here; at most 1 MB can be shown.",
     # Settings
     "settings": "Settings",
     "settings_instances": "Instances",
@@ -89,7 +98,6 @@ STRINGS: dict[str, str] = {
     "push_failed": "No distributor was chosen, so notifications are still off.",
     "channel_replies": "Replies",
     "channel_asks": "Questions and approvals",
-    "channel_reports": "Reports",
     "settings_assistant": "Assistant",
     "assistant_explained": "Make LLeMbas the phone's digital assistant: choose it under Default apps › Digital assistant app. Then holding the power button, the assist gesture or the lock screen's shortcut opens it over whatever is on screen.",
     "assistant_open_settings": "Open the assistant settings",

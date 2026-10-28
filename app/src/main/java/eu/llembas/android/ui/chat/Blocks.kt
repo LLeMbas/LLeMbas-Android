@@ -28,9 +28,11 @@ import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Terminal
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -46,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import eu.llembas.android.R
 import eu.llembas.android.api.Message
+import eu.llembas.android.api.ShowCard
 import eu.llembas.android.api.Step
 import eu.llembas.android.api.ToolCall
 import eu.llembas.android.ui.MarkdownText
@@ -79,15 +82,18 @@ fun UserBubble(message: Message, modifier: Modifier = Modifier) {
     }
 }
 
-/** A reply's steps, in the order they happened: the same table of contents the web page draws. */
+/**
+ * A reply's steps, in the order they happened: the same table of contents the web page draws.
+ * [onShow] opens a `show` card's file; without it (the assistant's sheet) the card only names it.
+ */
 @Composable
-fun Steps(steps: List<Step>, modifier: Modifier = Modifier) {
+fun Steps(steps: List<Step>, modifier: Modifier = Modifier, onShow: ((ShowCard) -> Unit)? = null) {
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         steps.forEach { step ->
             when (step.kind) {
                 "thinking" -> Thinking(step)
                 "text" -> MarkdownText(step.markdown.orEmpty(), modifier = Modifier.fillMaxWidth())
-                "tools" -> step.calls.forEach { ToolCallBlock(it) }
+                "tools" -> step.calls.forEach { ToolCallBlock(it, onShow = onShow) }
                 "steer" -> step.messages.forEach { Steered(it.text) }
             }
         }
@@ -140,10 +146,15 @@ private fun iconFor(kind: String): ImageVector = when (kind) {
  * scroller, so a megabyte of output never becomes the page.
  */
 @Composable
-fun ToolCallBlock(call: ToolCall, depth: Int = 0) {
+fun ToolCallBlock(call: ToolCall, depth: Int = 0, onShow: ((ShowCard) -> Unit)? = null) {
     val palette = LocalPalette.current
     var open by rememberSaveable(call.id ?: call.block.title) { mutableStateOf(call.block.kind == "edit") }
     val failed = call.status == "error" || !call.error.isNullOrEmpty()
+    val shown = call.show
+    if (shown != null && !failed) {
+        ShowCardRow(shown, depth, onShow)
+        return
+    }
     Column(
         Modifier
             .fillMaxWidth()
@@ -192,7 +203,49 @@ fun ToolCallBlock(call: ToolCall, depth: Int = 0) {
                 if (call.truncated) {
                     Text(stringResource(R.string.output_cut), style = MaterialTheme.typography.labelSmall, color = palette.inkFaint)
                 }
-                call.children?.forEach { ToolCallBlock(it, depth + 1) }
+                call.children?.forEach { ToolCallBlock(it, depth + 1, onShow) }
+            }
+        }
+    }
+}
+
+/**
+ * A `show` card: the file's name and path, and Open. Nothing of its contents -- the words here
+ * are a path a model chose, drawn as text like everything else. The web page opens a card that
+ * arrives while it is open by itself, beside the conversation, when the screen is wide enough;
+ * a phone's screen is not, so here it waits for a tap.
+ */
+@Composable
+private fun ShowCardRow(show: ShowCard, depth: Int, onShow: ((ShowCard) -> Unit)?) {
+    val palette = LocalPalette.current
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .padding(start = (depth * 16).dp)
+            .background(palette.surfaceRaised, Rounded)
+            .border(1.dp, palette.border, Rounded)
+            .then(if (onShow != null) Modifier.clickable { onShow(show) } else Modifier)
+            .padding(start = 12.dp, end = 4.dp, top = 4.dp, bottom = 4.dp)
+            .heightIn(min = 48.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(Icons.Filled.Visibility, contentDescription = stringResource(R.string.shown), modifier = Modifier.size(18.dp), tint = palette.leaf)
+        Spacer(Modifier.width(10.dp))
+        // The one part that gives: a long path shortens, the button keeps its size.
+        Column(Modifier.weight(1f)) {
+            Text(show.name.ifBlank { show.path }, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(
+                show.path + if (show.line > 0) ":${show.line}" else "",
+                fontFamily = FontFamily.Monospace,
+                style = MaterialTheme.typography.labelSmall,
+                color = palette.inkFaint,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        if (onShow != null) {
+            TextButton(onClick = { onShow(show) }, modifier = Modifier.heightIn(min = 48.dp)) {
+                Text(stringResource(R.string.viewer_open))
             }
         }
     }

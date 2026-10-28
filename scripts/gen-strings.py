@@ -2,8 +2,15 @@
 """Write the app's string resources: English from `strings.py`, the eight translations from
 the server's catalogues and `strings_own.json`. See `strings.py` for the rule.
 
-    scripts/gen-strings.py           (server at ../LLeMbas, or LEMBAS_SERVER)
-    scripts/gen-strings.py --check   fail if a key the code uses has no English, or the other way round
+    scripts/gen-strings.py <server-ref>   the catalogues at that ref of the server's git checkout
+                                          (../LLeMbas, or LEMBAS_SERVER) -- the same ref the
+                                          contract and the tokens are pinned to
+    scripts/gen-strings.py                the server's working tree as it is
+    scripts/gen-strings.py --check        fail if a key the code uses has no English, or the other
+                                          way round
+
+A ref, not the working tree, is the way to regenerate: the server's checkout is shared, and
+whatever is uncommitted in it is not what a released server says.
 """
 
 from __future__ import annotations
@@ -12,6 +19,7 @@ import importlib.util
 import json
 import os
 import re
+import subprocess
 import sys
 from pathlib import Path
 from xml.sax.saxutils import escape
@@ -31,8 +39,18 @@ def android(text: str) -> str:
     return escape(text).replace("'", "\\'").replace('"', '\\"')
 
 
-def server_catalogue(code: str) -> dict[str, str]:
+def server_catalogue(code: str, ref: str | None = None) -> dict[str, str]:
     path = SERVER / "src/lembas/web/i18n" / f"{code}.py"
+    if ref:
+        shown = subprocess.run(
+            ["git", "-C", str(SERVER), "show", f"{ref}:src/lembas/web/i18n/{code}.py"],
+            capture_output=True, text=True,
+        )
+        if shown.returncode != 0:
+            return {}
+        scope: dict = {"__name__": f"catalogue_{code}"}
+        exec(compile(shown.stdout, f"{ref}:{code}.py", "exec"), scope)  # the server's own file
+        return dict(scope.get("MESSAGES", {}))
     if not path.exists():
         return {}
     spec = importlib.util.spec_from_file_location(f"catalogue_{code}", path)
@@ -71,10 +89,17 @@ def main() -> None:
     if "--check" in sys.argv:
         print(f"gen-strings: {len(STRINGS)} strings, all used")
         return
+    args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    ref = None
+    if args:
+        ref = subprocess.run(
+            ["git", "-C", str(SERVER), "rev-parse", "--verify", f"{args[0]}^{{commit}}"],
+            capture_output=True, text=True, check=True,
+        ).stdout.strip()
     own = json.loads((Path(__file__).parent / "strings_own.json").read_text(encoding="utf-8"))
     write(RES / "values", STRINGS)
     for code in LANGS:
-        catalogue = server_catalogue(code)
+        catalogue = server_catalogue(code, ref)
         mine = own.get(code, {})
         out = {}
         for key, english in STRINGS.items():
@@ -84,7 +109,7 @@ def main() -> None:
             if text and text.count("%1$s") == english.count("%1$s"):
                 out[key] = text
         write(RES / f"values-{code}", out)
-        print(f"gen-strings: {code}: {len(out)}/{len(STRINGS) - 1}")
+        print(f"gen-strings: {code}: {len(out)}/{len(STRINGS) - 1}" + (f" (server {ref[:12]})" if ref else ""))
 
 
 if __name__ == "__main__":

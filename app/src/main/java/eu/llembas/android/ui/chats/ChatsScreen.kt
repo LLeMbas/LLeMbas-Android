@@ -53,7 +53,10 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import eu.llembas.android.R
 import eu.llembas.android.api.Chat
+import eu.llembas.android.api.Doorstep
+import eu.llembas.android.api.fit
 import eu.llembas.android.lembas
+import eu.llembas.android.ui.signin.refusal
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -68,12 +71,29 @@ class ChatsViewModel(app: Application) : AndroidViewModel(app) {
     val state = _state.asStateFlow()
     private var kind = "chat"
 
+    /** Why this instance is refused, once it was asked what it is; null while it fits. */
+    private var refused: Int? = null
+    private var checked = false
+
     fun load(kind: String) {
         this.kind = kind
         viewModelScope.launch {
             _state.update { it.copy(loading = true, error = null) }
             try {
                 val api = getApplication<Application>().lembas.instances.client() ?: return@launch
+                // An instance signed in to before it was downgraded, or by 0.1 against a 1.x
+                // server, is refused here as at sign-in. Unreachable is not refused: the chat
+                // list's own error says that better.
+                if (!checked) {
+                    runCatching { Doorstep().discover(api.base) }.onSuccess {
+                        checked = true
+                        refused = refusal(fit(it))
+                    }
+                }
+                refused?.let { said ->
+                    _state.value = ChatsState(error = getApplication<Application>().getString(said))
+                    return@launch
+                }
                 val page = api.chats(kind = kind)
                 _state.value = ChatsState(chats = page.chats, more = page.more)
             } catch (e: Exception) {

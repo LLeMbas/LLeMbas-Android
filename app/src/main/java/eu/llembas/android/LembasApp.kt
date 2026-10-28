@@ -18,15 +18,16 @@ class LembasApp : Application() {
             listOf(
                 NotificationChannel(CHANNEL_REPLIES, getString(R.string.channel_replies), NotificationManager.IMPORTANCE_DEFAULT),
                 NotificationChannel(CHANNEL_ASKS, getString(R.string.channel_asks), NotificationManager.IMPORTANCE_HIGH),
-                NotificationChannel(CHANNEL_REPORTS, getString(R.string.channel_reports), NotificationManager.IMPORTANCE_LOW),
             ),
         )
+        // LLeMbas 2.0 has no reports, so 0.1's channel for them goes rather than sit empty in
+        // the system's settings.
+        manager.deleteNotificationChannel("reports")
     }
 
     companion object {
         const val CHANNEL_REPLIES = "replies"
         const val CHANNEL_ASKS = "asks"
-        const val CHANNEL_REPORTS = "reports"
     }
 }
 

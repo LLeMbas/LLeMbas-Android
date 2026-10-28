@@ -227,6 +227,38 @@ class ApiClient(val base: String, private val token: String, val http: OkHttpCli
         }
     }
 
+    // --- What a `show` card opens -------------------------------------------------------------
+
+    /**
+     * The text of a file a `show` card named, as the chat sees it now: the server rebuilds the
+     * chat's view and checks the path again, so a grant taken away since takes the file away too.
+     * Always plain text -- the app never asks for a page to render.
+     */
+    suspend fun shownText(chatId: String, show: ShowCard): String = withContext(Dispatchers.IO) {
+        val url = "$v2/chats/$chatId/show".toHttpUrl().newBuilder()
+            .apply { show.query.forEach { (k, v) -> addQueryParameter(k, v) } }
+            .build()
+        http.newCall(authed(url.toString()).header("Accept", "text/plain").get().build()).await().use {
+            if (!it.isSuccessful) throw ApiException(it.code, detail(it))
+            val body = it.body!!
+            // The server shows at most 1 MB; anything much larger is not a file it meant.
+            if (body.contentLength() > SHOWN_MAX_BYTES) throw ApiException(413, "")
+            val bytes = body.source().use { source ->
+                source.request(SHOWN_MAX_BYTES + 1)
+                source.buffer.readByteArray(minOf(source.buffer.size, SHOWN_MAX_BYTES + 1))
+            }
+            if (bytes.size > SHOWN_MAX_BYTES) throw ApiException(413, "")
+            bytes.toString(Charsets.UTF_8)
+        }
+    }
+
+    /** The same file in the web UI's viewer, which renders HTML in its sealed frame. */
+    fun webViewer(chatId: String, show: ShowCard): String = "$base/chat/$chatId/show".toHttpUrl().newBuilder()
+        .apply { show.query.forEach { (k, v) -> addQueryParameter(k, v) } }
+        .apply { if (show.line > 0) addQueryParameter("line", show.line.toString()) }
+        .build()
+        .toString()
+
     // --- Push --------------------------------------------------------------------------------
     suspend fun pushKey(): PushKey = get("/push")
 
@@ -265,6 +297,9 @@ class ApiClient(val base: String, private val token: String, val http: OkHttpCli
         authed("$v2/chats/$chatId/messages/$messageId/stream").header("Accept", "text/event-stream").build()
 
     companion object {
+        /** 1 MB, the server's own limit on a shown file, with room for a little more. */
+        const val SHOWN_MAX_BYTES = 1_100_000L
+
         fun emptyBody(): RequestBody = ByteArray(0).toRequestBody(null)
     }
 }

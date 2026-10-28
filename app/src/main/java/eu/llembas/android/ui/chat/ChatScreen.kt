@@ -74,9 +74,11 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import eu.llembas.android.R
 import eu.llembas.android.api.Message
 import eu.llembas.android.api.ModelInfo
+import eu.llembas.android.api.ShowCard
 import eu.llembas.android.assist.Recorder
 import eu.llembas.android.lembas
 import eu.llembas.android.ui.theme.LocalPalette
+import eu.llembas.android.ui.viewer.FileViewer
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -88,6 +90,7 @@ fun ChatScreen(chatId: String?, onBack: () -> Unit, onOpened: (String) -> Unit =
     val snackbar = remember { SnackbarHostState() }
     var menu by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<Message?>(null) }
+    var showing by remember { mutableStateOf<ShowCard?>(null) }
 
     LaunchedEffect(chatId) { model.open(chatId) }
     // A new chat gets its id from its first message; the route follows, so Back and a
@@ -202,13 +205,13 @@ fun ChatScreen(chatId: String?, onBack: () -> Unit, onOpened: (String) -> Unit =
                     }
 
                     live != null && live.messageId == message.id && live.finished == null -> Column {
-                        Steps(live.shown)
+                        Steps(live.shown, onShow = { showing = it })
                         if (live.shown.isEmpty()) Text(stringResource(R.string.loading_line), color = palette.inkFaint)
                         live.metrics?.let { m -> ReplyFoot(message.copy(metrics = m)) }
                     }
 
                     else -> Column {
-                        Steps(message.steps)
+                        Steps(message.steps, onShow = { showing = it })
                         ReplyFoot(message)
                         if (live == null && message == rows.lastOrNull()) {
                             Row {
@@ -234,6 +237,10 @@ fun ChatScreen(chatId: String?, onBack: () -> Unit, onOpened: (String) -> Unit =
         ) {
             CardSheet(card) { answer -> model.answer(card, answer) }
         }
+    }
+
+    showing?.let { file ->
+        state.chat?.id?.let { id -> FileViewer(id, file, onClose = { showing = null }) }
     }
 
     editing?.let { message ->

@@ -113,7 +113,6 @@ object Notifications {
         )
         val channel = when (payload.kind) {
             "ask" -> LembasApp.CHANNEL_ASKS
-            "report" -> LembasApp.CHANNEL_REPORTS
             else -> LembasApp.CHANNEL_REPLIES
         }
         val builder = NotificationCompat.Builder(context, channel)

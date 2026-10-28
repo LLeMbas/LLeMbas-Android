@@ -11,7 +11,7 @@
     <string name="signin_open_browser">Otwórz w przeglądarce</string>
     <string name="signin_denied">Logowanie zostało odrzucone.</string>
     <string name="signin_expired">Kod wygasł, zanim został zatwierdzony. Spróbuj ponownie.</string>
-    <string name="signin_too_old">Ta instancja nie ma jeszcze API aplikacji. Wymaga LLeMbas 1.7.0 lub nowszego.</string>
+    <string name="signin_too_old">Ta instancja działa na starszym LLeMbas. Ta aplikacja wymaga LLeMbas 2.0 lub nowszego.</string>
     <string name="signin_too_new">Ta instancja używa nowszego API aplikacji niż ta aplikacja. Zaktualizuj aplikację.</string>
     <string name="new_chat">Nowy czat</string>
     <string name="tab_chats">Czaty</string>
@@ -58,6 +58,14 @@
     <string name="plan_revise">Popraw</string>
     <string name="plan_what_to_change">Co powinno się zmienić?</string>
     <string name="plan_carry_out">Wykonaj plan</string>
+    <string name="shown">Pokazano</string>
+    <string name="viewer_open">Otwórz</string>
+    <string name="viewer_open_browser">Otwórz w przeglądarce</string>
+    <string name="viewer_copy">Kopiuj</string>
+    <string name="viewer_html_source">To jest źródło strony. Otwórz ją w przeglądarce, aby zobaczyć samą stronę.</string>
+    <string name="viewer_long_markdown">Długi plik, dlatego jest pokazany jako zwykły tekst.</string>
+    <string name="viewer_unavailable">Ten serwer nie potrafi jeszcze przekazać pliku aplikacji. Otwórz go w przeglądarce.</string>
+    <string name="viewer_too_large">Ten plik jest za duży, by go pokazać; można pokazać najwyżej 1 MB.</string>
     <string name="settings">Ustawienia</string>
     <string name="settings_instances">Instancje</string>
     <string name="sign_out">Wyloguj się</string>
@@ -74,7 +82,6 @@
     <string name="push_failed">Nie wybrano dystrybutora, więc powiadomienia są wciąż wyłączone.</string>
     <string name="channel_replies">Odpowiedzi</string>
     <string name="channel_asks">Pytania i zatwierdzenia</string>
-    <string name="channel_reports">Raporty</string>
     <string name="settings_assistant">Asystent</string>
     <string name="assistant_explained">Ustaw LLeMbas jako cyfrowego asystenta telefonu: wybierz go w Domyślne aplikacje › Aplikacja asystenta cyfrowego. Przytrzymanie przycisku zasilania, gest asystenta lub skrót z ekranu blokady otwiera go wtedy nad tym, co jest na ekranie.</string>
     <string name="assistant_open_settings">Otwórz ustawienia asystenta</string>

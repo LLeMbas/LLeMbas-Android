@@ -43,6 +43,8 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import eu.llembas.android.R
 import eu.llembas.android.api.Doorstep
+import eu.llembas.android.api.ServerFit
+import eu.llembas.android.api.fit
 import eu.llembas.android.api.normaliseBase
 import eu.llembas.android.lembas
 import kotlinx.coroutines.Job
@@ -60,8 +62,12 @@ sealed interface SignInState {
     data object Done : SignInState
 }
 
-/** The newest API this app reads. A server with a newer one is told about, not guessed at. */
-const val APP_API = 1
+/** The sentence for a server this app will not work with, or null when it fits. */
+fun refusal(fit: ServerFit): Int? = when (fit) {
+    ServerFit.FITS -> null
+    ServerFit.NOT_LEMBAS, ServerFit.TOO_OLD -> R.string.signin_too_old
+    ServerFit.TOO_NEW -> R.string.signin_too_new
+}
 
 class SignInViewModel(app: Application) : AndroidViewModel(app) {
     private val _state = MutableStateFlow<SignInState>(SignInState.Address)
@@ -76,12 +82,8 @@ class SignInViewModel(app: Application) : AndroidViewModel(app) {
             try {
                 val base = normaliseBase(typed)
                 val found = doorstep.discover(base)
-                if (found.service != "lembas" || found.appApi < 1 || "app" !in found.scopes) {
-                    _state.value = SignInState.Failed(getApplication<Application>().getString(R.string.signin_too_old))
-                    return@launch
-                }
-                if (found.appApi > APP_API) {
-                    _state.value = SignInState.Failed(getApplication<Application>().getString(R.string.signin_too_new))
+                refusal(fit(found))?.let { said ->
+                    _state.value = SignInState.Failed(getApplication<Application>().getString(said))
                     return@launch
                 }
                 val device = getApplication<Application>().getString(R.string.device_name)

@@ -11,7 +11,7 @@
     <string name="signin_open_browser">Otvoriť v prehliadači</string>
     <string name="signin_denied">Prihlásenie bolo odmietnuté.</string>
     <string name="signin_expired">Kód vypršal skôr, než bol schválený. Skúste to znova.</string>
-    <string name="signin_too_old">Táto inštancia ešte nemá API pre aplikácie. Potrebuje LLeMbas 1.7.0 alebo novší.</string>
+    <string name="signin_too_old">Táto inštancia beží na staršom LLeMbas. Táto aplikácia potrebuje LLeMbas 2.0 alebo novší.</string>
     <string name="signin_too_new">Táto inštancia používa novšie API pre aplikácie než táto aplikácia. Aktualizujte aplikáciu.</string>
     <string name="new_chat">Nová konverzácia</string>
     <string name="tab_chats">Konverzácie</string>
@@ -58,6 +58,14 @@
     <string name="plan_revise">Prepracovať</string>
     <string name="plan_what_to_change">Čo by sa malo zmeniť?</string>
     <string name="plan_carry_out">Vykonať plán</string>
+    <string name="shown">Zobrazené</string>
+    <string name="viewer_open">Otvoriť</string>
+    <string name="viewer_open_browser">Otvoriť v prehliadači</string>
+    <string name="viewer_copy">Kopírovať</string>
+    <string name="viewer_html_source">Toto je zdrojový kód stránky. Samotnú stránku uvidíte po otvorení v prehliadači.</string>
+    <string name="viewer_long_markdown">Dlhý súbor, preto je zobrazený ako obyčajný text.</string>
+    <string name="viewer_unavailable">Tento server zatiaľ nevie aplikácii súbor odovzdať. Otvorte ho v prehliadači.</string>
+    <string name="viewer_too_large">Tento súbor je príliš veľký na zobrazenie; zobraziť možno najviac 1 MB.</string>
     <string name="settings">Nastavenia</string>
     <string name="settings_instances">Inštancie</string>
     <string name="sign_out">Odhlásiť sa</string>
@@ -74,7 +82,6 @@
     <string name="push_failed">Nebol zvolený žiadny distributor, takže upozornenia sú stále vypnuté.</string>
     <string name="channel_replies">Odpovede</string>
     <string name="channel_asks">Otázky a schválenia</string>
-    <string name="channel_reports">Správy</string>
     <string name="settings_assistant">Asistent</string>
     <string name="assistant_explained">Nastavte LLeMbas ako digitálneho asistenta telefónu: zvoľte ho v Predvolené aplikácie › Digitálny asistent. Podržanie tlačidla napájania, gesto asistenta alebo skratka na uzamknutej obrazovke ho potom otvorí nad tým, čo je práve na obrazovke.</string>
     <string name="assistant_open_settings">Otvoriť nastavenia asistenta</string>

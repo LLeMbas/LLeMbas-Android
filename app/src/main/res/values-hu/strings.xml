@@ -11,7 +11,7 @@
     <string name="signin_open_browser">Megnyitás a böngészőben</string>
     <string name="signin_denied">A bejelentkezést elutasították.</string>
     <string name="signin_expired">A kód lejárt, mielőtt jóváhagyták volna. Próbálja újra.</string>
-    <string name="signin_too_old">Ennek a példánynak még nincs alkalmazás-API-ja. LLeMbas 1.7.0 vagy újabb verzió szükséges hozzá.</string>
+    <string name="signin_too_old">Ezen a példányon régebbi LLeMbas fut. Ehhez az alkalmazáshoz LLeMbas 2.0 vagy újabb kell.</string>
     <string name="signin_too_new">Ez a példány újabb alkalmazás-API-t használ, mint ez az alkalmazás. Frissítse az alkalmazást.</string>
     <string name="new_chat">Új csevegés</string>
     <string name="tab_chats">Csevegések</string>
@@ -58,6 +58,14 @@
     <string name="plan_revise">Átdolgozás</string>
     <string name="plan_what_to_change">Mi változzon?</string>
     <string name="plan_carry_out">Terv végrehajtása</string>
+    <string name="shown">Megjelenítve</string>
+    <string name="viewer_open">Megnyitás</string>
+    <string name="viewer_open_browser">Megnyitás a böngészőben</string>
+    <string name="viewer_copy">Másolás</string>
+    <string name="viewer_html_source">Ez az oldal forráskódja. Magát az oldalt a böngészőben megnyitva láthatja.</string>
+    <string name="viewer_long_markdown">Hosszú fájl, ezért egyszerű szövegként jelenik meg.</string>
+    <string name="viewer_unavailable">Ez a szerver még nem tudja átadni a fájlt az alkalmazásnak. Nyissa meg inkább a böngészőben.</string>
+    <string name="viewer_too_large">Ez a fájl túl nagy a megjelenítéshez; legfeljebb 1 MB jeleníthető meg.</string>
     <string name="settings">Beállítások</string>
     <string name="settings_instances">Példányok</string>
     <string name="sign_out">Kijelentkezés</string>
@@ -74,7 +82,6 @@
     <string name="push_failed">Nem választottak elosztót, így az értesítések továbbra is ki vannak kapcsolva.</string>
     <string name="channel_replies">Válaszok</string>
     <string name="channel_asks">Kérdések és jóváhagyások</string>
-    <string name="channel_reports">Jelentések</string>
     <string name="settings_assistant">Asszisztens</string>
     <string name="assistant_explained">Tegye az LLeMbas-t a telefon digitális asszisztensévé: válassza ki az Alapértelmezett alkalmazások › Digitális asszisztens alkalmazás alatt. A bekapcsológomb lenyomva tartása, az asszisztens-gesztus vagy a lezárási képernyő parancsikonja ezután a képernyőn lévő tartalom felett nyitja meg.</string>
     <string name="assistant_open_settings">Asszisztens beállításainak megnyitása</string>

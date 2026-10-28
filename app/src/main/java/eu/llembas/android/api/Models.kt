@@ -27,6 +27,9 @@ data class Discovery(
     val version: String = "",
     val name: String = "",
     @SerialName("base_url") val baseUrl: String = "",
+    /** The device link's protocol: 3 from LLeMbas 2.0 on, which is what this app needs. */
+    val protocol: Int = 0,
+    val protocols: List<Int> = emptyList(),
     @SerialName("app_api") val appApi: Int = 0,
     val login: Login = Login(),
     val scopes: List<String> = emptyList(),
@@ -191,8 +194,44 @@ data class ToolCall(
     val truncated: Boolean = false,
     val job: JsonElement? = null,
     val children: List<ToolCall>? = null,
+    /** The `show` tool's card: a file put in front of the person. Never its text. */
+    val show: ShowCard? = null,
     val block: ToolBlock = ToolBlock(),
 )
+
+/**
+ * What a `show` call put in front of the person (`event["show"]`, harness spec 3.0.0): the
+ * file's name and where it is, never its contents -- the viewer fetches those. A file from the
+ * chat's own tree names its node and version; a file a linked device sent names the copy the
+ * server kept (`shown_id`), with the tree's two ids empty.
+ */
+@Serializable
+data class ShowCard(
+    val path: String = "",
+    val name: String = "",
+    /** `markdown`, `code`, `text` or `html`; anything else is read as `text`. */
+    val kind: String = "text",
+    val language: String = "",
+    val line: Int = 0,
+    @SerialName("node_id") val nodeId: String = "",
+    @SerialName("version_id") val versionId: String = "",
+    val sha: String = "",
+    val size: Long = 0,
+    val mime: String = "",
+    val source: String = "",
+    @SerialName("shown_id") val shownId: String = "",
+) {
+    /** The kind the viewer draws: an unknown one is plain text, never something richer. */
+    val viewKind: String get() = if (kind in VIEW_KINDS) kind else "text"
+
+    /** Which file, as the server's viewer routes take it: the device's copy, or node and version. */
+    val query: List<Pair<String, String>>
+        get() = if (shownId.isNotEmpty()) listOf("shown" to shownId) else listOf("node" to nodeId, "version" to versionId)
+
+    companion object {
+        val VIEW_KINDS = setOf("markdown", "code", "text", "html")
+    }
+}
 
 @Serializable
 data class SteerNote(val id: String = "", val text: String = "")
