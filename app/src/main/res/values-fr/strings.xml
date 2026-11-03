@@ -66,6 +66,10 @@
     <string name="viewer_long_markdown">Un fichier long, il est donc affiché en texte brut.</string>
     <string name="viewer_unavailable">Ce serveur ne peut pas encore transmettre le fichier à l\'application. Ouvrez-le plutôt dans le navigateur.</string>
     <string name="viewer_too_large">Ce fichier est trop volumineux pour être affiché ; 1 Mo au plus peut être affiché.</string>
+    <string name="viewer_not_text">Ce n\'est pas un fichier texte, il n\'est donc pas affiché ici.</string>
+    <string name="files">Fichiers</string>
+    <string name="files_all">Tous les fichiers</string>
+    <string name="files_empty">Rien ici pour l\'instant. Pas même un trou de hobbit.</string>
     <string name="settings">Paramètres</string>
     <string name="settings_instances">Instances</string>
     <string name="sign_out">Se déconnecter</string>

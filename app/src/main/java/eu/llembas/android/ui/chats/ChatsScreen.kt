@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -132,7 +133,7 @@ class ChatsViewModel(app: Application) : AndroidViewModel(app) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ChatsScreen(onOpen: (String) -> Unit, onNew: () -> Unit, onSettings: () -> Unit, model: ChatsViewModel = viewModel()) {
+fun ChatsScreen(onOpen: (String) -> Unit, onNew: () -> Unit, onSettings: () -> Unit, onFiles: () -> Unit, model: ChatsViewModel = viewModel()) {
     val state by model.state.collectAsStateWithLifecycle()
     var tab by rememberSaveable { mutableIntStateOf(0) }
     val kind = if (tab == 0) "chat" else "agent"
@@ -143,6 +144,9 @@ fun ChatsScreen(onOpen: (String) -> Unit, onNew: () -> Unit, onSettings: () -> U
             TopAppBar(
                 title = { Text(stringResource(R.string.app_name)) },
                 actions = {
+                    IconButton(onClick = onFiles) {
+                        Icon(Icons.Filled.Folder, contentDescription = stringResource(R.string.files))
+                    }
                     IconButton(onClick = onSettings) {
                         Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.settings))
                     }

@@ -66,6 +66,10 @@
     <string name="viewer_long_markdown">Dlouhý soubor, proto je zobrazen jako prostý text.</string>
     <string name="viewer_unavailable">Tento server zatím aplikaci soubor předat neumí. Otevřete ho v prohlížeči.</string>
     <string name="viewer_too_large">Tento soubor je příliš velký na zobrazení; zobrazit lze nejvýše 1 MB.</string>
+    <string name="viewer_not_text">Toto není textový soubor, proto se zde nezobrazuje.</string>
+    <string name="files">Soubory</string>
+    <string name="files_all">Všechny soubory</string>
+    <string name="files_empty">Zatím tu nic není. Ani hobití nora.</string>
     <string name="settings">Nastavení</string>
     <string name="settings_instances">Instance</string>
     <string name="sign_out">Odhlásit se</string>

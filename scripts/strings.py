@@ -81,6 +81,11 @@ STRINGS: dict[str, str] = {
     "viewer_long_markdown": "A long file, so it is shown as plain text.",
     "viewer_unavailable": "This server cannot hand the file to the app yet. Open it in the browser instead.",
     "viewer_too_large": "This file is too large to show here; at most 1 MB can be shown.",
+    "viewer_not_text": "This is not a text file, so it is not shown here.",
+    # Files (the person's tree, read-only)
+    "files": "Files",
+    "files_all": "All files",
+    "files_empty": "Nothing here yet. Not even a hobbit hole.",
     # Settings
     "settings": "Settings",
     "settings_instances": "Instances",

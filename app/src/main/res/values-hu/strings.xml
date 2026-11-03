@@ -66,6 +66,10 @@
     <string name="viewer_long_markdown">Hosszú fájl, ezért egyszerű szövegként jelenik meg.</string>
     <string name="viewer_unavailable">Ez a szerver még nem tudja átadni a fájlt az alkalmazásnak. Nyissa meg inkább a böngészőben.</string>
     <string name="viewer_too_large">Ez a fájl túl nagy a megjelenítéshez; legfeljebb 1 MB jeleníthető meg.</string>
+    <string name="viewer_not_text">Ez nem szövegfájl, ezért itt nem jelenik meg.</string>
+    <string name="files">Fájlok</string>
+    <string name="files_all">Minden fájl</string>
+    <string name="files_empty">Itt még nincs semmi. Még egy hobbitlyuk sem.</string>
     <string name="settings">Beállítások</string>
     <string name="settings_instances">Példányok</string>
     <string name="sign_out">Kijelentkezés</string>

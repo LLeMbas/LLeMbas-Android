@@ -67,6 +67,10 @@
     <string name="viewer_long_markdown">A long file, so it is shown as plain text.</string>
     <string name="viewer_unavailable">This server cannot hand the file to the app yet. Open it in the browser instead.</string>
     <string name="viewer_too_large">This file is too large to show here; at most 1 MB can be shown.</string>
+    <string name="viewer_not_text">This is not a text file, so it is not shown here.</string>
+    <string name="files">Files</string>
+    <string name="files_all">All files</string>
+    <string name="files_empty">Nothing here yet. Not even a hobbit hole.</string>
     <string name="settings">Settings</string>
     <string name="settings_instances">Instances</string>
     <string name="sign_out">Sign out</string>

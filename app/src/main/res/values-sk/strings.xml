@@ -66,6 +66,10 @@
     <string name="viewer_long_markdown">Dlhý súbor, preto je zobrazený ako obyčajný text.</string>
     <string name="viewer_unavailable">Tento server zatiaľ nevie aplikácii súbor odovzdať. Otvorte ho v prehliadači.</string>
     <string name="viewer_too_large">Tento súbor je príliš veľký na zobrazenie; zobraziť možno najviac 1 MB.</string>
+    <string name="viewer_not_text">Toto nie je textový súbor, preto sa tu nezobrazuje.</string>
+    <string name="files">Súbory</string>
+    <string name="files_all">Všetky súbory</string>
+    <string name="files_empty">Zatiaľ tu nič nie je. Ani hobitia nora.</string>
     <string name="settings">Nastavenia</string>
     <string name="settings_instances">Inštancie</string>
     <string name="sign_out">Odhlásiť sa</string>

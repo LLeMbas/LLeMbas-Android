@@ -66,6 +66,10 @@
     <string name="viewer_long_markdown">Długi plik, dlatego jest pokazany jako zwykły tekst.</string>
     <string name="viewer_unavailable">Ten serwer nie potrafi jeszcze przekazać pliku aplikacji. Otwórz go w przeglądarce.</string>
     <string name="viewer_too_large">Ten plik jest za duży, by go pokazać; można pokazać najwyżej 1 MB.</string>
+    <string name="viewer_not_text">To nie jest plik tekstowy, więc nie jest tu pokazywany.</string>
+    <string name="files">Pliki</string>
+    <string name="files_all">Wszystkie pliki</string>
+    <string name="files_empty">Jeszcze nic tu nie ma. Nawet hobbiciej norki.</string>
     <string name="settings">Ustawienia</string>
     <string name="settings_instances">Instancje</string>
     <string name="sign_out">Wyloguj się</string>

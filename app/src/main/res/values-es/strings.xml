@@ -66,6 +66,10 @@
     <string name="viewer_long_markdown">Un archivo largo, por eso se muestra como texto sin formato.</string>
     <string name="viewer_unavailable">Este servidor todavía no puede entregar el archivo a la aplicación. Ábralo en el navegador.</string>
     <string name="viewer_too_large">Este archivo es demasiado grande para mostrarlo; se puede mostrar como máximo 1 MB.</string>
+    <string name="viewer_not_text">No es un archivo de texto, así que no se muestra aquí.</string>
+    <string name="files">Archivos</string>
+    <string name="files_all">Todos los archivos</string>
+    <string name="files_empty">Aquí aún no hay nada. Ni siquiera un agujero hobbit.</string>
     <string name="settings">Ajustes</string>
     <string name="settings_instances">Instancias</string>
     <string name="sign_out">Cerrar sesión</string>

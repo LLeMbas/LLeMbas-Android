@@ -55,6 +55,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import eu.llembas.android.R
+import eu.llembas.android.api.ApiClient
 import eu.llembas.android.api.ApiException
 import eu.llembas.android.api.ShowCard
 import eu.llembas.android.lembas
@@ -72,11 +73,15 @@ private const val MARKDOWN_MAX_CHARS = 200_000
 private sealed interface Loaded {
     data object Loading : Loaded
 
-    data class Text(val text: String) : Loaded
+    /** [kind]: what the server said the file is, when it is only known once it came. */
+    data class Text(val text: String, val kind: String? = null) : Loaded
 
-    /** [unavailable]: this server has no door for the app to read a shown file through. */
+    /** [unavailable]: this server has no door for the app to read the file through. */
     data class Failed(val message: String, val unavailable: Boolean = false) : Loaded
 }
+
+/** What the viewer's title and body need to know before the text comes. */
+private data class Viewed(val name: String, val path: String, val line: Int, val kind: String)
 
 /**
  * What a `show` card opens: the file, full screen, read-only, as the chat sees it now.
@@ -90,26 +95,64 @@ private sealed interface Loaded {
  */
 @Composable
 fun FileViewer(chatId: String, show: ShowCard, onClose: () -> Unit) {
+    Viewer(
+        file = Viewed(show.name, show.path, show.line, show.viewKind),
+        key = chatId to show,
+        webUrl = { it.webViewer(chatId, show) },
+        load = { api, _ -> Loaded.Text(api.shownText(chatId, show)) },
+        onClose = onClose,
+    )
+}
+
+/**
+ * A file of the person's tree (the Files screen), in the same viewer and under the same rules:
+ * the person's own files are no more trusted than a model's, since a model may have written
+ * them. A file the server withholds (not text, over 1 MB) says why, and offers the web UI.
+ */
+@Composable
+fun TreeFileViewer(path: String, onClose: () -> Unit) {
+    Viewer(
+        file = Viewed(path.substringAfterLast('/').ifBlank { path }, path, 0, "text"),
+        key = path,
+        webUrl = { it.webFile(path) },
+        load = { api, context ->
+            val file = api.fileContent(path)
+            val withheld = file.withheld
+            when {
+                withheld == null -> Loaded.Text(file.text, file.viewKind)
+                withheld.message.isNotBlank() -> Loaded.Failed(withheld.message)
+                withheld.reason == "too_large" -> Loaded.Failed(context.getString(R.string.viewer_too_large))
+                else -> Loaded.Failed(context.getString(R.string.viewer_not_text))
+            }
+        },
+        onClose = onClose,
+    )
+}
+
+@Composable
+private fun Viewer(file: Viewed, key: Any, webUrl: (ApiClient) -> String?, load: suspend (ApiClient, Context) -> Loaded, onClose: () -> Unit) {
     val context = LocalContext.current
     val palette = LocalPalette.current
-    var loaded by remember(chatId, show) { mutableStateOf<Loaded>(Loaded.Loading) }
-    var web by remember(chatId, show) { mutableStateOf<String?>(null) }
+    var loaded by remember(key) { mutableStateOf<Loaded>(Loaded.Loading) }
+    var web by remember(key) { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(chatId, show) {
+    LaunchedEffect(key) {
         val api = context.lembas.instances.client()
         if (api == null) {
             loaded = Loaded.Failed(context.getString(R.string.assist_signed_out))
             return@LaunchedEffect
         }
-        web = api.webViewer(chatId, show)
+        web = webUrl(api)
         loaded = try {
-            Loaded.Text(api.shownText(chatId, show))
+            load(api, context)
         } catch (e: ApiException) {
             when {
                 e.status == 413 -> Loaded.Failed(context.getString(R.string.viewer_too_large))
 
+                e.status == 415 -> Loaded.Failed(e.message?.ifBlank { null } ?: context.getString(R.string.viewer_not_text))
+
                 // No such route at all (FastAPI's own "Not Found", or the wrong method): a
-                // server without the app's door to shown files. Its own 404 has a sentence.
+                // server without the app's door to the file. Its own 404 has a sentence.
                 e.status == 405 || (e.status == 404 && e.message == "Not Found") ->
                     Loaded.Failed(context.getString(R.string.viewer_unavailable), unavailable = true)
 
@@ -131,9 +174,9 @@ fun FileViewer(chatId: String, show: ShowCard, onClose: () -> Unit) {
                     },
                     title = {
                         Column {
-                            Text(show.name.ifBlank { show.path }, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(file.name.ifBlank { file.path }, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Text(
-                                show.path + if (show.line > 0) ":${show.line}" else "",
+                                file.path + if (file.line > 0) ":${file.line}" else "",
                                 style = MaterialTheme.typography.labelSmall,
                                 fontFamily = FontFamily.Monospace,
                                 color = palette.inkFaint,
@@ -144,7 +187,7 @@ fun FileViewer(chatId: String, show: ShowCard, onClose: () -> Unit) {
                     },
                     actions = {
                         (loaded as? Loaded.Text)?.let { done ->
-                            IconButton(onClick = { copy(context, show.name, done.text) }) {
+                            IconButton(onClick = { copy(context, file.name, done.text) }) {
                                 Icon(Icons.Filled.ContentCopy, contentDescription = stringResource(R.string.viewer_copy))
                             }
                         }
@@ -173,7 +216,7 @@ fun FileViewer(chatId: String, show: ShowCard, onClose: () -> Unit) {
                         }
                     }
 
-                    is Loaded.Text -> Body(show, now.text)
+                    is Loaded.Text -> Body(now.kind ?: file.kind, file.line, now.text)
                 }
             }
         }
@@ -181,9 +224,8 @@ fun FileViewer(chatId: String, show: ShowCard, onClose: () -> Unit) {
 }
 
 @Composable
-private fun Body(show: ShowCard, text: String) {
+private fun Body(kind: String, line: Int, text: String) {
     val palette = LocalPalette.current
-    val kind = show.viewKind
     if (kind == "markdown" && text.length <= MARKDOWN_MAX_CHARS) {
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
             MarkdownText(text, modifier = Modifier.fillMaxWidth())
@@ -204,7 +246,7 @@ private fun Body(show: ShowCard, text: String) {
                 modifier = Modifier.fillMaxWidth().background(palette.bgSunken).padding(horizontal = 16.dp, vertical = 10.dp),
             )
         }
-        Lines(text, show.line)
+        Lines(text, line)
     }
 }
 

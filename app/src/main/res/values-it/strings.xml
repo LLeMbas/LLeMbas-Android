@@ -66,6 +66,10 @@
     <string name="viewer_long_markdown">Un file lungo, quindi è mostrato come testo semplice.</string>
     <string name="viewer_unavailable">Questo server non può ancora passare il file all\'app. Aprilo invece nel browser.</string>
     <string name="viewer_too_large">Questo file è troppo grande da mostrare; si può mostrare al massimo 1 MB.</string>
+    <string name="viewer_not_text">Non è un file di testo, quindi non viene mostrato qui.</string>
+    <string name="files">File</string>
+    <string name="files_all">Tutti i file</string>
+    <string name="files_empty">Ancora niente qui. Nemmeno una caverna hobbit.</string>
     <string name="settings">Impostazioni</string>
     <string name="settings_instances">Istanze</string>
     <string name="sign_out">Esci</string>

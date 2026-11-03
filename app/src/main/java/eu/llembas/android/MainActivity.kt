@@ -28,6 +28,7 @@ import eu.llembas.android.auth.Prefs
 import eu.llembas.android.push.Notifications
 import eu.llembas.android.ui.chat.ChatScreen
 import eu.llembas.android.ui.chats.ChatsScreen
+import eu.llembas.android.ui.files.FilesScreen
 import eu.llembas.android.ui.settings.SettingsScreen
 import eu.llembas.android.ui.signin.SignInScreen
 import eu.llembas.android.ui.theme.LembasTheme
@@ -89,6 +90,7 @@ class MainActivity : ComponentActivity() {
                             onOpen = { nav.navigate("chat/$it") },
                             onNew = { nav.navigate("new") },
                             onSettings = { nav.navigate("settings") },
+                            onFiles = { nav.navigate("files") },
                         )
                     }
                     composable("new") {
@@ -103,6 +105,7 @@ class MainActivity : ComponentActivity() {
                     composable("chat/{id}") { entry ->
                         ChatScreen(chatId = entry.arguments?.getString("id"), onBack = { nav.popBackStack() })
                     }
+                    composable("files") { FilesScreen(onBack = { nav.popBackStack() }) }
                     composable("settings") {
                         SettingsScreen(onBack = { nav.popBackStack() }, onAddInstance = { nav.navigate("add") })
                     }

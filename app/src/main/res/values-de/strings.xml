@@ -66,6 +66,10 @@
     <string name="viewer_long_markdown">Eine lange Datei, daher wird sie als reiner Text angezeigt.</string>
     <string name="viewer_unavailable">Dieser Server kann die Datei der App noch nicht übergeben. Öffnen Sie sie stattdessen im Browser.</string>
     <string name="viewer_too_large">Diese Datei ist zu groß zum Anzeigen; höchstens 1 MB kann angezeigt werden.</string>
+    <string name="viewer_not_text">Das ist keine Textdatei, deshalb wird sie hier nicht angezeigt.</string>
+    <string name="files">Dateien</string>
+    <string name="files_all">Alle Dateien</string>
+    <string name="files_empty">Hier ist noch nichts. Nicht einmal eine Hobbithöhle.</string>
     <string name="settings">Einstellungen</string>
     <string name="settings_instances">Instanzen</string>
     <string name="sign_out">Abmelden</string>

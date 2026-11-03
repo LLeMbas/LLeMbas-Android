@@ -16,6 +16,10 @@ For LLeMbas server 2.0, and only for it.
   numbered lines; a long Markdown file is shown as text. **HTML is never rendered in the app**:
   it is shown as its source, and "Open in the browser" opens the web viewer, which draws it in
   its sealed frame. Copy takes the whole file.
+- **Files**: the person's own files, read-only, from the folder button beside Settings. Browse
+  the tree as the web UI's explorer shows it (folders first, back goes up one), and open a file
+  in the same viewer as a shown one, under the same rules. A file the server does not hand over
+  as text -- an image, a binary, anything over 1 MB -- says why, and offers the web UI's viewer.
 - **A server older than 2.0 is refused** with a sentence, at sign-in and for an instance signed
   in to before: the device-link protocol must be 3 or newer, and the app API 2.
 
