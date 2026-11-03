@@ -5,6 +5,8 @@ is in alpha and releases come off `main`.
 
 ## [Unreleased]
 
+## [1.0.0-beta.1] — 2026-11-03
+
 For LLeMbas server 2.0, and only for it.
 
 ### Added

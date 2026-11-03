@@ -28,10 +28,13 @@ android {
         minSdk = 29
         targetSdk = 36
         // The one source of the version. versionCode is derived from it, so the two cannot
-        // drift: 0.1.0 -> 100, 1.2.3 -> 10203.
-        versionName = "0.1.0"
-        versionCode = versionName!!.split(".").map { it.toInt() }.let { (a, b, c) ->
-            a * 10000 + b * 100 + c
+        // drift, and a beta sorts below its release: 1.0.0-beta.1 -> 1000001,
+        // 1.0.0-beta.2 -> 1000002, 1.0.0 -> 1000099, 1.2.3 -> 1020399.
+        versionName = "1.0.0-beta.1"
+        versionCode = versionName!!.split("-beta.").let { parts ->
+            val (a, b, c) = parts[0].split(".").map { it.toInt() }
+            val pre = if (parts.size == 2) parts[1].toInt() else 99
+            ((a * 10000 + b * 100 + c) * 100) + pre
         }
     }
 
