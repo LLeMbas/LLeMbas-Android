@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- A self-hosted instance often sits behind its owner's own certificate authority. Trusting
      the CAs the person installed on this phone (Settings › Security › Install a certificate)
-     is what lets the app reach it -- the same step the browser needs. No plain HTTP: a token
+     is what lets the app reach it: the same step the browser needs. No plain HTTP: a token
      goes with every request. -->
 <network-security-config>
     <base-config cleartextTrafficPermitted="false">
