@@ -1,8 +1,11 @@
 package eu.llembas.android
 
+import eu.llembas.android.api.APP_API
 import eu.llembas.android.api.AskFrame
 import eu.llembas.android.api.Chat
 import eu.llembas.android.api.DoneFrame
+import eu.llembas.android.api.FileContent
+import eu.llembas.android.api.FileListing
 import eu.llembas.android.api.JobsFrame
 import eu.llembas.android.api.LembasJson
 import eu.llembas.android.api.LiveReply
@@ -13,8 +16,12 @@ import eu.llembas.android.api.StatusFrame
 import eu.llembas.android.api.SteeredFrame
 import eu.llembas.android.api.StepsFrame
 import eu.llembas.android.api.Tail
+import eu.llembas.android.api.ToolCall
 import kotlinx.serialization.KSerializer
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.json.jsonObject
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -32,7 +39,59 @@ class ContractTest {
     @Test
     fun theVersionIsOneThisAppReads() {
         val version = LembasJson.parseToJsonElement(text("version")).toString()
-        assertEquals("""{"app_api":1}""", version)
+        assertEquals("""{"app_api":$APP_API}""", version)
+    }
+
+    @Test
+    fun aShowCardFromTheTreeAndOneFromADevice() {
+        // The server's own `show` cards (`tool_show.json`): what the app reads them by, and the
+        // query that fetches the text from `GET /api/v2/chats/{chat}/show`.
+        val calls = LembasJson.parseToJsonElement(text("tool_show")).jsonObject.getValue("calls")
+        val (tree, device) = LembasJson.decodeFromJsonElement(ListSerializer(ToolCall.serializer()), calls)
+        val show = tree.show!!
+        assertEquals("show", tree.name)
+        assertEquals("recipe.md", show.name)
+        assertEquals("/home/frodo/recipe.md", show.path)
+        assertEquals("markdown", show.viewKind)
+        assertEquals(3, show.line)
+        assertEquals(120L, show.size)
+        assertEquals(listOf("node" to "node1", "version" to "ver1"), show.query)
+
+        val kept = device.show!!
+        assertEquals("device", kept.source)
+        assertEquals("code", kept.viewKind)
+        assertEquals("python", kept.language)
+        // `line: null` reads as no line, and the tree's two ids are empty on a device's card.
+        assertEquals(0, kept.line)
+        assertEquals(listOf("shown" to "shown1"), kept.query)
+    }
+
+    @Test
+    fun aDirectoryOfThePersonsFiles() {
+        val listing = read("files_listing", FileListing.serializer())
+        assertEquals("/home/frodo", listing.path)
+        assertEquals("/home", listing.parent)
+        assertEquals(listOf("recipes", "lembas.md"), listing.entries.map { it.name })
+        assertTrue(listing.entries[0].isFolder)
+        val file = listing.entries[1]
+        assertFalse(file.isFolder)
+        assertEquals(27L, file.size)
+        assertEquals("text/markdown", file.mime)
+    }
+
+    @Test
+    fun aFileAndAWithheldOne() {
+        val file = read("file_content", FileContent.serializer())
+        assertNull(file.withheld)
+        assertEquals("markdown", file.viewKind)
+        assertTrue(file.text.startsWith("# Lembas"))
+
+        val image = read("file_content_withheld", FileContent.serializer())
+        assertEquals("", image.text)
+        assertEquals("not_text", image.withheld!!.reason)
+        assertTrue(image.withheld!!.message.isNotBlank())
+        // An image is no kind the viewer draws, so if its text ever came it would be plain text.
+        assertEquals("text", image.viewKind)
     }
 
     @Test

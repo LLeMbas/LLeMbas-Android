@@ -230,9 +230,13 @@ class ApiClient(val base: String, private val token: String, val http: OkHttpCli
     // --- What a `show` card opens -------------------------------------------------------------
 
     /**
-     * The text of a file a `show` card named, as the chat sees it now: the server rebuilds the
-     * chat's view and checks the path again, so a grant taken away since takes the file away too.
-     * Always plain text -- the app never asks for a page to render.
+     * The text of a file a `show` card named, as the chat sees it now:
+     * `GET /api/v2/chats/{chat}/show?node=<node_id>&version=<version_id>` for a file in the tree,
+     * `?shown=<shown_id>` for the copy a linked device sent ([ShowCard.query]). The server rebuilds
+     * the chat's view and checks the path again, so a grant taken away since takes the file away
+     * too (404, in the server's words). `text/plain; charset=utf-8`, at most 1 MB: above it a 413,
+     * and a 415 for a file that is not text. Always plain text -- an HTML file is its source, and
+     * the app never asks for a page to render.
      */
     suspend fun shownText(chatId: String, show: ShowCard): String = withContext(Dispatchers.IO) {
         val url = "$v2/chats/$chatId/show".toHttpUrl().newBuilder()
@@ -251,6 +255,26 @@ class ApiClient(val base: String, private val token: String, val http: OkHttpCli
             bytes.toString(Charsets.UTF_8)
         }
     }
+
+    // --- The person's files ------------------------------------------------------------------
+
+    /** A directory, as the person may see it (no chat's grants): `GET /api/v2/files?path=`. */
+    suspend fun files(path: String = "/"): FileListing {
+        val url = "$v2/files".toHttpUrl().newBuilder().addQueryParameter("path", path).build()
+        return call(authed(url.toString()).get().build(), FileListing.serializer())
+    }
+
+    /**
+     * A file's text: `GET /api/v2/files/content?path=`. A file the server will not hand over as
+     * text (not text, over 1 MB) is not an error: it comes back with `withheld` saying why.
+     */
+    suspend fun fileContent(path: String): FileContent {
+        val url = "$v2/files/content".toHttpUrl().newBuilder().addQueryParameter("path", path).build()
+        return call(authed(url.toString()).get().build(), FileContent.serializer())
+    }
+
+    /** A file of the tree in the web UI's own viewer (`/files/view`), for what the app does not draw. */
+    fun webFile(path: String): String = "$base/files/view".toHttpUrl().newBuilder().addQueryParameter("path", path).build().toString()
 
     /** The same file in the web UI's viewer, which renders HTML in its sealed frame. */
     fun webViewer(chatId: String, show: ShowCard): String = "$base/chat/$chatId/show".toHttpUrl().newBuilder()

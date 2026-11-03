@@ -233,6 +233,50 @@ data class ShowCard(
     }
 }
 
+// --- The person's files (`GET /files`, `GET /files/content`) ----------------------------------
+
+/** One entry of a directory: `kind` is `file`, `dir` or `mount`. */
+@Serializable
+data class FileEntry(
+    val name: String = "",
+    val path: String = "",
+    val kind: String = "file",
+    val size: Long = 0,
+    val mime: String = "",
+    @SerialName("updated_at") val updatedAt: String? = null,
+) {
+    /** A directory or a mount: something to open as a listing, not in the viewer. */
+    val isFolder: Boolean get() = kind == "dir" || kind == "mount"
+}
+
+/** A directory, through the person's own access. `parent` is null at `/`. */
+@Serializable
+data class FileListing(val path: String = "/", val parent: String? = null, val entries: List<FileEntry> = emptyList())
+
+/** Why a file's text did not come: `reason` is `not_text` or `too_large`; `message` says it. */
+@Serializable
+data class Withheld(val reason: String = "", val message: String = "")
+
+/**
+ * A file's text, as the explorer's viewer reads it. An HTML file is its source, never rendered;
+ * a file that is not text or is over 1 MB has an empty [text] and says why in [withheld].
+ */
+@Serializable
+data class FileContent(
+    val path: String = "",
+    val name: String = "",
+    val size: Long = 0,
+    val mime: String = "",
+    val kind: String = "text",
+    val language: String = "",
+    val sha: String = "",
+    val text: String = "",
+    val withheld: Withheld? = null,
+) {
+    /** The kind the viewer draws, by the `show` card's rule: anything unknown is plain text. */
+    val viewKind: String get() = if (kind in ShowCard.VIEW_KINDS) kind else "text"
+}
+
 @Serializable
 data class SteerNote(val id: String = "", val text: String = "")
 

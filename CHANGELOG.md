@@ -17,13 +17,19 @@ For LLeMbas server 2.0, and only for it.
   it is shown as its source, and "Open in the browser" opens the web viewer, which draws it in
   its sealed frame. Copy takes the whole file.
 - **A server older than 2.0 is refused** with a sentence, at sign-in and for an instance signed
-  in to before: the device-link protocol must be 3 or newer.
+  in to before: the device-link protocol must be 3 or newer, and the app API 2.
 
 ### Changed
 
 - **The server's contract is pinned to LLeMbas 2.0** (`dev`): no canvas, chats without knowledge
   bases. Theme and strings are generated from the same commit; `gen-strings.py` takes a server
   ref, as the other two scripts do. Selected text uses the web UI's `--selection` tint.
+- **The app reads app API 2**, the server 2.0's: a server that still says 1 (a 2.0 build from
+  before the show route and the files) is refused as too old, one that says 3 as too new.
+- **A shown file is fetched from the server's own route**, `GET /api/v2/chats/{chat}/show`
+  (`?node=&version=` for a file in the tree, `?shown=` for a device's copy), and a file that is
+  not text says so in the server's words. The contract now carries the server's `show` cards and
+  the files routes, and the tests read those instead of a hand-written card.
 - CI also runs on pushes to `dev`.
 
 ### Removed

@@ -1,7 +1,12 @@
 package eu.llembas.android.api
 
-/** The newest app API this app reads. A server with a newer one is told about, not guessed at. */
-const val APP_API = 1
+/**
+ * The app API this app reads: 2, the server's 2.0 (no canvas, no `knowledge_bases`, the `show`
+ * card and its route, and the person's files). A server with a newer one is told about, not
+ * guessed at; one with an older one is refused, because 1 has neither the show route nor the
+ * files this app opens -- a 2.0 `dev` server from before the files routes still said 1.
+ */
+const val APP_API = 2
 
 /**
  * The device-link protocol of LLeMbas 2.0. This app is built for 2.0 -- the file tree, the
@@ -19,7 +24,7 @@ fun fit(found: Discovery): ServerFit {
     val protocol = maxOf(found.protocol, found.protocols.maxOrNull() ?: 0)
     return when {
         found.service != "lembas" -> ServerFit.NOT_LEMBAS
-        protocol < MIN_PROTOCOL || found.appApi < 1 || "app" !in found.scopes -> ServerFit.TOO_OLD
+        protocol < MIN_PROTOCOL || found.appApi < APP_API || "app" !in found.scopes -> ServerFit.TOO_OLD
         found.appApi > APP_API -> ServerFit.TOO_NEW
         else -> ServerFit.FITS
     }
