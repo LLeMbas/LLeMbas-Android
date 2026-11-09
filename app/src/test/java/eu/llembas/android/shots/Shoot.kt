@@ -10,6 +10,7 @@ import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.RoborazziComposeOptions
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.github.takahirom.roborazzi.fontScale
+import com.github.takahirom.roborazzi.inspectionMode
 import com.github.takahirom.roborazzi.size
 import eu.llembas.android.ui.theme.LembasTheme
 
@@ -32,6 +33,8 @@ fun shoot(name: String, phone: Phone = Phone.Large, fontScale: Float = 1f, conte
             filePath = "build/screenshots/${phone.tag}-$name-$theme$font.png",
             roborazziComposeOptions = RoborazziComposeOptions {
                 size(phone.widthDp, phone.heightDp)
+                // As a preview: no endless animation, no pictures fetched from an instance.
+                inspectionMode(true)
                 if (fontScale != 1f) fontScale(fontScale)
             },
         ) {

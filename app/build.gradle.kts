@@ -114,6 +114,12 @@ android {
             test.systemProperty("roborazzi.test.record", "true")
             test.systemProperty("robolectric.pixelCopyRenderMode", "hardware")
             test.maxHeapSize = "3g"
+            // Name each test as it starts, so a run that stops in one says which.
+            test.testLogging {
+                events("started", "passed", "failed", "skipped")
+                exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+            }
+            test.timeout.set(java.time.Duration.ofMinutes(20))
         }
     }
 

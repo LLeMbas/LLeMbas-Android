@@ -24,6 +24,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -77,8 +78,9 @@ fun ModelAvatar(model: ModelInfo?, fallbackName: String, size: Dp = 24.dp, modif
     val palette = LocalPalette.current
     val path = model?.image
     var image by remember(path) { mutableStateOf(path?.let { ModelImages.cached(it) }) }
+    val still = LocalInspectionMode.current
     LaunchedEffect(path) {
-        if (path != null && image == null) image = ModelImages.load(context, path)
+        if (path != null && image == null && !still) image = ModelImages.load(context, path)
     }
     Box(modifier.size(size).clip(CircleShape).background(palette.accentSoft), contentAlignment = Alignment.Center) {
         val shown = image

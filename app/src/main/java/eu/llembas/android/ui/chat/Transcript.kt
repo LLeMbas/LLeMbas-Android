@@ -70,6 +70,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
@@ -287,15 +288,22 @@ private fun footLine(message: Message): String? {
 @Composable
 fun Writing(modifier: Modifier = Modifier, withLine: Boolean = false) {
     val palette = LocalPalette.current
+    // Still in a preview or a screenshot, where an animation that never ends never lets the
+    // picture be taken.
+    val still = LocalInspectionMode.current
     val pulse = rememberInfiniteTransition(label = "writing")
     Row(modifier.heightIn(min = 32.dp), verticalAlignment = Alignment.CenterVertically) {
         repeat(3) { i ->
-            val alpha by pulse.animateFloat(
-                initialValue = 0.25f,
-                targetValue = 1f,
-                animationSpec = infiniteRepeatable(tween(600, delayMillis = i * 150), RepeatMode.Reverse),
-                label = "dot$i",
-            )
+            val alpha = if (still) {
+                listOf(1f, 0.6f, 0.3f)[i]
+            } else {
+                pulse.animateFloat(
+                    initialValue = 0.25f,
+                    targetValue = 1f,
+                    animationSpec = infiniteRepeatable(tween(600, delayMillis = i * 150), RepeatMode.Reverse),
+                    label = "dot$i",
+                ).value
+            }
             Box(Modifier.padding(end = 4.dp).size(8.dp).alpha(alpha).clip(CircleShape).background(palette.accent))
         }
         if (withLine) {
@@ -531,7 +539,8 @@ fun AttachmentTile(attachment: Attachment, side: Dp, modifier: Modifier = Modifi
     Box(modifier.size(side).clip(Block).background(palette.surfaceRaised).border(1.dp, palette.border, Block), contentAlignment = Alignment.Center) {
         if (attachment.image) {
             var image by remember(attachment.id) { mutableStateOf(Thumbnails.cached(attachment.id)) }
-            LaunchedEffect(attachment.id) { if (image == null) image = Thumbnails.load(context, attachment.id) }
+            val still = LocalInspectionMode.current
+            LaunchedEffect(attachment.id) { if (image == null && !still) image = Thumbnails.load(context, attachment.id) }
             val shown = image
             if (shown != null) {
                 Image(shown, contentDescription = attachment.name, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
