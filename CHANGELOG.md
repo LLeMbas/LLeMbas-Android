@@ -5,6 +5,11 @@ is in alpha and releases come off `main`.
 
 ## [Unreleased]
 
+### Changed
+
+- **Pinned to LLeMbas server 2.0.0-beta.4**: the contract, the theme and the strings come from that
+  release. Nothing a person sees changes; the server's API is the same as in beta.1.
+
 ## [1.0.0-beta.1] — 2026-11-03
 
 For LLeMbas server 2.0, and only for it.
