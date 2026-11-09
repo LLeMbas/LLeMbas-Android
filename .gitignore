@@ -8,6 +8,8 @@ local.properties
 # A release key never goes in the repository (CI writes it from secrets)
 *.jks
 *.keystore
+# ...except the public test key debug builds are signed with (see app/build.gradle.kts)
+!/app/test-debug.keystore
 # IDEs
 .idea/
 *.iml

@@ -5,7 +5,15 @@ is in alpha and releases come off `main`.
 
 ## [Unreleased]
 
+### Added
+
+- **Test builds for every change**: each push to `dev` leaves an installable APK on the CI run,
+  signed with a public test key so a newer test build installs over an older one. The version
+  in Settings › About carries the run's number.
+
 ### Changed
+
+- A beta (`vX.Y.Z-beta.N`) is published on GitHub as a pre-release by itself.
 
 - **Pinned to LLeMbas server 2.0.0-beta.4**: the contract, the theme and the strings come from that
   release. Nothing a person sees changes; the server's API is the same as in beta.1.

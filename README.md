@@ -20,6 +20,13 @@ and check it against `SHA256SUMS`. The `full` APK updates itself from llembas.eu
 one does not. Android 10 or newer; the instance must run LLeMbas server 2.0 or newer (an older
 one is refused at sign-in, with a sentence saying so).
 
+**Test builds.** Every push to `dev` builds a debug APK: open the newest green run under
+[Actions](https://github.com/LLeMbas/LLeMbas-Android/actions/workflows/ci.yml), download the
+`llembas-android-debug-N` artifact (GitHub asks you to be signed in), unzip it and install the APK that does
+not end in `-fdroid`. It is a separate app ("eu.llembas.android.debug") beside a released one,
+signed with a public test key kept in this repository, so each test build installs over the one
+before it -- and anyone could sign one, so take test builds only from this repository's runs.
+
 If your instance uses a certificate from your own certificate authority, install that CA on the
 phone first (Settings › Security › Encryption & credentials › Install a certificate › CA
 certificate). The app trusts CAs you installed, as the browser does.

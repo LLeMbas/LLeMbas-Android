@@ -37,7 +37,7 @@ class Updater(private val context: Context) {
                 if (!it.isSuccessful) return@withContext context.getString(R.string.update_unreachable)
                 LembasJson.decodeFromString(Latest.serializer(), it.body!!.string())
             }
-            if (!newer(latest.version, BuildConfig.VERSION_NAME.removeSuffix("-debug"))) {
+            if (!newer(latest.version, BuildConfig.VERSION_NAME.substringBefore("-debug"))) {
                 return@withContext context.getString(R.string.update_none)
             }
             if (!context.packageManager.canRequestPackageInstalls()) {

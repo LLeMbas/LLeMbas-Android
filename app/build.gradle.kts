@@ -39,6 +39,17 @@ android {
     }
 
     signingConfigs {
+        // Debug builds are signed with a *public* test key that lives in the repository, so the
+        // APK every CI run uploads installs over the one before it (a runner's own debug key is
+        // new each run, and Android refuses an update from a different signer). It signs only
+        // the `.debug` application id, never a release, and it is no secret: anyone can sign
+        // with it, so install a debug build only from this repository's CI.
+        getByName("debug") {
+            storeFile = file("test-debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
         releaseKey?.let { key ->
             create("release") {
                 storeFile = file(key.getProperty("file"))
@@ -58,7 +69,9 @@ android {
         }
         debug {
             applicationIdSuffix = ".debug"
-            versionNameSuffix = "-debug"
+            // CI's run number, so a tester can tell two test builds apart in Settings › About.
+            versionNameSuffix = "-debug" + (System.getenv("GITHUB_RUN_NUMBER")?.let { ".$it" } ?: "")
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
 

@@ -47,10 +47,21 @@ jobs:
         run: ./gradlew --no-daemon lintFullDebug
         continue-on-error: true
 
+      # The test build a tester installs (Actions › this run › Artifacts): debug-signed with the
+      # repository's public test key, so each one installs over the last. `full` is the one to
+      # use; `fdroid` is the same app without the updater.
+      - name: Name the test builds
+        run: |
+          mkdir test-builds
+          short="${GITHUB_SHA::7}"
+          cp app/build/outputs/apk/full/debug/app-full-debug.apk "test-builds/llembas-android-debug-$GITHUB_RUN_NUMBER-$short.apk"
+          cp app/build/outputs/apk/fdroid/debug/app-fdroid-debug.apk "test-builds/llembas-android-debug-$GITHUB_RUN_NUMBER-$short-fdroid.apk"
+          (cd test-builds && sha256sum *.apk > SHA256SUMS)
+
       - uses: actions/upload-artifact@v4
         with:
-          name: llembas-android-debug
-          path: app/build/outputs/apk/*/debug/*.apk
+          name: llembas-android-debug-${{ github.run_number }}
+          path: test-builds/
           if-no-files-found: error
 
       - uses: actions/upload-artifact@v4

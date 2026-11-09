@@ -73,4 +73,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           git tag -l --format='%(contents)' "$TAG" | sed '/-----BEGIN SSH SIGNATURE-----/,$d' > notes.md
-          gh release create "$TAG" --verify-tag --title "LLeMbas for Android $VERSION" --notes-file notes.md dist/*
+          # A `-beta.N` tag is a pre-release: never "Latest", never what /releases/latest hands out.
+          pre=""
+          case "$TAG" in *-*) pre="--prerelease" ;; esac
+          gh release create "$TAG" --verify-tag $pre --title "LLeMbas for Android $VERSION" --notes-file notes.md dist/*
