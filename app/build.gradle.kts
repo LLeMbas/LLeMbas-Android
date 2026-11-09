@@ -1,3 +1,4 @@
+import java.time.Duration
 import java.util.Properties
 
 plugins {
@@ -119,7 +120,7 @@ android {
                 events("started", "passed", "failed", "skipped")
                 exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
             }
-            test.timeout.set(java.time.Duration.ofMinutes(20))
+            test.timeout.set(Duration.ofMinutes(20))
         }
     }
 
