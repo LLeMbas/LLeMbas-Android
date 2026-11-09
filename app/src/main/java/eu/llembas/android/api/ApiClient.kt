@@ -248,6 +248,13 @@ class ApiClient(val base: String, private val token: String, val http: OkHttpCli
     suspend fun stopAgent(chatId: String, kind: String, id: String): List<String> =
         send<Stopped>("POST", "/chats/$chatId/agents/${segment(kind)}/${segment(id)}/stop", null).stopped
 
+    /**
+     * Summarise the earlier turns now and stop sending them (the activity sheet's Compact). The
+     * server refuses in its own words (409) while a reply is being written or with nothing to
+     * summarise; the transcript is read again after, for the divider it leaves.
+     */
+    suspend fun compact(chatId: String) = empty(authed("$v2/chats/$chatId/compact").post(ByteArray(0).toRequestBody(null)).build())
+
     suspend fun team(chatId: String, since: Int = 0): TeamView = get<TeamEnvelope>("/chats/$chatId/team?since=$since").team
 
     suspend fun stopMember(chatId: String, name: String): List<String> = send<Stopped>("POST", "/chats/$chatId/team/${segment(name)}/stop", null).stopped

@@ -143,8 +143,28 @@ class ActivityTest {
     @Test
     fun theStripCountsWhatIsGoing() {
         val summary = ActivitySummary(queued = 1, working = 3, waiting = 0, done = 4, finished = 4, active = 4, total = 8)
-        assertEquals(listOf("working" to 3, "queued" to 1), ActivityLogic.stripCounts(summary))
+        assertEquals(listOf("working" to 3, "queued" to 1, "finished" to 4), ActivityLogic.stripCounts(summary))
         assertTrue(ActivityLogic.stripCounts(ActivitySummary(done = 2, finished = 2)).isEmpty())
+    }
+
+    @Test
+    fun autoCompactIsCountedOnlyAgainstAKnownWindow() {
+        val context = read("activity", ActivityEnvelope.serializer()).activity.context!!
+        // 95 % of 128k is 121.6k; 41k used.
+        assertEquals(80_600, ActivityLogic.untilAutoCompact(context))
+        assertEquals(0, ActivityLogic.untilAutoCompact(context.copy(used = 127_000)))
+        assertNull(ActivityLogic.untilAutoCompact(context.copy(threshold = 0)))
+        assertNull(ActivityLogic.untilAutoCompact(context.copy(limit = 0)))
+    }
+
+    @Test
+    fun aTaskIsCalledByWhatItWasAskedToDo() {
+        val activity = read("activity", ActivityEnvelope.serializer()).activity
+        val (baker, command) = activity.agents
+        assertEquals("baker", ActivityLogic.title(baker))
+        assertEquals("find mallorn leaves", ActivityLogic.title(baker.children[1]))
+        assertEquals("pytest", ActivityLogic.title(command))
+        assertEquals(2, ActivityLogic.descendants(baker))
     }
 
     @Test
@@ -167,10 +187,10 @@ class ActivityTest {
         val activity = read("activity", ActivityEnvelope.serializer()).activity
         val (baker, _) = activity.agents
         val wrapper = baker.children[0]
-        val helper = baker.children[1]
+        val subagent = baker.children[1]
         assertEquals(105L, ActivityLogic.elapsed(baker, readAtMillis = 1_000, nowMillis = 11_000))
         assertEquals(0L, ActivityLogic.elapsed(wrapper, readAtMillis = 1_000, nowMillis = 11_000))
-        assertEquals(12L, ActivityLogic.elapsed(helper, readAtMillis = 1_000, nowMillis = 11_000))
+        assertEquals(12L, ActivityLogic.elapsed(subagent, readAtMillis = 1_000, nowMillis = 11_000))
     }
 
     @Test

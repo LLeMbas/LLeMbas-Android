@@ -44,16 +44,46 @@ object ActivityLogic {
     }
 
     /**
-     * What the strip above the composer says, as counts in order: agents working, queued,
-     * waiting. Empty when nothing is going -- then there is no strip.
+     * What the strip above the composer says, as counts in order: running, queued, waiting,
+     * then finished. Empty when nothing is going -- then there is no strip, whatever finished.
      */
-    fun stripCounts(summary: ActivitySummary): List<Pair<String, Int>> =
-        listOf("working" to summary.working, "queued" to summary.queued, "waiting" to summary.waiting).filter { it.second > 0 }
+    fun stripCounts(summary: ActivitySummary): List<Pair<String, Int>> {
+        if (summary.working + summary.queued + summary.waiting == 0) return emptyList()
+        return listOf(
+            "working" to summary.working,
+            "queued" to summary.queued,
+            "waiting" to summary.waiting,
+            "finished" to summary.finished,
+        ).filter { it.second > 0 }
+    }
+
+    /**
+     * How many tokens are left before the chat compacts itself: the window's [ContextUse.threshold]
+     * per cent, less what is used. Null when it never will -- the threshold is 0 (off) or 100,
+     * or the window is unknown -- since a count against an unknown window is a guess.
+     */
+    fun untilAutoCompact(context: ContextUse): Int? {
+        if (context.limit <= 0 || context.threshold !in 1..99) return null
+        return (context.limit.toLong() * context.threshold / 100 - context.used).toInt().coerceAtLeast(0)
+    }
+
+    /**
+     * What a task is called in its row: a team's member by its name, a subagent or a command
+     * by what it was asked to do (its role, else its brief), its id only when it has neither.
+     */
+    fun title(agent: ActivityAgent): String = if (agent.kind == "member") {
+        agent.name
+    } else {
+        agent.role.ifBlank { agent.brief }.ifBlank { agent.name }
+    }
+
+    /** Every task under [agent], however deep. */
+    fun descendants(agent: ActivityAgent): Int = agent.children.sumOf { 1 + descendants(it) }
 
     /** The top level split as the panel shows it: those still going, then the ended ones. */
     fun split(agents: List<ActivityAgent>): Pair<List<ActivityAgent>, List<ActivityAgent>> = agents.partition { it.isActive }
 
-    /** Every agent of a forest with its helpers under it, in tree order, for drawing as rows. */
+    /** Every agent of a forest with its subagents under it, in tree order, for drawing as rows. */
     fun flatten(agents: List<ActivityAgent>): List<ActivityAgent> = agents.flatMap { listOf(it) + flatten(it.children) }
 
     /**

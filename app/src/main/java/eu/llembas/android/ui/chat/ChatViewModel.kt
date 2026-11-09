@@ -65,6 +65,8 @@ data class ChatState(
     val teamOffered: Boolean = false,
     /** Whether the events route is followed; without it an open panel polls. */
     val activityLive: Boolean = false,
+    /** A Compact asked for from the activity sheet and not answered yet. */
+    val compacting: Boolean = false,
     /** What a chat not made yet will be made with: chosen in the top bar and the tune sheet. */
     val draft: Draft = Draft(),
 )
@@ -421,6 +423,24 @@ class ChatViewModel(app: Application) :
     fun stopAgent(agent: ActivityAgent) = control { api, chat ->
         api.stopAgent(chat.id, agent.kind, agent.id)
         loadActivity(context = false)
+    }
+
+    /** Compact the chat now; the transcript and the sheet are read again for what it changed. */
+    fun compact() {
+        val chat = _state.value.chat ?: return
+        if (_state.value.compacting) return
+        viewModelScope.launch {
+            _state.update { it.copy(compacting = true) }
+            try {
+                api().compact(chat.id)
+                refresh()
+                loadActivity()
+            } catch (e: Exception) {
+                fail(e)
+            } finally {
+                _state.update { it.copy(compacting = false) }
+            }
+        }
     }
 
     override fun delete(then: () -> Unit) = control { api, chat ->

@@ -521,7 +521,7 @@ data class AgentStep(val tool: String = "", val label: String = "", val title: S
 
 /**
  * One background agent: a team's member (`kind` member, [id] its name) or a job (`kind` job;
- * [type] `subagent` or `command`), with its own helpers in [children]. [role], [brief] and
+ * [type] `subagent` or `command`), with its own subagents in [children]. [role], [brief] and
  * [text] are a model's words: shown as text, never as anything richer.
  */
 @Serializable

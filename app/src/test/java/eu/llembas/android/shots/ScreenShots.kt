@@ -16,6 +16,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import eu.llembas.android.ui.chat.ActivityActions
+import eu.llembas.android.ui.chat.ActivityContent
 import eu.llembas.android.ui.chat.ChatActions
 import eu.llembas.android.ui.chat.ChatContent
 import eu.llembas.android.ui.chat.ModelPickerContent
@@ -41,6 +43,8 @@ import java.time.ZoneOffset
 private object NoChatActions : ChatActions
 
 private object NoDrawerActions : DrawerActions
+
+private object NoActivityActions : ActivityActions
 
 private object NoSettingsActions : SettingsActions
 
@@ -125,6 +129,21 @@ class ScreenShots {
     fun scheduleRun() {
         shoot("12-schedule-run") { RunContent(Fakes.run) }
         shoot("12-schedule-run", Phone.Small) { RunContent(Fakes.run) }
+    }
+
+    @Test
+    fun activity() {
+        val sheet: @Composable () -> Unit = { SheetOver { ActivityContent(Fakes.activity, readAt = 0, now = 0, actions = NoActivityActions) } }
+        val open: @Composable () -> Unit = {
+            SheetOver { ActivityContent(Fakes.activity, readAt = 0, now = 0, actions = NoActivityActions, unfolded = true) }
+        }
+        shoot("14-activity", content = sheet)
+        shoot("14-activity", Phone.Small, content = sheet)
+        shoot("14-activity", Phone.Small, fontScale = 1.5f, content = sheet)
+        shoot("15-activity-open", content = open)
+        shoot("16-activity-new-chat") {
+            SheetOver { ActivityContent(eu.llembas.android.api.Activity(), readAt = 0, now = 0, actions = NoActivityActions, canCompact = false) }
+        }
     }
 
     @Test

@@ -1,9 +1,13 @@
 package eu.llembas.android.shots
 
+import eu.llembas.android.api.ActivityAgent
+import eu.llembas.android.api.ActivityEnvelope
 import eu.llembas.android.api.ActivitySummary
+import eu.llembas.android.api.AgentStep
 import eu.llembas.android.api.AgentsSetting
 import eu.llembas.android.api.Attachment
 import eu.llembas.android.api.Chat
+import eu.llembas.android.api.ContextPart
 import eu.llembas.android.api.LembasJson
 import eu.llembas.android.api.LinkedDevice
 import eu.llembas.android.api.LiveReply
@@ -111,7 +115,61 @@ object Fakes {
         messages = listOf(question, answer, packing, packingAnswer),
         models = models,
         teamOffered = true,
-        summary = ActivitySummary(working = 2, active = 2, total = 2),
+        summary = ActivitySummary(working = 2, queued = 1, done = 4, finished = 4, active = 3, total = 7),
+    )
+
+    private val fixture = LembasJson.decodeFromString(ActivityEnvelope.serializer(), text("activity")).activity
+
+    private fun job(id: String, type: String, role: String, brief: String, state: String, seconds: Int, stoppable: Boolean = true) = ActivityAgent(
+        kind = "job",
+        id = id,
+        type = type,
+        name = id,
+        role = role,
+        brief = brief,
+        state = state,
+        seconds = seconds,
+        model = if (type == "command") "" else "qwen",
+        agent = if (type == "command") "" else "explore",
+        manager = "lead",
+        stoppable = stoppable,
+        transcript = type != "command",
+    )
+
+    /**
+     * The activity sheet with everything in it, as the reference has it: a context two thirds
+     * free with auto-compact ahead, a team with a member under the lead, subagents and commands
+     * running, four finished, the room and no plan.
+     */
+    val activity = fixture.copy(
+        summary = ActivitySummary(queued = 1, working = 4, done = 4, finished = 4, active = 5, total = 9),
+        agents = listOf(
+            fixture.agents[0].copy(seconds = 1_135, step = AgentStep(tool = "edit", label = "Edit", title = "recipe.md", running = true)),
+            job("job2", "subagent", "Find where the waybread recipe is used", "Search the notes for every use of the recipe", "working", 97),
+            job("job3", "command", "Run related test files", "pytest -q tests/test_bake.py", "working", 40),
+            fixture.agents[1].copy(role = "Relax status, rerun targeted tests", seconds = 39),
+        ) + listOf(
+            job("job4", "subagent", "Read the old packing list", "", "done", 64, stoppable = false),
+            job("job5", "command", "Lint the notes", "ruff check", "done", 12, stoppable = false),
+            job("job6", "subagent", "Check the weather on the pass", "", "error", 8, stoppable = false),
+            job("job7", "command", "Count the provisions", "wc -l list.md", "stopped", 3, stoppable = false),
+        ),
+        context = fixture.context!!.copy(
+            used = 41_200,
+            limit = 128_000,
+            percent = 32.2,
+            categories = listOf(
+                ContextPart("messages", 26_300, 20.5),
+                ContextPart("memory", 2_400, 1.9),
+                ContextPart("mcp_tools", 2_300, 1.8),
+                ContextPart("tools", 2_000, 1.6),
+                ContextPart("instructions", 1_300, 1.0),
+                ContextPart("system", 500, 0.4),
+                ContextPart("since", 200, 0.1),
+                ContextPart("buffer", 6_400, 5.0),
+                ContextPart("free", 80_400, 62.8),
+            ),
+        ),
     )
 
     /** The last reply while it is being written: its tools done, its words coming in. */

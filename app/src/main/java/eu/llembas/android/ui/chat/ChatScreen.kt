@@ -142,10 +142,8 @@ fun ChatScreen(
     )
 
     if (activityOpen) {
-        state.chat?.let { chat ->
-            // A device's files are on the device: the panel lists them, the tree cannot open them.
-            ActivityPanel(chat.id, state, model, canOpenFiles = !chat.isAgent, onClose = { activityOpen = false })
-        }
+        // A device's files are on the device: the sheet lists them, the tree cannot open them.
+        ActivityPanel(state.chat?.id, state, model, canOpenFiles = !isAgent, onClose = { activityOpen = false })
     }
     showing?.let { file ->
         state.chat?.id?.let { id -> FileViewer(id, file, onClose = { showing = null }) }
@@ -219,15 +217,13 @@ fun ChatContent(
                         )
                     },
                     actions = {
+                        // The activity sheet, always within reach: context, background tasks, plan.
+                        IconButton(onClick = onActivity) { Icon(Icons.Filled.Bolt, contentDescription = stringResource(R.string.activity_open)) }
                         if (chat != null) {
                             IconButton(onClick = onNewChat) { Icon(Icons.Filled.EditNote, contentDescription = stringResource(R.string.new_chat)) }
                             Box {
                                 IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.more)) }
                                 DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                                    MenuItem(Icons.Filled.Bolt, stringResource(R.string.activity)) {
-                                        menu = false
-                                        onActivity()
-                                    }
                                     MenuItem(Icons.Filled.DriveFileRenameOutline, stringResource(R.string.rename_chat)) {
                                         menu = false
                                         renaming = true

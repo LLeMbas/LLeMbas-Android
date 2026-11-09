@@ -21,7 +21,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -32,7 +31,9 @@ import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Groups
-import androidx.compose.material.icons.filled.StopCircle
+import androidx.compose.material.icons.filled.SmartToy
+import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
@@ -40,12 +41,14 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -72,6 +75,7 @@ import eu.llembas.android.api.Activity
 import eu.llembas.android.api.ActivityAgent
 import eu.llembas.android.api.ActivityLogic
 import eu.llembas.android.api.ActivitySummary
+import eu.llembas.android.api.ActivityTeam
 import eu.llembas.android.api.AgentDetail
 import eu.llembas.android.api.ContextUse
 import eu.llembas.android.api.Output
@@ -84,9 +88,12 @@ import eu.llembas.android.ui.theme.Palette
 import eu.llembas.android.ui.viewer.TreeFileViewer
 import kotlinx.coroutines.delay
 
-// --- The strip above the composer ---------------------------------------------------------
+// --- The summary chip above the composer --------------------------------------------------
 
-/** What runs in the background, in one line ("3 agents working · 1 queued"), opening the panel. */
+/**
+ * What runs in the background, in one line ("2 running · 1 queued · 4 finished"), opening the
+ * activity sheet. Only while anything runs: finished work alone is no reason for a line.
+ */
 @Composable
 fun ActivityStrip(summary: ActivitySummary, onOpen: () -> Unit) {
     val counts = ActivityLogic.stripCounts(summary)
@@ -97,8 +104,9 @@ fun ActivityStrip(summary: ActivitySummary, onOpen: () -> Unit) {
         onClick = onOpen,
         color = palette.surfaceRaised,
         contentColor = palette.ink,
-        shape = RoundedCornerShape(8.dp),
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp).heightIn(min = 48.dp),
+        shape = RoundedCornerShape(12.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, palette.border),
+        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp).heightIn(min = 48.dp),
     ) {
         Row(Modifier.padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Filled.Bolt, contentDescription = null, tint = palette.accent, modifier = Modifier.size(18.dp))
@@ -116,7 +124,7 @@ fun ActivityStrip(summary: ActivitySummary, onOpen: () -> Unit) {
 
 @Composable
 private fun stateCount(state: String, n: Int): String = when (state) {
-    "working" -> if (n == 1) stringResource(R.string.agents_one_working) else stringResource(R.string.agents_n_working, n.toString())
+    "working" -> stringResource(R.string.tasks_n_running, n.toString())
     "queued" -> stringResource(R.string.agents_n_queued, n.toString())
     "waiting" -> stringResource(R.string.agents_n_waiting, n.toString())
     else -> stringResource(R.string.agents_n_finished, n.toString())
@@ -132,7 +140,14 @@ private fun stateWord(state: String): String = when (state) {
     else -> stringResource(R.string.agent_state_error)
 }
 
-/** The state's dot, in the web panel's colours: accent working, warning waiting, success done. */
+@Composable
+private fun kindWord(agent: ActivityAgent): String = when {
+    agent.kind == "member" -> stringResource(R.string.task_member)
+    agent.type == "command" -> stringResource(R.string.task_command)
+    else -> stringResource(R.string.task_subagent)
+}
+
+/** The state's colour, in the web panel's: accent working, warning waiting, success done. */
 private fun stateColour(palette: Palette, state: String): Color = when (state) {
     "working" -> palette.accent
     "queued", "waiting" -> palette.warning
@@ -168,32 +183,43 @@ private fun categoryName(key: String): String = when (key) {
     else -> key
 }
 
-// --- The panel ------------------------------------------------------------------------------
+// --- The sheet ------------------------------------------------------------------------------
 
 /**
- * The chat's activity, full screen: Context, Outputs, Background tasks (with the team's room)
- * and Plan -- the web's activity panel, from `GET /chats/{chat}/activity`. Kept current by the
- * events route through the view model; without it, read again every few seconds while open.
- * Everything an agent wrote is a model's words: names, roles and briefs as plain text, the
- * room and replies through [MarkdownText]'s untrusted rules.
+ * What the activity sheet asks of the chat. Every action has a do-nothing default, so the
+ * screenshot tests draw the sheet with fake data and nothing behind it.
+ */
+interface ActivityActions {
+    fun stop(agent: ActivityAgent) {}
+    fun read(agent: ActivityAgent) {}
+    fun openFile(path: String) {}
+    fun compact() {}
+}
+
+/**
+ * The chat's activity as a sheet over it, from the top bar's button or the strip: Context,
+ * Outputs, Background tasks, the team's Room and Plan -- the web's side panel, from
+ * `GET /chats/{chat}/activity`. Kept current by the events route through the view model;
+ * without it, read again every few seconds while open. A chat not made yet has nothing to
+ * show but says so in each section. Stopping anything asks first.
  */
 @Composable
-fun ActivityPanel(chatId: String, state: ChatState, model: ChatViewModel, canOpenFiles: Boolean, onClose: () -> Unit) {
-    val activity = state.activity
+fun ActivityPanel(chatId: String?, state: ChatState, model: ChatViewModel, canOpenFiles: Boolean, onClose: () -> Unit) {
     val live by rememberUpdatedState(state.activityLive)
     var now by remember { mutableLongStateOf(SystemClock.elapsedRealtime()) }
     var stopping by remember { mutableStateOf<ActivityAgent?>(null) }
     var reading by remember { mutableStateOf<ActivityAgent?>(null) }
     var viewing by remember { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(chatId) {
+        if (chatId == null) return@LaunchedEffect
         model.panel(true)
         var ticks = 0
         while (true) {
             delay(1_000)
             now = SystemClock.elapsedRealtime()
             ticks++
-            // Without the events route, the panel reads itself again: cheaply, every 5 s.
+            // Without the events route, the sheet reads itself again: cheaply, every 5 s.
             if (!live && ticks % 5 == 0) model.loadActivity(context = false)
         }
     }
@@ -202,54 +228,44 @@ fun ActivityPanel(chatId: String, state: ChatState, model: ChatViewModel, canOpe
         model.panel(false)
         onClose()
     }
-    Dialog(onDismissRequest = close, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Scaffold(
-            topBar = {
-                TopAppBar(
-                    navigationIcon = {
-                        IconButton(onClick = close) { Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.close)) }
-                    },
-                    title = { Text(stringResource(R.string.activity)) },
-                )
-            },
-        ) { padding ->
-            if (activity == null) {
-                Box(Modifier.padding(padding).fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
-                return@Scaffold
-            }
-            LazyColumn(
-                Modifier.padding(padding).fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                item { Section(stringResource(R.string.activity_context)) { ContextSection(activity.context) } }
-                item {
-                    Section(stringResource(R.string.activity_outputs), count = activity.outputs.size.takeIf { it > 0 }) {
-                        OutputsSection(activity.outputs, canOpenFiles) { viewing = it }
-                    }
-                }
-                item {
-                    Section(stringResource(R.string.activity_tasks)) {
-                        TasksSection(activity, state.activityAt, now, onStop = { stopping = it }, onRead = { reading = it })
-                    }
-                }
-                ActivityLogic.plan(activity.plan)?.let { plan ->
-                    item { Section(stringResource(R.string.mode_plan)) { PlanBody(plan) } }
-                }
-            }
+    val actions = object : ActivityActions {
+        override fun stop(agent: ActivityAgent) {
+            stopping = agent
         }
+
+        override fun read(agent: ActivityAgent) {
+            reading = agent
+        }
+
+        override fun openFile(path: String) {
+            if (canOpenFiles) viewing = path
+        }
+
+        override fun compact() = model.compact()
+    }
+    ModalBottomSheet(onDismissRequest = close, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        ActivityContent(
+            activity = if (chatId == null) Activity() else state.activity,
+            readAt = state.activityAt,
+            now = now,
+            actions = actions,
+            canCompact = chatId != null && !state.running,
+            compacting = state.compacting,
+            canOpenFiles = canOpenFiles,
+            onClose = close,
+        )
     }
 
     stopping?.let { agent ->
         AlertDialog(
             onDismissRequest = { stopping = null },
-            title = { Text(stringResource(R.string.agent_stop, agent.name)) },
+            title = { Text(stringResource(R.string.agent_stop, ActivityLogic.title(agent))) },
             text = {
                 Text(
                     if (agent.kind == "member") {
                         stringResource(R.string.agent_stop_member_confirm, agent.name)
                     } else {
-                        stringResource(R.string.agent_stop_confirm, agent.name)
+                        stringResource(R.string.agent_stop_confirm, ActivityLogic.title(agent))
                     },
                 )
             },
@@ -262,13 +278,70 @@ fun ActivityPanel(chatId: String, state: ChatState, model: ChatViewModel, canOpe
             dismissButton = { TextButton(onClick = { stopping = null }) { Text(stringResource(R.string.cancel)) } },
         )
     }
-    reading?.let { agent -> AgentConversation(chatId, agent, onClose = { reading = null }) }
+    if (chatId != null) reading?.let { agent -> AgentConversation(chatId, agent, onClose = { reading = null }) }
     viewing?.let { path -> TreeFileViewer(path, onClose = { viewing = null }) }
 }
 
-/** A heading that folds its section away, open to begin with. */
+/**
+ * The sheet as it is drawn, from its facts alone: what the screenshot tests render. [activity]
+ * null is still being read; [now] and [readAt] are the clock that elapsed time counts on;
+ * [unfolded] opens the first task and the finished ones, for the screenshots to see them.
+ */
 @Composable
-private fun Section(title: String, count: Int? = null, content: @Composable () -> Unit) {
+fun ActivityContent(
+    activity: Activity?,
+    readAt: Long,
+    now: Long,
+    actions: ActivityActions,
+    canCompact: Boolean = true,
+    compacting: Boolean = false,
+    canOpenFiles: Boolean = true,
+    unfolded: Boolean = false,
+    onClose: () -> Unit = {},
+) {
+    val palette = LocalPalette.current
+    Column(Modifier.fillMaxWidth()) {
+        Row(
+            Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(stringResource(R.string.activity), style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+            IconButton(onClick = onClose) { Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.close), tint = palette.inkMuted) }
+        }
+        if (activity == null) {
+            Box(Modifier.fillMaxWidth().height(240.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+            return@Column
+        }
+        LazyColumn(
+            Modifier.fillMaxWidth(),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 32.dp),
+        ) {
+            item {
+                Section(stringResource(R.string.activity_context)) {
+                    ContextSection(activity.context, canCompact, compacting, actions::compact)
+                }
+            }
+            if (activity.outputs.isNotEmpty()) {
+                item {
+                    Section(stringResource(R.string.activity_outputs), count = activity.outputs.size) {
+                        OutputsSection(activity.outputs, canOpenFiles, actions::openFile)
+                    }
+                }
+            }
+            item { Section(stringResource(R.string.activity_tasks)) { TasksSection(activity, readAt, now, actions, unfolded) } }
+            activity.team?.let { team ->
+                item { Section(stringResource(R.string.team_room), count = team.room.size.takeIf { it > 0 }) { RoomSection(team) } }
+            }
+            ActivityLogic.plan(activity.plan)?.let { plan ->
+                item { Section(stringResource(R.string.mode_plan), divider = false) { PlanBody(plan) } }
+            }
+        }
+    }
+}
+
+/** A heading that folds its section away, open to begin with, with an optional count beside it. */
+@Composable
+private fun Section(title: String, count: Int? = null, divider: Boolean = true, content: @Composable () -> Unit) {
     val palette = LocalPalette.current
     var open by rememberSaveable(title) { mutableStateOf(true) }
     Column(Modifier.fillMaxWidth()) {
@@ -281,85 +354,113 @@ private fun Section(title: String, count: Int? = null, content: @Composable () -
             Icon(if (open) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore, contentDescription = null, tint = palette.inkFaint)
         }
         if (open) content()
-        HorizontalDivider(Modifier.padding(top = 8.dp), color = palette.border)
+        if (divider) HorizontalDivider(Modifier.padding(top = 12.dp), color = palette.border)
     }
 }
 
 @Composable
 private fun Empty(text: String) {
-    Text(text, style = MaterialTheme.typography.bodySmall, color = LocalPalette.current.inkMuted)
+    Text(text, style = MaterialTheme.typography.bodySmall, color = LocalPalette.current.inkMuted, modifier = Modifier.padding(bottom = 4.dp))
 }
 
 // --- Context --------------------------------------------------------------------------------
 
+/**
+ * The reference's Context: "N% used" and used / window on one line, the segmented bar, one row
+ * per category (swatch, name, tokens, per cent), then how far auto-compact is and the button
+ * that compacts now.
+ */
 @Composable
-private fun ContextSection(context: ContextUse?) {
+private fun ContextSection(context: ContextUse?, canCompact: Boolean, compacting: Boolean, onCompact: () -> Unit) {
     val palette = LocalPalette.current
-    if (context == null) {
-        Empty(stringResource(R.string.activity_not_measured))
-        return
-    }
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            val pct = context.percent
+        if (context == null) {
+            Empty(stringResource(R.string.activity_not_measured))
+        } else {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                val pct = context.percent
+                Text(
+                    if (pct != null) stringResource(R.string.activity_used, ActivityLogic.percent(pct)) else ActivityLogic.compactTokens(context.used),
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(
+                    if (context.limit > 0) {
+                        "${ActivityLogic.compactTokens(context.used)} / ${ActivityLogic.compactTokens(context.limit)}"
+                    } else {
+                        stringResource(R.string.activity_window_unknown)
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = palette.inkMuted,
+                )
+            }
+            val parts = ActivityLogic.barParts(context)
+            if (parts.isNotEmpty()) {
+                // One segment per category, by its tokens; the rest of the window is the bar's own
+                // background. Weights, so the segments always fill exactly the bar's width.
+                Row(Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)).background(palette.surfaceRaised)) {
+                    parts.forEach { part -> Box(Modifier.weight(part.tokens.toFloat()).fillMaxHeight().background(categoryColour(palette, part.key))) }
+                    val rest = (context.limit - parts.sumOf { it.tokens }).coerceAtLeast(0)
+                    if (rest > 0) Spacer(Modifier.weight(rest.toFloat()))
+                }
+            }
+            // Each row a fixed grid: swatch, the name that gives, two number columns of their own
+            // width -- the numbers line up whatever the names say in which language.
+            context.categories.forEach { part ->
+                Row(Modifier.fillMaxWidth().heightIn(min = 24.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(10.dp).clip(RoundedCornerShape(2.dp)).background(categoryColour(palette, part.key)))
+                    Text(
+                        categoryName(part.key),
+                        style = MaterialTheme.typography.bodySmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
+                    )
+                    Text(
+                        ActivityLogic.compactTokens(part.tokens),
+                        style = MaterialTheme.typography.bodySmall,
+                        textAlign = TextAlign.End,
+                        modifier = Modifier.width(56.dp),
+                    )
+                    Text(
+                        part.percent?.let { "${ActivityLogic.percent(it)}%" } ?: "—",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = palette.inkMuted,
+                        textAlign = TextAlign.End,
+                        modifier = Modifier.width(56.dp),
+                    )
+                }
+            }
             Text(
-                if (pct != null) stringResource(R.string.activity_used, ActivityLogic.percent(pct)) else ActivityLogic.compactTokens(context.used),
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.weight(1f),
+                stringResource(if (context.measured) R.string.activity_measured else R.string.activity_estimated) + " " +
+                    stringResource(R.string.activity_tools_offered, context.toolsCount.toString()),
+                style = MaterialTheme.typography.labelSmall,
+                color = palette.inkFaint,
             )
+        }
+        // How far automatic compaction is, and the button. The words give; the button keeps its
+        // own size whatever the sentence says in which language.
+        Row(Modifier.fillMaxWidth().heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically) {
+            val until = context?.let { ActivityLogic.untilAutoCompact(it) }
             Text(
-                if (context.limit > 0) {
-                    "${ActivityLogic.compactTokens(context.used)} / ${ActivityLogic.compactTokens(context.limit)}"
-                } else {
-                    stringResource(R.string.activity_window_unknown)
+                when {
+                    context == null -> ""
+                    until != null -> stringResource(R.string.activity_until_compact, ActivityLogic.compactTokens(until))
+                    context.threshold <= 0 -> stringResource(R.string.activity_compact_off)
+                    else -> ""
                 },
                 style = MaterialTheme.typography.bodySmall,
                 color = palette.inkMuted,
+                modifier = Modifier.weight(1f).padding(end = 8.dp),
             )
-        }
-        val parts = ActivityLogic.barParts(context)
-        if (parts.isNotEmpty()) {
-            // One segment per category, by its tokens; the rest of the window is the bar's own
-            // background. Weights, so the segments always fill exactly the bar's width.
-            Row(Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)).background(palette.surfaceRaised)) {
-                parts.forEach { part -> Box(Modifier.weight(part.tokens.toFloat()).fillMaxHeight().background(categoryColour(palette, part.key))) }
-                val rest = (context.limit - parts.sumOf { it.tokens }).coerceAtLeast(0)
-                if (rest > 0) Spacer(Modifier.weight(rest.toFloat()))
+            OutlinedButton(onClick = onCompact, enabled = canCompact && !compacting && context != null) {
+                if (compacting) {
+                    CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
+                    Spacer(Modifier.width(8.dp))
+                }
+                Text(stringResource(R.string.activity_compact))
             }
         }
-        // Each row a fixed grid: swatch, the name that gives, two number columns of their own
-        // width -- the numbers line up whatever the names say in which language.
-        context.categories.forEach { part ->
-            Row(Modifier.fillMaxWidth().heightIn(min = 24.dp), verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(10.dp).clip(RoundedCornerShape(2.dp)).background(categoryColour(palette, part.key)))
-                Text(
-                    categoryName(part.key),
-                    style = MaterialTheme.typography.bodySmall,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
-                )
-                Text(
-                    ActivityLogic.compactTokens(part.tokens),
-                    style = MaterialTheme.typography.bodySmall,
-                    textAlign = TextAlign.End,
-                    modifier = Modifier.width(56.dp),
-                )
-                Text(
-                    part.percent?.let { "${ActivityLogic.percent(it)}%" } ?: "—",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = palette.inkMuted,
-                    textAlign = TextAlign.End,
-                    modifier = Modifier.width(56.dp),
-                )
-            }
-        }
-        Text(
-            stringResource(if (context.measured) R.string.activity_measured else R.string.activity_estimated) + " " +
-                stringResource(R.string.activity_tools_offered, context.toolsCount.toString()),
-            style = MaterialTheme.typography.labelSmall,
-            color = palette.inkFaint,
-        )
     }
 }
 
@@ -368,10 +469,6 @@ private fun ContextSection(context: ContextUse?) {
 @Composable
 private fun OutputsSection(outputs: List<Output>, canOpen: Boolean, onOpen: (String) -> Unit) {
     val palette = LocalPalette.current
-    if (outputs.isEmpty()) {
-        Empty(stringResource(R.string.outputs_empty))
-        return
-    }
     Column {
         outputs.forEach { out ->
             Row(
@@ -406,8 +503,13 @@ private fun OutputsSection(outputs: List<Output>, canOpen: Boolean, onOpen: (Str
 
 // --- Background tasks -----------------------------------------------------------------------
 
+/**
+ * Subagents, a team's members and background commands, as the reference has them: "Running N"
+ * with a card per task (elapsed and a stop each, those under it folded into "N under it"),
+ * then "Finished N" folded away.
+ */
 @Composable
-private fun TasksSection(activity: Activity, readAt: Long, now: Long, onStop: (ActivityAgent) -> Unit, onRead: (ActivityAgent) -> Unit) {
+private fun TasksSection(activity: Activity, readAt: Long, now: Long, actions: ActivityActions, unfolded: Boolean) {
     val palette = LocalPalette.current
     val team = activity.team
     if (activity.agents.isEmpty() && team == null) {
@@ -415,14 +517,8 @@ private fun TasksSection(activity: Activity, readAt: Long, now: Long, onStop: (A
         return
     }
     val (live, ended) = ActivityLogic.split(activity.agents)
-    var showEnded by rememberSaveable { mutableStateOf(false) }
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        val counts = ActivityLogic.stripCounts(activity.summary)
-        Text(
-            if (counts.isEmpty()) stringResource(R.string.tasks_none_running) else counts.map { (s, n) -> stateCount(s, n) }.joinToString(" · "),
-            style = MaterialTheme.typography.bodySmall,
-            color = palette.inkMuted,
-        )
+    var showEnded by rememberSaveable { mutableStateOf(unfolded) }
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         team?.let { t ->
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Filled.Groups, contentDescription = null, tint = palette.inkMuted, modifier = Modifier.size(18.dp))
@@ -434,48 +530,118 @@ private fun TasksSection(activity: Activity, readAt: Long, now: Long, onStop: (A
             }
             if (t.goal.isNotBlank()) Text(t.goal, style = MaterialTheme.typography.bodySmall, color = palette.inkMuted)
         }
-        ActivityLogic.flatten(live).forEach { AgentRow(it, readAt, now, onStop, onRead) }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(stringResource(R.string.tasks_running), style = MaterialTheme.typography.labelLarge, color = palette.inkMuted)
+            Text(live.size.toString(), style = MaterialTheme.typography.labelLarge, color = palette.inkFaint, modifier = Modifier.padding(start = 6.dp))
+        }
+        if (live.isEmpty()) Empty(stringResource(R.string.tasks_none_running))
+        live.forEachIndexed { i, task -> TaskCard(task, readAt, now, actions, unfolded && i == 0) }
         if (ended.isNotEmpty()) {
             Row(
                 Modifier.fillMaxWidth().heightIn(min = 48.dp).clickable { showEnded = !showEnded },
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(if (showEnded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore, contentDescription = null, tint = palette.inkFaint)
+                Icon(
+                    if (showEnded) Icons.Filled.ExpandMore else Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = palette.inkFaint,
+                )
                 Text(
-                    stringResource(R.string.agents_n_finished, ended.size.toString()),
-                    style = MaterialTheme.typography.bodyMedium,
+                    stringResource(R.string.tasks_finished),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = palette.inkMuted,
                     modifier = Modifier.padding(start = 6.dp),
                 )
+                Text(ended.size.toString(), style = MaterialTheme.typography.labelLarge, color = palette.inkFaint, modifier = Modifier.padding(start = 6.dp))
             }
-            if (showEnded) ActivityLogic.flatten(ended).forEach { AgentRow(it, readAt, now, onStop, onRead) }
+            if (showEnded) ended.forEach { TaskCard(it, readAt, now, actions, unfolded = false) }
         }
-        team?.let { t ->
-            Text(stringResource(R.string.team_room), style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 12.dp))
-            if (t.room.isEmpty()) Empty(stringResource(R.string.room_empty)) else t.room.forEach { RoomEntry(it) }
+    }
+}
+
+/** One top-level task as a card of its own, with the tasks under it inside, folded. */
+@Composable
+private fun TaskCard(agent: ActivityAgent, readAt: Long, now: Long, actions: ActivityActions, unfolded: Boolean) {
+    val palette = LocalPalette.current
+    var nestedOpen by rememberSaveable(agent.kind, agent.id, "nested") { mutableStateOf(unfolded) }
+    Surface(
+        color = palette.surfaceRaised,
+        contentColor = palette.ink,
+        shape = RoundedCornerShape(12.dp),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(Modifier.padding(vertical = 2.dp)) {
+            TaskRow(agent, readAt, now, actions, unfolded)
+            val under = ActivityLogic.descendants(agent)
+            if (under > 0) {
+                Row(
+                    Modifier.fillMaxWidth().heightIn(min = 40.dp).clickable { nestedOpen = !nestedOpen }.padding(start = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        if (nestedOpen) Icons.Filled.ExpandMore else Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                        contentDescription = null,
+                        tint = palette.inkFaint,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Text(
+                        stringResource(R.string.tasks_nested, under.toString()),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = palette.inkMuted,
+                        modifier = Modifier.padding(start = 4.dp),
+                    )
+                }
+                if (nestedOpen) ActivityLogic.flatten(agent.children).forEach { TaskRow(it, readAt, now, actions, unfolded = false) }
+            }
         }
     }
 }
 
 /**
- * One agent: a fixed row (state dot, what it is -- the part that gives, cut not wrapped --,
- * elapsed time in a column of its own width, the stop button at its tap size), indented by
- * its depth in the tree; tapped, it opens to its brief, model, latest step and what it is
- * writing, and the way into its conversation.
+ * One task: a fixed row (chevron, kind icon, what it is -- the part that gives, cut not
+ * wrapped --, elapsed time in a column of its own width, the stop square at its tap size),
+ * indented by its depth; tapped, it opens to its brief, model, latest step and live text, and
+ * the way into its conversation.
  */
 @Composable
-private fun AgentRow(agent: ActivityAgent, readAt: Long, now: Long, onStop: (ActivityAgent) -> Unit, onRead: (ActivityAgent) -> Unit) {
+private fun TaskRow(agent: ActivityAgent, readAt: Long, now: Long, actions: ActivityActions, unfolded: Boolean) {
     val palette = LocalPalette.current
-    var open by rememberSaveable(agent.kind, agent.id) { mutableStateOf(false) }
+    var open by rememberSaveable(agent.kind, agent.id) { mutableStateOf(unfolded) }
     Column(Modifier.fillMaxWidth().padding(start = (16 * agent.depth.coerceIn(0, 4)).dp)) {
         Row(
-            Modifier.fillMaxWidth().heightIn(min = 48.dp).clickable { open = !open },
+            Modifier.fillMaxWidth().heightIn(min = 48.dp).clickable { open = !open }.padding(start = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box(Modifier.size(8.dp).clip(CircleShape).background(stateColour(palette, agent.state)))
+            Icon(
+                if (open) Icons.Filled.ExpandMore else Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = palette.inkFaint,
+                modifier = Modifier.size(18.dp),
+            )
+            Icon(
+                when {
+                    agent.kind == "member" -> Icons.Filled.Groups
+                    agent.type == "command" -> Icons.Filled.Terminal
+                    else -> Icons.Filled.SmartToy
+                },
+                contentDescription = kindWord(agent),
+                tint = stateColour(palette, agent.state),
+                modifier = Modifier.padding(start = 4.dp).size(18.dp),
+            )
             Column(Modifier.weight(1f).padding(horizontal = 8.dp)) {
-                Text(agent.name, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                if (agent.role.isNotBlank()) {
-                    Text(agent.role, style = MaterialTheme.typography.labelSmall, color = palette.inkMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(ActivityLogic.title(agent), style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                val sub = listOfNotNull(
+                    if (agent.kind == "member") agent.role.ifBlank { null } else null,
+                    if (agent.isActive) null else stateWord(agent.state),
+                )
+                if (sub.isNotEmpty()) {
+                    Text(
+                        sub.joinToString(" · "),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = palette.inkMuted,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
                 }
             }
             Text(
@@ -486,23 +652,40 @@ private fun AgentRow(agent: ActivityAgent, readAt: Long, now: Long, onStop: (Act
                 modifier = Modifier.width(64.dp),
             )
             Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
-                if (agent.stoppable) {
-                    IconButton(onClick = { onStop(agent) }) {
-                        Icon(Icons.Filled.StopCircle, contentDescription = stringResource(R.string.agent_stop, agent.name), tint = palette.inkMuted)
+                if (agent.stoppable && agent.isActive) {
+                    IconButton(onClick = { actions.stop(agent) }) {
+                        Box(
+                            Modifier.size(24.dp).clip(RoundedCornerShape(6.dp)).background(palette.surfaceActive),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                Icons.Filled.Stop,
+                                contentDescription = stringResource(R.string.agent_stop, ActivityLogic.title(agent)),
+                                tint = palette.ink,
+                                modifier = Modifier.size(16.dp),
+                            )
+                        }
                     }
                 }
             }
         }
         if (open) {
-            Column(Modifier.padding(start = 16.dp, bottom = 8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Column(Modifier.padding(start = 34.dp, end = 12.dp, bottom = 10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 val facts = listOfNotNull(
+                    kindWord(agent),
                     stateWord(agent.state),
                     agent.agent.ifBlank { null },
                     agent.model.ifBlank { null },
                     if (agent.steps > 0) stringResource(R.string.agent_steps, agent.steps.toString(), agent.tools.toString()) else null,
                 )
                 Text(facts.joinToString(" · "), style = MaterialTheme.typography.labelSmall, color = palette.inkMuted)
-                if (agent.brief.isNotBlank()) Text(agent.brief, style = MaterialTheme.typography.bodySmall)
+                if (agent.brief.isNotBlank() && agent.brief != ActivityLogic.title(agent)) {
+                    Text(
+                        agent.brief,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontFamily = if (agent.type == "command") FontFamily.Monospace else null,
+                    )
+                }
                 agent.step?.let { step ->
                     Text(
                         listOf(step.label.ifBlank { step.tool }, step.title).filter { it.isNotBlank() }.joinToString(" "),
@@ -517,7 +700,7 @@ private fun AgentRow(agent: ActivityAgent, readAt: Long, now: Long, onStop: (Act
                     Text(agent.text, style = MaterialTheme.typography.bodySmall, color = palette.ink, maxLines = 6, overflow = TextOverflow.Ellipsis)
                 }
                 if (agent.transcript) {
-                    OutlinedButton(onClick = { onRead(agent) }) {
+                    OutlinedButton(onClick = { actions.read(agent) }) {
                         Icon(Icons.Filled.Visibility, contentDescription = null, modifier = Modifier.size(18.dp))
                         Text(stringResource(R.string.agent_open_conversation), modifier = Modifier.padding(start = 6.dp))
                     }
@@ -525,6 +708,13 @@ private fun AgentRow(agent: ActivityAgent, readAt: Long, now: Long, onStop: (Act
             }
         }
     }
+}
+
+// --- The room -------------------------------------------------------------------------------
+
+@Composable
+private fun RoomSection(team: ActivityTeam) {
+    if (team.room.isEmpty()) Empty(stringResource(R.string.room_empty)) else Column { team.room.forEach { RoomEntry(it) } }
 }
 
 @Composable

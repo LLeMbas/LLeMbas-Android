@@ -5,6 +5,24 @@ is in alpha and releases come off `main`.
 
 ## [Unreleased]
 
+### Changed
+
+- **Subagents, by that name.** Everything the app says about the work a chat hands off now
+  calls it a subagent -- the strip, the activity sheet and the chat's options. The team's size
+  in Options is **Subagents**, fewest and most.
+- **The activity sheet, laid out as a side panel is on a computer**, and always one tap away:
+  the button at the top of every chat (a new one too) opens it as a sheet. **Context**: how
+  much of the window is used, in per cent and in tokens of the window, a bar split by what
+  fills it, each part with its tokens and share, how far it is to compacting by itself -- and a
+  **Compact** button that does it now. **Background tasks**: what is running -- subagents, a
+  team's members and background commands -- each on a card with how long it has run and a
+  stop button (which asks first); a card opens to what it was asked, its latest step, what it
+  is writing and its whole conversation, and folds those working under it into "N under it".
+  The finished ones are folded away under **Finished**. Then the team's **Room** and the
+  **Plan**.
+- **The line above the message box** says what runs in the background -- "2 running · 1 queued
+  · 4 finished" -- only while anything does, and opens the sheet.
+
 ## [1.0.0-beta.3] — 2026-11-09
 
 For LLeMbas server 2.0 (2.0.0-beta.6 or later for scheduled tasks).
