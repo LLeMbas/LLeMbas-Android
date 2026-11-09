@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
@@ -35,11 +36,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AttachFile
+import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material3.AlertDialog
@@ -57,6 +61,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SheetValue
+import androidx.compose.material3.Slider
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -76,19 +81,25 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import eu.llembas.android.R
 import eu.llembas.android.api.AgentTarget
+import eu.llembas.android.api.AgentsSetting
 import eu.llembas.android.api.LinkedDevice
 import eu.llembas.android.api.Message
 import eu.llembas.android.api.ModelInfo
 import eu.llembas.android.api.ShowCard
 import eu.llembas.android.assist.Recorder
 import eu.llembas.android.lembas
+import eu.llembas.android.ui.ModelAvatar
 import eu.llembas.android.ui.theme.LocalPalette
 import eu.llembas.android.ui.viewer.FileViewer
 import kotlinx.coroutines.launch
@@ -110,7 +121,9 @@ fun ChatScreen(
     var editing by remember { mutableStateOf<Message?>(null) }
     var showing by remember { mutableStateOf<ShowCard?>(null) }
     var renaming by remember { mutableStateOf(false) }
+    var activityOpen by rememberSaveable { mutableStateOf(false) }
     val context = LocalContext.current
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
     val scope = rememberCoroutineScope()
     val copy: (String) -> Unit = { text ->
         context.getSystemService(ClipboardManager::class.java)?.setPrimaryClip(ClipData.newPlainText("LLeMbas", text))
@@ -122,6 +135,10 @@ fun ChatScreen(
     // A new chat gets its id from its first message; the route follows, so Back and a
     // rotation land on the chat rather than on an empty composer.
     LaunchedEffect(state.chat?.id) { state.chat?.id?.let { if (it != chatId) onOpened(it) } }
+    // The chat's background agents, followed while the screen is in front and not otherwise.
+    LaunchedEffect(state.chat?.id) {
+        if (state.chat?.id != null) lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) { model.watchActivity() }
+    }
     LaunchedEffect(state.error, state.notice) {
         (state.error ?: state.notice)?.let {
             snackbar.showSnackbar(it)
@@ -156,14 +173,22 @@ fun ChatScreen(
                     }
                 },
                 title = {
-                    Text(
-                        state.chat?.title?.ifBlank { null } ?: stringResource(if (agent) R.string.new_agent_chat else R.string.new_chat),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        state.chat?.model?.ifBlank { null }?.let { id ->
+                            ModelAvatar(state.models.firstOrNull { it.id == id }, id, size = 28.dp, modifier = Modifier.padding(end = 10.dp))
+                        }
+                        Text(
+                            state.chat?.title?.ifBlank { null } ?: stringResource(if (agent) R.string.new_agent_chat else R.string.new_chat),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
                 },
                 actions = {
                     if (state.chat != null) {
+                        IconButton(onClick = { activityOpen = true }) {
+                            Icon(Icons.Filled.Bolt, contentDescription = stringResource(R.string.activity_open))
+                        }
                         IconButton(onClick = { menu = true }) {
                             Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.more))
                         }
@@ -205,7 +230,9 @@ fun ChatScreen(
                         }
                     }
                 }
-                if (live != null && live.jobs.isNotEmpty()) {
+                state.summary?.let { summary -> ActivityStrip(summary) { activityOpen = true } }
+                // A server without the activity panel: its jobs frame, one chip each, as before.
+                if (state.summary == null && live != null && live.jobs.isNotEmpty()) {
                     Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         live.jobs.forEach { job ->
                             AssistChip(onClick = {}, label = { Text("${job.id} · ${job.description.ifBlank { job.command }} · ${job.state}", maxLines = 1) })
@@ -281,6 +308,13 @@ fun ChatScreen(
             ),
         ) {
             CardSheet(card) { answer -> model.answer(card, answer) }
+        }
+    }
+
+    if (activityOpen) {
+        state.chat?.let { chat ->
+            // A device's files are on the device: the panel lists them, the tree cannot open them.
+            ActivityPanel(chat.id, state, model, canOpenFiles = !chat.isAgent, onClose = { activityOpen = false })
         }
     }
 
@@ -364,6 +398,9 @@ private fun Composer(model: ChatViewModel, state: ChatState, agent: Boolean) {
     var text by rememberSaveable { mutableStateOf("") }
     var chosenModel by rememberSaveable { mutableStateOf<String?>(null) }
     var chosenEffort by rememberSaveable { mutableStateOf<String?>(null) }
+    var chosenMin by rememberSaveable { mutableStateOf<Int?>(null) }
+    var chosenMax by rememberSaveable { mutableStateOf<Int?>(null) }
+    var askAgents by remember { mutableStateOf(false) }
     var planMode by rememberSaveable { mutableStateOf(false) }
     var agentMode by rememberSaveable { mutableStateOf("edit") }
     var device by rememberSaveable { mutableStateOf<String?>(null) }
@@ -432,13 +469,26 @@ private fun Composer(model: ChatViewModel, state: ChatState, agent: Boolean) {
             ModelChip(state.models, current) { id ->
                 if (chat == null) chosenModel = id else model.change("model", id)
             }
-            val efforts = state.models.firstOrNull { it.id == current }?.efforts.orEmpty()
-            if (efforts.isNotEmpty()) {
+            val info = state.models.firstOrNull { it.id == current }
+            if (info != null) {
                 // A new chat keeps the choice until its first message makes it; an open one
-                // changes at once, as the web page's control does.
-                EffortChip(efforts, if (chat == null) chosenEffort else chat.effort?.ifBlank { null }) { picked ->
-                    if (chat == null) chosenEffort = picked else model.change("effort", picked ?: "off")
+                // changes at once, as the web page's control does. The control is the model's:
+                // none for one level, a Thinking switch for off and one more, else the picker.
+                val level = info.level(if (chat == null) chosenEffort else chat.effort?.ifBlank { null })
+                LevelControl(info, level) { picked ->
+                    if (chat == null) chosenEffort = picked else model.change("effort", picked)
                 }
+            }
+            // The team's size, where a team is offered: the server's word for a chat that
+            // exists, the model's facts for one about to be made.
+            val teamOffered = if (chat != null) state.teamOffered else !newAgent && info?.mayHaveTeam == true
+            if (teamOffered) {
+                val setting = chat?.agents ?: AgentsSetting(chosenMin ?: 1, chosenMax ?: 4)
+                AssistChip(
+                    onClick = { askAgents = true },
+                    leadingIcon = { Icon(Icons.Filled.Groups, contentDescription = null) },
+                    label = { Text(stringResource(R.string.team_chip, setting.min.toString(), setting.max.toString()), maxLines = 1) },
+                )
             }
             when {
                 newAgent -> ModeChip(agentMode) { agentMode = it }
@@ -515,12 +565,26 @@ private fun Composer(model: ChatViewModel, state: ChatState, agent: Boolean) {
                             } else {
                                 null
                             },
-                            effort = chosenEffort,
+                            effort = chosenEffort?.takeIf { picked -> state.models.firstOrNull { it.id == current }?.offered?.contains(picked) == true },
                             agent = if (newAgent) target?.let { AgentTarget(it.id, directory) } else null,
+                            agents = if (chosenMin != null || chosenMax != null) AgentsSetting(chosenMin ?: 1, chosenMax ?: 4) else null,
                         )
                         text = ""
                     },
                 ) { Icon(Icons.AutoMirrored.Filled.Send, contentDescription = stringResource(R.string.send)) }
+            }
+        }
+    }
+
+    if (askAgents) {
+        val now = chat?.agents ?: AgentsSetting(chosenMin ?: 1, chosenMax ?: 4)
+        AgentsDialog(now, onDismiss = { askAgents = false }) { picked ->
+            askAgents = false
+            if (chat == null) {
+                chosenMin = picked.min
+                chosenMax = picked.max
+            } else {
+                model.setAgents(picked)
             }
         }
     }
@@ -593,34 +657,115 @@ private fun ModeChip(current: String, onPick: (String) -> Unit) {
 private fun ModelChip(models: List<ModelInfo>, current: String?, onPick: (String) -> Unit) {
     var open by remember { mutableStateOf(false) }
     Box {
-        AssistChip(onClick = { open = true }, label = { Text(models.firstOrNull { it.id == current }?.name ?: current ?: "—", maxLines = 1) })
+        val shown = models.firstOrNull { it.id == current }
+        AssistChip(
+            onClick = { open = true },
+            leadingIcon = { ModelAvatar(shown, current ?: "?", size = 20.dp) },
+            label = { Text(shown?.name ?: current ?: "—", maxLines = 1) },
+        )
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             models.forEach { m ->
-                DropdownMenuItem(text = { Text(m.name) }, onClick = {
-                    open = false
-                    onPick(m.id)
-                })
+                DropdownMenuItem(
+                    leadingIcon = { ModelAvatar(m, m.id, size = 28.dp) },
+                    text = { Text(m.name.ifBlank { m.id }) },
+                    onClick = {
+                        open = false
+                        onPick(m.id)
+                    },
+                )
             }
         }
     }
 }
 
+/** A level's name: `off` and `default` in words, an effort as the model calls it. */
 @Composable
-private fun EffortChip(efforts: List<String>, current: String?, onPick: (String?) -> Unit) {
-    var open by remember { mutableStateOf(false) }
-    Box {
-        AssistChip(onClick = { open = true }, label = { Text(current ?: stringResource(R.string.effort_off)) })
-        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-            DropdownMenuItem(text = { Text(stringResource(R.string.effort_off)) }, onClick = {
-                open = false
-                onPick(null)
-            })
-            efforts.forEach { e ->
-                DropdownMenuItem(text = { Text(e) }, onClick = {
-                    open = false
-                    onPick(e)
-                })
+private fun levelName(level: String): String = when (level) {
+    "off" -> stringResource(R.string.level_off)
+    "default" -> stringResource(R.string.level_default)
+    else -> level
+}
+
+/**
+ * How hard the model thinks, by the model's `control`: nothing for one level; a Thinking chip
+ * that is on or off for `off` and one effort; the picker for more.
+ */
+@Composable
+private fun LevelControl(model: ModelInfo, level: String, onPick: (String) -> Unit) {
+    when (model.levelControl) {
+        "switch" -> FilterChip(
+            selected = level != "off",
+            onClick = { onPick(if (level == "off") model.onLevel else "off") },
+            leadingIcon = { Icon(Icons.Filled.Psychology, contentDescription = null) },
+            label = { Text(stringResource(R.string.thinking_switch)) },
+        )
+
+        "slider" -> {
+            var open by remember { mutableStateOf(false) }
+            Box {
+                AssistChip(onClick = { open = true }, label = { Text(stringResource(R.string.effort_level, levelName(level)), maxLines = 1) })
+                DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+                    model.offered.forEach { option ->
+                        DropdownMenuItem(
+                            text = { Text(levelName(option)) },
+                            trailingIcon = { if (option == level) Text("✓") },
+                            onClick = {
+                                open = false
+                                onPick(option)
+                            },
+                        )
+                    }
+                }
             }
         }
+
+        else -> Unit
+    }
+}
+
+/**
+ * The team's size: the fewest and the most agents, its own included. Two sliders on one
+ * column, each with its label and value on a row of its own, so the two line up whatever the
+ * words. The most never goes under the fewest; the server checks the pair against its cap.
+ */
+@Composable
+private fun AgentsDialog(now: AgentsSetting, onDismiss: () -> Unit, onSave: (AgentsSetting) -> Unit) {
+    var low by remember { mutableStateOf(now.min.coerceIn(1, AgentsSetting.CAP)) }
+    var high by remember { mutableStateOf(now.max.coerceIn(1, AgentsSetting.CAP)) }
+    val palette = LocalPalette.current
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.team_agents)) },
+        text = {
+            Column {
+                Text(stringResource(R.string.team_hint), style = MaterialTheme.typography.bodySmall, color = palette.inkMuted)
+                AgentsSlider(stringResource(R.string.team_fewest), low) {
+                    low = it
+                    if (high < it) high = it
+                }
+                AgentsSlider(stringResource(R.string.team_most), high) {
+                    high = it
+                    if (low > it) low = it
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = { onSave(AgentsSetting(low, high)) }) { Text(stringResource(R.string.save)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
+    )
+}
+
+@Composable
+private fun AgentsSlider(label: String, value: Int, onChange: (Int) -> Unit) {
+    Column(Modifier.padding(top = 12.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(label, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+            Text(value.toString(), style = MaterialTheme.typography.titleMedium, modifier = Modifier.width(40.dp), textAlign = TextAlign.End)
+        }
+        Slider(
+            value = value.toFloat(),
+            onValueChange = { onChange(Math.round(it).coerceIn(1, AgentsSetting.CAP)) },
+            valueRange = 1f..AgentsSetting.CAP.toFloat(),
+            steps = AgentsSetting.CAP - 2,
+        )
     }
 }

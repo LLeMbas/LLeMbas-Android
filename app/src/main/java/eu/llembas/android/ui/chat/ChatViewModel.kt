@@ -2,17 +2,24 @@ package eu.llembas.android.ui.chat
 
 import android.app.Application
 import android.net.Uri
+import android.os.SystemClock
 import android.provider.OpenableColumns
 import androidx.core.content.FileProvider
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import eu.llembas.android.api.Activity
+import eu.llembas.android.api.ActivityAgent
+import eu.llembas.android.api.ActivityFrame
+import eu.llembas.android.api.ActivitySummary
 import eu.llembas.android.api.AgentTarget
+import eu.llembas.android.api.AgentsSetting
 import eu.llembas.android.api.ApiClient
 import eu.llembas.android.api.ApiException
 import eu.llembas.android.api.Attachment
 import eu.llembas.android.api.Card
 import eu.llembas.android.api.CardAnswer
 import eu.llembas.android.api.Chat
+import eu.llembas.android.api.LembasJson
 import eu.llembas.android.api.LinkedDevice
 import eu.llembas.android.api.LiveReply
 import eu.llembas.android.api.Message
@@ -49,6 +56,15 @@ data class ChatState(
     val unsent: String? = null,
     /** A card somebody answered elsewhere first: said once, then cleared. */
     val notice: String? = null,
+    /** The activity panel's facts, once it has been opened; [activityAt] is when they were read. */
+    val activity: Activity? = null,
+    val activityAt: Long = 0,
+    /** The strip's counts, from the events route (or the first read). */
+    val summary: ActivitySummary? = null,
+    /** Whether this chat may have a team: the server's word for a chat that exists. */
+    val teamOffered: Boolean = false,
+    /** Whether the events route is followed; without it an open panel polls. */
+    val activityLive: Boolean = false,
 )
 
 /**
@@ -93,6 +109,11 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
                     it.copy(chat = detail.chat, messages = detail.messages, more = detail.more, models = models, loading = false)
                 }
                 detail.live?.let { follow(it) }
+                // Whether a team is offered and what runs in the background: the cheap read,
+                // without the context count. A server without the panel has no answer.
+                runCatching { client.activity(chatId, context = false) }.onSuccess { a ->
+                    _state.update { it.copy(teamOffered = a.teamOffered, summary = a.summary) }
+                }
             } catch (e: Exception) {
                 fail(e)
             }
@@ -161,7 +182,15 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
         turn.reply?.let { follow(it.id) }
     }
 
-    fun send(text: String, model: String? = null, mode: String? = null, effort: String? = null, temporary: Boolean = false, agent: AgentTarget? = null) {
+    fun send(
+        text: String,
+        model: String? = null,
+        mode: String? = null,
+        effort: String? = null,
+        temporary: Boolean = false,
+        agent: AgentTarget? = null,
+        agents: AgentsSetting? = null,
+    ) {
         val attached = _state.value.pending
         val files = attached.map { it.id }
         if (text.isBlank() && files.isEmpty()) return
@@ -171,7 +200,16 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
                 val chat = _state.value.chat
                 _state.update { it.copy(pending = emptyList()) }
                 if (chat == null) {
-                    val made = client.createChat(text, files, model = model, temporary = temporary, effort = effort, mode = mode, agent = agent)
+                    val made = client.createChat(
+                        text,
+                        files,
+                        model = model,
+                        temporary = temporary,
+                        effort = effort,
+                        mode = mode,
+                        agent = agent,
+                        agents = agents,
+                    )
                     _state.update { it.copy(chat = made.chat, messages = listOfNotNull(made.message, made.reply)) }
                     made.reply?.let { follow(it.id) }
                 } else {
@@ -226,6 +264,84 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
     fun change(key: String, value: String?) = control { api, chat ->
         val updated = api.updateChat(chat.id, JsonObject(mapOf(key to JsonPrimitive(value))))
         _state.update { it.copy(chat = updated) }
+        // Another model may serve one request at a time, or more: whether a team is offered
+        // follows it.
+        if (key == "model") {
+            runCatching { api.activity(chat.id, context = false) }.onSuccess { r -> _state.update { it.copy(teamOffered = r.teamOffered) } }
+        }
+    }
+
+    /** The team's size, both ends; the server refuses a pair outside its bounds in its words. */
+    fun setAgents(agents: AgentsSetting) = control { api, chat ->
+        val updated = api.setAgents(chat.id, agents)
+        _state.update { it.copy(chat = updated) }
+    }
+
+    // --- The activity panel ------------------------------------------------------------------
+
+    /**
+     * Follow the chat's activity while the screen is in front: the events route says when
+     * anything changed, with the strip's counts; an open panel then reads the whole of it
+     * again. Runs until cancelled. A server without the route (or one that refuses it) leaves
+     * the strip to the first read and an open panel to polling.
+     */
+    suspend fun watchActivity() {
+        val chat = _state.value.chat ?: return
+        val client = runCatching { api() }.getOrNull() ?: return
+        if (_state.value.summary == null) {
+            // A chat its first message just made: whether a team is offered, read once.
+            runCatching { client.activity(chat.id, context = false) }.onSuccess { a ->
+                _state.update { it.copy(teamOffered = a.teamOffered, summary = a.summary) }
+            }
+        }
+        try {
+            StreamClient(client).watch { client.activityEvents(chat.id) }.collect { frame ->
+                if (frame.event != "activity") return@collect
+                val read = runCatching { LembasJson.decodeFromString(ActivityFrame.serializer(), frame.data) }.getOrNull() ?: return@collect
+                val changed = read.version != _state.value.activity?.version
+                _state.update { it.copy(summary = read.summary, activityLive = true) }
+                if (changed && panelOpen) loadActivity()
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            // Nothing to say: the strip and the panel do without the route.
+        } finally {
+            _state.update { it.copy(activityLive = false) }
+        }
+    }
+
+    private var panelOpen = false
+
+    fun panel(open: Boolean) {
+        panelOpen = open
+        if (open) loadActivity()
+    }
+
+    /** Read the panel's facts; [context] false keeps the last count (the costly part). */
+    fun loadActivity(context: Boolean = true) {
+        val chat = _state.value.chat ?: return
+        viewModelScope.launch {
+            try {
+                val read = api().activity(chat.id, context)
+                _state.update { s ->
+                    s.copy(
+                        activity = if (context) read else read.copy(context = s.activity?.context),
+                        activityAt = SystemClock.elapsedRealtime(),
+                        summary = read.summary,
+                        teamOffered = read.teamOffered,
+                    )
+                }
+            } catch (e: Exception) {
+                fail(e)
+            }
+        }
+    }
+
+    /** Stop a background agent (and, for a member, those under it), then read the panel again. */
+    fun stopAgent(agent: ActivityAgent) = control { api, chat ->
+        api.stopAgent(chat.id, agent.kind, agent.id)
+        loadActivity(context = false)
     }
 
     fun delete(then: () -> Unit) = control { api, chat ->

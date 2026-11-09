@@ -19,6 +19,19 @@ is in alpha and releases come off `main`.
 - **Test builds for every change**: each push to `dev` leaves an installable APK on the CI run,
   signed with a public test key so a newer test build installs over an older one. The version
   in Settings › About carries the run's number.
+- **The activity panel**: the lightning button in a chat, or the line above the message box
+  ("3 agents working · 1 queued"), opens a full-screen view of what the chat is doing --
+  **Context** (how much of the model's window is used, a bar and the breakdown by category),
+  **Outputs** (the files the chat and its agents wrote, with lines added and removed; tap one to
+  read it), **Background tasks** (every helper, command and team member as a tree, with its
+  state, how long it has run, its model, its latest step and what it is writing; open its whole
+  conversation read-only, or stop it after a confirmation; finished ones folded under "N
+  finished"), the team's **Room** and the **Plan**. It keeps itself current while it is open.
+- **Agents, fewest and most**, in the chat's chips where the model can run a team: how many
+  agents the chat's team may have, its own included (1 to 4 to begin with). Set it before the
+  first message or change it in an open chat.
+- **Model pictures**: the model picker and the chat's title show each model's picture from the
+  instance, or its initial where it has none.
 
 ### Changed
 
@@ -32,6 +45,12 @@ is in alpha and releases come off `main`.
   sign-in, the chats, a chat, Files, the viewer, the assistant and Share.
 - The effort chosen for a **new** chat is now sent with its first message (it was lost until the
   chat existed).
+- **The effort control is the model's own**: none for a model with one level, a **Think before
+  answering** chip that switches thinking on and off for a model that offers exactly that, and
+  the effort picker for more levels. "Off" is offered only by a model that can really switch
+  thinking off. A chat started without a choice starts at the model's start level.
+- Requires the beta.5 `/api/v2` of LLeMbas 2.0 for the panel, the team size, the Thinking switch
+  and the pictures; against an older 2.0 beta the app keeps the effort picker and the jobs chips.
 - The agent mode "Manual" is translated, and "Plan" no longer reads as a price plan in German,
   French and Hungarian.
 
