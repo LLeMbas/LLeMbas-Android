@@ -29,12 +29,13 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - name: ktlint (signature-checked)
+      # ktlint 1.8.0 from Maven Central: the same jar the signed GitHub release wraps in a
+      # shell header (checked byte for byte), from a host that does not 504 on release assets.
+      - name: ktlint (hash-pinned)
         run: |
-          curl -sSfL -o ktlint https://github.com/pinterest/ktlint/releases/download/1.8.0/ktlint
-          echo "a3fd620207d5c40da6ca789b95e7f823c54e854b7fade7f613e91096a3706d75  ktlint" | sha256sum -c
-          chmod +x ktlint
-          ./ktlint "app/src/**/*.kt" "*.kts" "app/*.kts"
+          curl -sSfL --retry 5 --retry-all-errors -o ktlint.jar https://repo1.maven.org/maven2/com/pinterest/ktlint/ktlint-cli/1.8.0/ktlint-cli-1.8.0-all.jar
+          echo "369ad2b789f95a011f807e1fcb690ccef80bd7cd014fd139e73ae82dcc0baeab  ktlint.jar" | sha256sum -c
+          java -jar ktlint.jar "app/src/**/*.kt" "*.kts" "app/*.kts"
 
       - uses: gradle/actions/wrapper-validation@v4
 
