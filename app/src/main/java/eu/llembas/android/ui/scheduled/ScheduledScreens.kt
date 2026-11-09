@@ -205,7 +205,13 @@ fun ScheduledContent(
 @Composable
 private fun ScheduleCard(schedule: Schedule, onOpen: () -> Unit, onPause: (Boolean) -> Unit) {
     val palette = LocalPalette.current
-    Surface(onClick = onOpen, shape = RoundedCornerShape(20.dp), color = palette.surfaceRaised, modifier = Modifier.fillMaxWidth()) {
+    Surface(
+        onClick = onOpen,
+        shape = RoundedCornerShape(20.dp),
+        color = palette.surfaceRaised,
+        contentColor = palette.ink,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
         Row(Modifier.padding(start = 16.dp, end = 12.dp, top = 14.dp, bottom = 14.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
@@ -466,7 +472,7 @@ private fun ScheduleBody(
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         item {
-            Surface(shape = RoundedCornerShape(20.dp), color = palette.surfaceRaised, modifier = Modifier.fillMaxWidth()) {
+            Surface(shape = RoundedCornerShape(20.dp), color = palette.surfaceRaised, contentColor = palette.ink, modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Filled.Schedule, contentDescription = null, tint = palette.accent, modifier = Modifier.size(20.dp))
@@ -506,7 +512,7 @@ private fun ScheduleBody(
         if (next.isNotEmpty() && !schedule.paused) {
             item { Header(stringResource(R.string.schedule_next_runs)) }
             item {
-                Surface(shape = RoundedCornerShape(16.dp), color = palette.surfaceRaised, modifier = Modifier.fillMaxWidth()) {
+                Surface(shape = RoundedCornerShape(16.dp), color = palette.surfaceRaised, contentColor = palette.ink, modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(vertical = 8.dp)) {
                         next.forEach {
                             Text(it, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
@@ -553,7 +559,7 @@ private fun Header(text: String) {
 @Composable
 private fun RunRow(run: ScheduleRun, onOpen: () -> Unit) {
     val palette = LocalPalette.current
-    Surface(shape = RoundedCornerShape(16.dp), color = palette.surfaceRaised, modifier = Modifier.fillMaxWidth()) {
+    Surface(shape = RoundedCornerShape(16.dp), color = palette.surfaceRaised, contentColor = palette.ink, modifier = Modifier.fillMaxWidth()) {
         Row(Modifier.heightIn(min = 64.dp).padding(start = 12.dp, end = 4.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.width(112.dp)) { StatusChip(run.status, run.missed) }
             Column(Modifier.weight(1f)) {
@@ -703,7 +709,7 @@ fun ScheduleEditContent(
             if (state.unsupported) Text(stringResource(R.string.scheduled_unsupported), color = palette.inkMuted)
             state.error?.let { Text(it, color = palette.danger, style = MaterialTheme.typography.bodyMedium) }
             state.preview?.let { p ->
-                Surface(shape = RoundedCornerShape(20.dp), color = palette.surfaceRaised, modifier = Modifier.fillMaxWidth()) {
+                Surface(shape = RoundedCornerShape(20.dp), color = palette.surfaceRaised, contentColor = palette.ink, modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(stringResource(R.string.schedule_understood), style = MaterialTheme.typography.labelLarge, color = palette.accent)
                         if (p.title.isNotBlank()) Text(p.title, style = MaterialTheme.typography.titleMedium)

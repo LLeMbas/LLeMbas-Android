@@ -142,8 +142,8 @@ object Fakes {
     )
 
     private val ok =
-        ScheduleRun(id = "r1", dueAt = "2026-03-10T06:30:00+00:00", startedAt = "2026-03-10T06:30:02+00:00", status = "ok", model = "qwen", chatId = "c9")
-    private val nextRuns = (11..17).map { "2026-03-${it}T06:30:00+00:00" }
+        ScheduleRun(id = "r1", dueAt = "2026-03-10T07:30:00+00:00", startedAt = "2026-03-10T07:30:02+00:00", status = "ok", model = "qwen", chatId = "c9")
+    private val nextRuns = listOf(11, 12, 13, 16, 17).map { "2026-03-${it}T07:30:00+00:00" }
 
     val schedules = listOf(
         Schedule(
@@ -190,17 +190,17 @@ object Fakes {
             ok,
             ScheduleRun(
                 id = "r0",
-                startedAt = "2026-03-09T06:41:00+00:00",
+                startedAt = "2026-03-09T07:41:00+00:00",
                 status = "ok",
                 model = "gpt-oss",
                 modelReason = "switched: qwen busy",
                 chatId = "c8",
             ),
-            ScheduleRun(id = "r-1", dueAt = "2026-03-06T06:30:00+00:00", status = "silent", model = "qwen"),
-            ScheduleRun(id = "r-2", dueAt = "2026-03-05T06:30:00+00:00", status = "missed", missed = 2),
+            ScheduleRun(id = "r-1", dueAt = "2026-03-06T07:30:00+00:00", status = "silent", model = "qwen"),
+            ScheduleRun(id = "r-2", dueAt = "2026-03-05T07:30:00+00:00", status = "missed", missed = 2),
             ScheduleRun(
                 id = "r-3",
-                startedAt = "2026-03-04T06:30:00+00:00",
+                startedAt = "2026-03-04T07:30:00+00:00",
                 status = "failed",
                 model = "qwen",
                 error = "The model stopped answering after 10 minutes.",

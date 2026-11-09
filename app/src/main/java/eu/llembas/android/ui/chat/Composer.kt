@@ -123,7 +123,9 @@ fun tuneSummary(state: ChatState, agent: Boolean): String {
         agent || chat?.isAgent == true -> parts += modeName(chat?.mode?.ifBlank { null } ?: state.draft.agentMode)
         (chat == null && state.draft.plan) || chat?.mode == "plan" -> parts += stringResource(R.string.mode_plan)
     }
-    if (state.offersTeam(agent) && state.agents.max > 1) {
+    // The team only once someone chose its size: the default says nothing worth repeating.
+    val chosenTeam = state.chat?.agents ?: state.draft.agents
+    if (state.offersTeam(agent) && chosenTeam != null && chosenTeam.max > 1) {
         parts += stringResource(R.string.team_chip, state.agents.min.toString(), state.agents.max.toString())
     }
     return parts.joinToString(" · ")
@@ -174,6 +176,7 @@ fun Composer(state: ChatState, actions: ChatActions, agent: Boolean, onTune: () 
     Surface(
         shape = Field,
         color = palette.surfaceRaised,
+        contentColor = palette.ink,
         border = BorderStroke(1.dp, palette.border),
         modifier = modifier.fillMaxWidth(),
     ) {
@@ -573,7 +576,7 @@ fun AgentsSlider(label: String, value: Int, onChange: (Int) -> Unit) {
             onValueChange = { shown = it },
             onValueChangeFinished = { onChange(Math.round(shown).coerceIn(1, AgentsSetting.CAP)) },
             valueRange = 1f..AgentsSetting.CAP.toFloat(),
-            steps = AgentsSetting.CAP - 2,
+            // Continuous: 31 tick marks would be noise, and the value is rounded anyway.
         )
     }
 }

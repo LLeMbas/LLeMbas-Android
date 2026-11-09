@@ -171,7 +171,8 @@ fun ChatContent(
     val palette = LocalPalette.current
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val list = rememberLazyListState()
+    // A chat opens at its end, where the conversation is, not at its first message.
+    val list = rememberLazyListState(initialFirstVisibleItemIndex = maxOf(0, state.messages.size - 1 + if (state.more) 1 else 0))
     var menu by remember { mutableStateOf(false) }
     var picking by remember { mutableStateOf(false) }
     var tuning by remember { mutableStateOf(false) }
@@ -260,7 +261,12 @@ fun ChatContent(
                         }
                     }
                     live?.plan?.let { plan ->
-                        Surface(color = palette.surfaceRaised, shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
+                        Surface(
+                            color = palette.surfaceRaised,
+                            contentColor = palette.ink,
+                            shape = RoundedCornerShape(16.dp),
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                        ) {
                             Column(Modifier.heightIn(max = 180.dp).padding(horizontal = 16.dp, vertical = 8.dp)) { PlanBody(plan) }
                         }
                     }
@@ -460,6 +466,7 @@ private fun Suggestions(onPick: (String) -> Unit) {
                 onClick = { onPick("$t $l") },
                 shape = RoundedCornerShape(16.dp),
                 color = palette.surfaceRaised,
+                contentColor = palette.ink,
                 border = androidx.compose.foundation.BorderStroke(1.dp, palette.border),
                 modifier = Modifier.width(184.dp).fillMaxHeight(),
             ) {

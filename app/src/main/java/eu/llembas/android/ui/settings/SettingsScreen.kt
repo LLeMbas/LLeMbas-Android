@@ -338,7 +338,7 @@ private fun Group(title: String, content: @Composable () -> Unit) {
         color = palette.accent,
         modifier = Modifier.padding(start = 16.dp, top = 24.dp, bottom = 8.dp),
     )
-    Surface(shape = RoundedCornerShape(20.dp), color = palette.surfaceRaised, modifier = Modifier.fillMaxWidth()) {
+    Surface(shape = RoundedCornerShape(20.dp), color = palette.surfaceRaised, contentColor = palette.ink, modifier = Modifier.fillMaxWidth()) {
         Column { content() }
     }
 }

@@ -96,6 +96,7 @@ fun ActivityStrip(summary: ActivitySummary, onOpen: () -> Unit) {
     Surface(
         onClick = onOpen,
         color = palette.surfaceRaised,
+        contentColor = palette.ink,
         shape = RoundedCornerShape(8.dp),
         modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp).heightIn(min = 48.dp),
     ) {
