@@ -100,6 +100,11 @@ class Doorstep(private val http: OkHttpClient = SharedHttp) {
     private fun post(url: String, body: JsonObject) = Request.Builder().url(url).post(body.toString().toRequestBody(JSON)).build()
 }
 
+private fun agentsJson(agents: AgentsSetting) = buildJsonObject {
+    put("min", agents.min)
+    put("max", agents.max)
+}
+
 internal fun detail(response: Response): String {
     val text = runCatching { response.body?.string().orEmpty() }.getOrDefault("")
     val said = runCatching {
@@ -172,6 +177,7 @@ class ApiClient(val base: String, private val token: String, val http: OkHttpCli
         effort: String? = null,
         mode: String? = null,
         agent: AgentTarget? = null,
+        agents: AgentsSetting? = null,
     ): NewChat = send(
         "POST",
         "/chats",
@@ -181,6 +187,7 @@ class ApiClient(val base: String, private val token: String, val http: OkHttpCli
             model?.let { put("model", it) }
             effort?.let { put("effort", it) }
             mode?.let { put("mode", it) }
+            agents?.let { put("agents", agentsJson(it)) }
             put("temporary", temporary)
             // An agent chat runs on a linked device; an empty directory is the device's first
             // allowed one. A device that is no longer linked makes it an ordinary chat on the
@@ -204,6 +211,9 @@ class ApiClient(val base: String, private val token: String, val http: OkHttpCli
 
     suspend fun updateChat(chatId: String, changes: JsonObject): Chat = send<ChatEnvelope>("PATCH", "/chats/$chatId", changes).chat
 
+    /** The team's size, both ends at once: the server checks the pair (422 outside its bounds). */
+    suspend fun setAgents(chatId: String, agents: AgentsSetting): Chat = updateChat(chatId, buildJsonObject { put("agents", agentsJson(agents)) })
+
     suspend fun deleteChat(chatId: String) = empty(authed("$v2/chats/$chatId").delete().build())
 
     suspend fun stop(chatId: String, messageId: String) =
@@ -221,6 +231,46 @@ class ApiClient(val base: String, private val token: String, val http: OkHttpCli
     suspend fun answer(chatId: String, cardId: String, answer: CardAnswer) {
         val body = LembasJson.encodeToString(CardAnswer.serializer(), answer).toRequestBody(JSON)
         empty(authed("$v2/chats/$chatId/interactions/$cardId").post(body).build())
+    }
+
+    // --- The activity panel, background agents and the team -----------------------------------
+
+    /** Everything the panel shows; `context = false` leaves out the costly context count. */
+    suspend fun activity(chatId: String, context: Boolean = true): Activity = get<ActivityEnvelope>("/chats/$chatId/activity?context=$context").activity
+
+    /** The events route: an `activity` frame whenever the panel's facts change. */
+    fun activityEvents(chatId: String): Request = authed("$v2/chats/$chatId/activity/events").header("Accept", "text/event-stream").build()
+
+    /** One background agent and its whole conversation, read-only. `kind` is `member` or `job`. */
+    suspend fun agent(chatId: String, kind: String, id: String): AgentDetail = get("/chats/$chatId/agents/${segment(kind)}/${segment(id)}")
+
+    /** Stop a background agent (a member leaves the team with those under it). */
+    suspend fun stopAgent(chatId: String, kind: String, id: String): List<String> =
+        send<Stopped>("POST", "/chats/$chatId/agents/${segment(kind)}/${segment(id)}/stop", null).stopped
+
+    suspend fun team(chatId: String, since: Int = 0): TeamView = get<TeamEnvelope>("/chats/$chatId/team?since=$since").team
+
+    suspend fun stopMember(chatId: String, name: String): List<String> = send<Stopped>("POST", "/chats/$chatId/team/${segment(name)}/stop", null).stopped
+
+    // --- Model pictures --------------------------------------------------------------------------
+
+    /**
+     * A model's picture, with the token: only a path under the instance's own
+     * `/api/v2/models/images/` is fetched -- a list that named anything else, another host
+     * included, gets the initial instead. At most [IMAGE_MAX_BYTES]; null when there is none.
+     */
+    suspend fun modelImage(path: String): ByteArray? = withContext(Dispatchers.IO) {
+        val url = modelImageUrl(base, path) ?: return@withContext null
+        http.newCall(authed(url).header("Accept", "image/*").get().build()).await().use {
+            if (!it.isSuccessful) return@use null
+            val body = it.body ?: return@use null
+            if (body.contentLength() > IMAGE_MAX_BYTES) return@use null
+            val bytes = body.source().use { source ->
+                source.request(IMAGE_MAX_BYTES + 1)
+                source.buffer.readByteArray(minOf(source.buffer.size, IMAGE_MAX_BYTES + 1))
+            }
+            bytes.takeIf { b -> b.size <= IMAGE_MAX_BYTES }
+        }
     }
 
     // --- Attachments -------------------------------------------------------------------------
@@ -337,5 +387,21 @@ class ApiClient(val base: String, private val token: String, val http: OkHttpCli
         const val SHOWN_MAX_BYTES = 1_100_000L
 
         fun emptyBody(): RequestBody = ByteArray(0).toRequestBody(null)
+
+        /** A model's picture is small; anything larger is not one. */
+        const val IMAGE_MAX_BYTES = 2_000_000L
+
+        private const val IMAGE_PATH = "/api/v2/models/images/"
+
+        /** The picture's URL on [base], or null for a path that is not one of the instance's pictures. */
+        fun modelImageUrl(base: String, path: String?): String? {
+            if (path.isNullOrBlank() || !path.startsWith(IMAGE_PATH)) return null
+            val name = path.removePrefix(IMAGE_PATH)
+            if (name.isEmpty() || !name.all { it.isLetterOrDigit() || it == '.' || it == '_' || it == '-' } || name.startsWith(".")) return null
+            return "$base$IMAGE_PATH$name"
+        }
+
+        /** One path segment, escaped: an agent's name or a job's id is a model's choice. */
+        fun segment(value: String): String = java.net.URLEncoder.encode(value, "UTF-8").replace("+", "%20")
     }
 }

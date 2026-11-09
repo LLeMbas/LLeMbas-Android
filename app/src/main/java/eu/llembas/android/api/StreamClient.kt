@@ -5,6 +5,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.flow
+import okhttp3.Request
 import okhttp3.Response
 import okhttp3.sse.EventSource
 import okhttp3.sse.EventSourceListener
@@ -31,7 +32,7 @@ class StreamClient(private val api: ApiClient) {
         while (true) {
             var closed = false
             var refused: ApiException? = null
-            once(chatId, messageId).collect { result ->
+            once(api.streamRequest(chatId, messageId)).collect { result ->
                 when (result) {
                     is Outcome.Event -> {
                         wait = 1_000L
@@ -51,15 +52,45 @@ class StreamClient(private val api: ApiClient) {
         }
     }
 
+    /**
+     * Follow an events route that ends itself now and then (`close` after a while, as the
+     * activity panel's does): opened again at once after a `close`, and after a pause that
+     * grows to 30 seconds when the connection drops. It runs until its collector stops; a
+     * refusal (4xx) ends it with the error.
+     */
+    fun watch(request: () -> Request): Flow<Frame> = flow {
+        var wait = 1_000L
+        while (true) {
+            var closed = false
+            var refused: ApiException? = null
+            once(request()).collect { result ->
+                when (result) {
+                    is Outcome.Event -> {
+                        wait = 1_000L
+                        if (result.frame.event == "close") closed = true else emit(result.frame)
+                    }
+
+                    is Outcome.Refused -> refused = result.error
+
+                    is Outcome.Dropped -> Unit
+                }
+            }
+            refused?.let { throw it }
+            if (closed) continue
+            delay(wait)
+            wait = (wait * 2).coerceAtMost(30_000L)
+        }
+    }
+
     private sealed interface Outcome {
         data class Event(val frame: Frame) : Outcome
         data class Refused(val error: ApiException) : Outcome
         data object Dropped : Outcome
     }
 
-    private fun once(chatId: String, messageId: String): Flow<Outcome> = callbackFlow {
+    private fun once(request: Request): Flow<Outcome> = callbackFlow {
         val source = EventSources.createFactory(http).newEventSource(
-            api.streamRequest(chatId, messageId),
+            request,
             object : EventSourceListener() {
                 override fun onEvent(eventSource: EventSource, id: String?, type: String?, data: String) {
                     trySend(Outcome.Event(Frame(type ?: "message", data)))

@@ -81,9 +81,54 @@ data class ModelInfo(
     val vision: Boolean = false,
     val tools: Boolean = false,
     val efforts: List<String> = emptyList(),
+    /** Whether the model's server stops thinking when asked: only then is `off` a level. */
+    @SerialName("thinking_switch") val thinkingSwitch: Boolean = false,
+    /** The levels a chat offers, in order (harness spec 3.2.0): `off` first when switchable. */
+    val levels: List<String> = emptyList(),
+    /** The level a chat starts at when none was chosen. */
+    val effort: String = "",
+    /** How the level is chosen: `none`, `switch` (Thinking on or off) or `slider`. */
+    val control: String = "",
+    /** How many requests the model's server answers at once; null for no stated limit. */
+    val parallel: Int? = null,
     val context: Int = 0,
+    /** The picture's path on the instance (`/api/v2/models/images/…`), read with the token. */
+    val image: String? = null,
     val default: Boolean = false,
-)
+) {
+    /**
+     * The levels, for a server that says them; an older one said only `efforts`, offered after
+     * an `off` that meant "the model's default" -- as the app showed it before.
+     */
+    val offered: List<String> get() = levels.ifEmpty { if (efforts.isEmpty()) emptyList() else listOf("off") + efforts }
+
+    /** Which control the composer draws, by the server's word or, from an older one, by the count. */
+    val levelControl: String
+        get() = control.takeIf { it in CONTROLS } ?: when {
+            offered.size <= 1 -> "none"
+            offered.size == 2 && "off" in offered -> "switch"
+            else -> "slider"
+        }
+
+    /** The level in force: [chosen] when this model offers it, else its start level. */
+    fun level(chosen: String?): String =
+        chosen?.takeIf { it in offered } ?: effort.takeIf { it in offered } ?: offered.firstOrNull { it != "off" } ?: offered.firstOrNull().orEmpty()
+
+    /** For the Thinking switch: the level that is "on" (the one that is not `off`). */
+    val onLevel: String get() = offered.firstOrNull { it != "off" } ?: effort
+
+    /**
+     * Whether a new chat on this model may have a team, as far as the app can tell: the model
+     * serves two requests at once (`parallel` ≥ 2, or no stated limit) and takes tools. The
+     * server also needs subagents on, which only an existing chat's activity says
+     * (`team_offered`); a setting it does not use is kept and does nothing.
+     */
+    val mayHaveTeam: Boolean get() = tools && (parallel == null || parallel >= 2)
+
+    companion object {
+        val CONTROLS = setOf("none", "switch", "slider")
+    }
+}
 
 @Serializable
 data class ModelList(val models: List<ModelInfo> = emptyList())
@@ -118,13 +163,26 @@ data class Chat(
     val mode: String = "",
     val effort: String? = null,
     val device: Device? = null,
+    /** An agent chat's session on its device (`lembas -s <id>` continues it); null until opened. */
+    @SerialName("device_session_id") val deviceSessionId: String? = null,
     @SerialName("parent_chat_id") val parentChatId: String? = null,
     @SerialName("created_at") val createdAt: String? = null,
     @SerialName("updated_at") val updatedAt: String? = null,
     @SerialName("system_prompt") val systemPrompt: String? = null,
     val plan: JsonObject? = null,
+    /** The team's size: how many agents, its own included, the chat may have. */
+    val agents: AgentsSetting? = null,
 ) {
     val isAgent: Boolean get() = kind == "agent"
+}
+
+/** A chat's `agents {min, max}` (harness spec 3.2.0): `1 ≤ min ≤ max ≤` the instance's cap. */
+@Serializable
+data class AgentsSetting(val min: Int = 1, val max: Int = 4) {
+    companion object {
+        /** The spec's default cap; an instance may set it lower, and then refuses past it (422). */
+        const val CAP = 32
+    }
 }
 
 @Serializable
@@ -429,3 +487,179 @@ data class PushPayload(
     @SerialName("interaction_id") val interactionId: String? = null,
     val ask: String? = null,
 )
+
+// --- The activity panel (`GET /chats/{chat}/activity`) -------------------------------------
+
+/** How many background agents are in each state, and the three sums the strip shows. */
+@Serializable
+data class ActivitySummary(
+    val queued: Int = 0,
+    val working: Int = 0,
+    val waiting: Int = 0,
+    val done: Int = 0,
+    val stopped: Int = 0,
+    val error: Int = 0,
+    val active: Int = 0,
+    val finished: Int = 0,
+    val total: Int = 0,
+)
+
+/** An agent's latest step: the tool it called and on what. */
+@Serializable
+data class AgentStep(val tool: String = "", val label: String = "", val title: String = "", val error: Boolean = false, val running: Boolean = false)
+
+/**
+ * One background agent: a team's member (`kind` member, [id] its name) or a job (`kind` job;
+ * [type] `subagent` or `command`), with its own helpers in [children]. [role], [brief] and
+ * [text] are a model's words: shown as text, never as anything richer.
+ */
+@Serializable
+data class ActivityAgent(
+    val kind: String = "",
+    val id: String = "",
+    val type: String = "",
+    val name: String = "",
+    val role: String = "",
+    val brief: String = "",
+    val state: String = "",
+    val seconds: Int = 0,
+    val started: String = "",
+    val model: String = "",
+    val agent: String = "",
+    val manager: String? = null,
+    val depth: Int = 0,
+    val lead: Boolean = false,
+    val step: AgentStep? = null,
+    val text: String = "",
+    val steps: Int = 0,
+    val tools: Int = 0,
+    val stoppable: Boolean = false,
+    val transcript: Boolean = false,
+    val children: List<ActivityAgent> = emptyList(),
+) {
+    /** Still to come back: queued, working or waiting. */
+    val isActive: Boolean get() = state in ACTIVE
+
+    companion object {
+        val ACTIVE = setOf("queued", "working", "waiting")
+    }
+}
+
+/** One message in a team's room. [text] is a model's: rendered as untrusted markdown. */
+@Serializable
+data class RoomMessage(
+    val n: Int = 0,
+    val from: String = "",
+    val to: List<String> = emptyList(),
+    val text: String = "",
+    val report: Boolean = false,
+    val created: String = "",
+)
+
+@Serializable
+data class ActivityTeam(
+    val min: Int = 1,
+    val max: Int = 1,
+    val size: Int = 0,
+    val goal: String = "",
+    val room: List<RoomMessage> = emptyList(),
+    val cursor: Int = 0,
+)
+
+/** One category of the context: `messages`, `system`, `memory`, … and `free`. */
+@Serializable
+data class ContextPart(val key: String = "", val tokens: Int = 0, val percent: Double? = null)
+
+@Serializable
+data class ContextUse(
+    val used: Int = 0,
+    val limit: Int = 0,
+    val percent: Double? = null,
+    val measured: Boolean = false,
+    val threshold: Int = 0,
+    @SerialName("tools_count") val toolsCount: Int = 0,
+    @SerialName("mcp_count") val mcpCount: Int = 0,
+    val categories: List<ContextPart> = emptyList(),
+)
+
+/** A file the chat or its agents wrote: lines added and removed when known. */
+@Serializable
+data class Output(
+    val path: String = "",
+    val name: String = "",
+    val writes: Int = 0,
+    val created: Boolean = false,
+    val added: Int? = null,
+    val removed: Int? = null,
+    val at: String = "",
+)
+
+/** Everything the activity panel shows. [version] changes whenever any of it but the elapsed time does. */
+@Serializable
+data class Activity(
+    val version: String = "",
+    val summary: ActivitySummary = ActivitySummary(),
+    val agents: List<ActivityAgent> = emptyList(),
+    val team: ActivityTeam? = null,
+    @SerialName("team_offered") val teamOffered: Boolean = false,
+    val context: ContextUse? = null,
+    val outputs: List<Output> = emptyList(),
+    val plan: JsonObject? = null,
+)
+
+@Serializable
+data class ActivityEnvelope(val activity: Activity)
+
+/** The events route's frame: what changed is fetched with `GET /activity`. */
+@Serializable
+data class ActivityFrame(val version: String = "", val summary: ActivitySummary = ActivitySummary())
+
+/** A tool call in an agent's conversation: its name and what it was on. */
+@Serializable
+data class TurnTool(val name: String = "", val title: String = "", val isError: Boolean = false)
+
+/** One turn of a background agent's conversation. `machine`: a message the system gave it. */
+@Serializable
+data class AgentTurn(
+    val role: String = "",
+    val text: String = "",
+    val machine: Boolean = false,
+    val tools: List<TurnTool> = emptyList(),
+    val error: String = "",
+    val running: Boolean = false,
+)
+
+@Serializable
+data class AgentDetail(val agent: ActivityAgent, val transcript: List<AgentTurn> = emptyList())
+
+@Serializable
+data class Stopped(val stopped: List<String> = emptyList())
+
+/** One agent of a team's tree (`GET /chats/{chat}/team`). */
+@Serializable
+data class TeamAgent(
+    val name: String = "",
+    val manager: String? = null,
+    val role: String = "",
+    val state: String = "",
+    val model: String = "",
+    val agent: String = "",
+    val lead: Boolean = false,
+    val depth: Int = 0,
+)
+
+@Serializable
+data class TeamView(
+    val offered: Boolean = false,
+    val min: Int = 1,
+    val max: Int = 1,
+    val size: Int = 0,
+    val parallel: Int? = null,
+    val goal: String = "",
+    val agents: List<TeamAgent> = emptyList(),
+    val room: List<RoomMessage> = emptyList(),
+    val cursor: Int = 0,
+)
+
+@Serializable
+data class TeamEnvelope(val team: TeamView)
