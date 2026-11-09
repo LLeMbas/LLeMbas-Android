@@ -60,6 +60,7 @@ import eu.llembas.android.api.ApiException
 import eu.llembas.android.api.ShowCard
 import eu.llembas.android.lembas
 import eu.llembas.android.ui.MarkdownText
+import eu.llembas.android.ui.explain
 import eu.llembas.android.ui.theme.LocalPalette
 import java.io.IOException
 
@@ -159,7 +160,7 @@ private fun Viewer(file: Viewed, key: Any, webUrl: (ApiClient) -> String?, load:
                 else -> Loaded.Failed(e.message ?: context.getString(R.string.viewer_unavailable))
             }
         } catch (e: IOException) {
-            Loaded.Failed(e.message ?: e.javaClass.simpleName)
+            Loaded.Failed(context.explain(e))
         }
     }
 

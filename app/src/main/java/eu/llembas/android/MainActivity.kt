@@ -89,6 +89,7 @@ class MainActivity : ComponentActivity() {
                         ChatsScreen(
                             onOpen = { nav.navigate("chat/$it") },
                             onNew = { nav.navigate("new") },
+                            onNewAgent = { nav.navigate("new-agent") },
                             onSettings = { nav.navigate("settings") },
                             onFiles = { nav.navigate("files") },
                         )
@@ -99,6 +100,16 @@ class MainActivity : ComponentActivity() {
                             onBack = { nav.popBackStack() },
                             onOpened = { id ->
                                 nav.navigate("chat/$id") { popUpTo("new") { inclusive = true } }
+                            },
+                        )
+                    }
+                    composable("new-agent") {
+                        ChatScreen(
+                            chatId = null,
+                            agent = true,
+                            onBack = { nav.popBackStack() },
+                            onOpened = { id ->
+                                nav.navigate("chat/$id") { popUpTo("new-agent") { inclusive = true } }
                             },
                         )
                     }

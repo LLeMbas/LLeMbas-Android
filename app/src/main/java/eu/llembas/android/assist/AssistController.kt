@@ -8,6 +8,7 @@ import eu.llembas.android.api.LiveReply
 import eu.llembas.android.api.StreamClient
 import eu.llembas.android.lembas
 import eu.llembas.android.push.Notifications
+import eu.llembas.android.ui.explain
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -81,7 +82,7 @@ class AssistController(private val context: Context, private val scope: Coroutin
                 _state.update { it.copy(busy = false) }
                 if (text.isNotBlank()) ask(text, spoken = true)
             } catch (e: Exception) {
-                _state.update { it.copy(busy = false, error = e.message) }
+                _state.update { it.copy(busy = false, error = context.explain(e)) }
             }
         }
     }
@@ -115,7 +116,7 @@ class AssistController(private val context: Context, private val scope: Coroutin
                     if (words.isNotBlank()) speaker.play(api.speech(plain(words)))
                 }
             } catch (e: Exception) {
-                _state.update { it.copy(error = e.message ?: e.javaClass.simpleName) }
+                _state.update { it.copy(error = context.explain(e)) }
             } finally {
                 _state.update { it.copy(busy = false) }
             }

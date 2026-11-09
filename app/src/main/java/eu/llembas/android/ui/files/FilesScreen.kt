@@ -47,6 +47,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import eu.llembas.android.R
 import eu.llembas.android.api.FileEntry
 import eu.llembas.android.lembas
+import eu.llembas.android.ui.explain
 import eu.llembas.android.ui.theme.LocalPalette
 import eu.llembas.android.ui.viewer.TreeFileViewer
 import kotlinx.coroutines.Job
@@ -91,7 +92,7 @@ class FilesViewModel(app: Application) : AndroidViewModel(app) {
                 _state.value = FilesState(path = listing.path, parent = listing.parent, entries = listing.entries)
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
-                _state.update { it.copy(loading = false, error = e.message ?: e.javaClass.simpleName) }
+                _state.update { it.copy(loading = false, error = getApplication<Application>().explain(e)) }
             }
         }
     }

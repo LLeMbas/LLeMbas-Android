@@ -47,6 +47,7 @@ import eu.llembas.android.api.ServerFit
 import eu.llembas.android.api.fit
 import eu.llembas.android.api.normaliseBase
 import eu.llembas.android.lembas
+import eu.llembas.android.ui.explain
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -124,7 +125,7 @@ class SignInViewModel(app: Application) : AndroidViewModel(app) {
                 }
                 _state.value = SignInState.Failed(getApplication<Application>().getString(R.string.signin_expired))
             } catch (e: Exception) {
-                _state.value = SignInState.Failed(e.message ?: e.javaClass.simpleName)
+                _state.value = SignInState.Failed(getApplication<Application>().explain(e))
             }
         }
     }

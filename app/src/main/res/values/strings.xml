@@ -18,7 +18,12 @@
     <string name="tab_chats">Chats</string>
     <string name="tab_agents">Agents</string>
     <string name="empty_chats">No chats yet. Not all those who wander are lost — start one.</string>
-    <string name="empty_agents">No agent chats. Start one from the web interface on a linked device.</string>
+    <string name="empty_agents">No agent chats yet. Start one with New agent chat, on a device linked to this instance.</string>
+    <string name="new_agent_chat">New agent chat</string>
+    <string name="agent_device">Device</string>
+    <string name="agent_no_device">No device is linked right now. Start `lembas service` on a computer signed in to this instance, then come back.</string>
+    <string name="agent_directory">Folder on the device</string>
+    <string name="agent_directory_hint">Empty: the device\'s first folder</string>
     <string name="empty_chat">What shall we talk about?</string>
     <string name="loading_line">Baking lembas…</string>
     <string name="archive">Archive</string>
@@ -36,6 +41,15 @@
     <string name="send">Send</string>
     <string name="stop">Stop</string>
     <string name="attach">Attach a file</string>
+    <string name="attach_take_photo">Take a photo</string>
+    <string name="attach_choose_photos">Choose photos</string>
+    <string name="attach_choose_files">Choose files</string>
+    <string name="copy_message">Copy message</string>
+    <string name="copied">Copied.</string>
+    <string name="rename_chat">Rename chat</string>
+    <string name="save">Save</string>
+    <string name="retry">Try again</string>
+    <string name="offline">The instance cannot be reached. Check the phone\'s connection, and that it can reach the instance\'s address.</string>
     <string name="dictate">Dictate</string>
     <string name="remove">Remove</string>
     <string name="more">More</string>
@@ -46,6 +60,7 @@
     <string name="mode_plan">Plan</string>
     <string name="mode_edit">Edit</string>
     <string name="mode_manual">Manual</string>
+    <string name="mode_auto">Auto</string>
     <string name="card_approval">Allow this?</string>
     <string name="card_allow_once">Allow once</string>
     <string name="card_allow_always">Always allow this</string>

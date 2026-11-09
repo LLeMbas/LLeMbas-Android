@@ -17,7 +17,12 @@
     <string name="tab_chats">Chats</string>
     <string name="tab_agents">Agentes</string>
     <string name="empty_chats">Aún no hay chats. No todos los que vagan están perdidos — empiece uno.</string>
-    <string name="empty_agents">No hay chats de agente. Inicie uno desde la interfaz web en un dispositivo vinculado.</string>
+    <string name="empty_agents">Aún no hay chats de agente. Inicie uno con Nuevo chat de agente, en un dispositivo vinculado a esta instancia.</string>
+    <string name="new_agent_chat">Nuevo chat de agente</string>
+    <string name="agent_device">Dispositivo</string>
+    <string name="agent_no_device">Ahora no hay ningún dispositivo vinculado. Inicie `lembas service` en un ordenador con sesión iniciada en esta instancia y vuelva.</string>
+    <string name="agent_directory">Carpeta en el dispositivo</string>
+    <string name="agent_directory_hint">Vacío: la primera carpeta del dispositivo</string>
     <string name="empty_chat">¿De qué hablamos?</string>
     <string name="loading_line">Horneando lembas…</string>
     <string name="archive">Archivar</string>
@@ -35,6 +40,15 @@
     <string name="send">Enviar</string>
     <string name="stop">Detener</string>
     <string name="attach">Adjuntar un archivo</string>
+    <string name="attach_take_photo">Hacer una foto</string>
+    <string name="attach_choose_photos">Elegir fotos</string>
+    <string name="attach_choose_files">Elegir archivos</string>
+    <string name="copy_message">Copiar mensaje</string>
+    <string name="copied">Copiado.</string>
+    <string name="rename_chat">Renombrar chat</string>
+    <string name="save">Guardar</string>
+    <string name="retry">Reintentar</string>
+    <string name="offline">No se puede acceder a la instancia. Compruebe la conexión del teléfono y que llegue a la dirección de la instancia.</string>
     <string name="dictate">Dictar</string>
     <string name="remove">Quitar</string>
     <string name="more">Más</string>
@@ -45,6 +59,7 @@
     <string name="mode_plan">Plan</string>
     <string name="mode_edit">Editar</string>
     <string name="mode_manual">Manual</string>
+    <string name="mode_auto">Automático</string>
     <string name="card_approval">¿Permitir esto?</string>
     <string name="card_allow_once">Permitir una vez</string>
     <string name="card_allow_always">Permitir siempre esto</string>

@@ -25,6 +25,9 @@ import java.io.IOException
 import java.util.concurrent.TimeUnit
 import kotlin.coroutines.resumeWithException
 
+/** Where a new agent chat runs: a linked device ([LinkedDevice.id]) and a folder on it. */
+data class AgentTarget(val device: String, val directory: String = "")
+
 /** A refusal from the server, in its own words (`{"detail": "…"}`). */
 class ApiException(val status: Int, message: String) : IOException(message)
 
@@ -168,6 +171,7 @@ class ApiClient(val base: String, private val token: String, val http: OkHttpCli
         temporary: Boolean = false,
         effort: String? = null,
         mode: String? = null,
+        agent: AgentTarget? = null,
     ): NewChat = send(
         "POST",
         "/chats",
@@ -178,6 +182,14 @@ class ApiClient(val base: String, private val token: String, val http: OkHttpCli
             effort?.let { put("effort", it) }
             mode?.let { put("mode", it) }
             put("temporary", temporary)
+            // An agent chat runs on a linked device; an empty directory is the device's first
+            // allowed one. A device that is no longer linked makes it an ordinary chat on the
+            // server, rather than losing the message.
+            agent?.let {
+                put("kind", "agent")
+                put("device", it.device)
+                if (it.directory.isNotBlank()) put("directory", it.directory.trim())
+            }
         },
     )
 

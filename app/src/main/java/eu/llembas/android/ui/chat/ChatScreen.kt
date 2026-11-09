@@ -4,10 +4,16 @@ package eu.llembas.android.ui.chat
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -21,6 +27,7 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
@@ -29,9 +36,12 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.DropdownMenu
@@ -72,6 +82,8 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import eu.llembas.android.R
+import eu.llembas.android.api.AgentTarget
+import eu.llembas.android.api.LinkedDevice
 import eu.llembas.android.api.Message
 import eu.llembas.android.api.ModelInfo
 import eu.llembas.android.api.ShowCard
@@ -83,7 +95,13 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ChatScreen(chatId: String?, onBack: () -> Unit, onOpened: (String) -> Unit = {}, model: ChatViewModel = viewModel(key = chatId ?: "new")) {
+fun ChatScreen(
+    chatId: String?,
+    onBack: () -> Unit,
+    onOpened: (String) -> Unit = {},
+    agent: Boolean = false,
+    model: ChatViewModel = viewModel(key = chatId ?: if (agent) "new-agent" else "new"),
+) {
     val state by model.state.collectAsStateWithLifecycle()
     val palette = LocalPalette.current
     val list = rememberLazyListState()
@@ -91,8 +109,16 @@ fun ChatScreen(chatId: String?, onBack: () -> Unit, onOpened: (String) -> Unit =
     var menu by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<Message?>(null) }
     var showing by remember { mutableStateOf<ShowCard?>(null) }
+    var renaming by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val copy: (String) -> Unit = { text ->
+        context.getSystemService(ClipboardManager::class.java)?.setPrimaryClip(ClipData.newPlainText("LLeMbas", text))
+        // Android 13 and newer say "Copied" themselves.
+        if (Build.VERSION.SDK_INT < 33) scope.launch { snackbar.showSnackbar(context.getString(R.string.copied)) }
+    }
 
-    LaunchedEffect(chatId) { model.open(chatId) }
+    LaunchedEffect(chatId) { model.open(chatId, agent = agent && chatId == null) }
     // A new chat gets its id from its first message; the route follows, so Back and a
     // rotation land on the chat rather than on an empty composer.
     LaunchedEffect(state.chat?.id) { state.chat?.id?.let { if (it != chatId) onOpened(it) } }
@@ -104,8 +130,20 @@ fun ChatScreen(chatId: String?, onBack: () -> Unit, onOpened: (String) -> Unit =
     }
     val live = state.live
     val rows = state.messages
-    LaunchedEffect(rows.size, live?.shown?.size) {
-        if (rows.isNotEmpty()) list.animateScrollToItem(rows.size - 1)
+    // To the end when the transcript grows, and while a reply is being written -- but only if
+    // the person is at the end already: reading back up is not interrupted by the next line.
+    // Whether to follow is decided when the person's own scroll comes to rest, not when a
+    // line arrives: by then the line has already made the list longer than the screen.
+    var following by remember { mutableStateOf(true) }
+    LaunchedEffect(list.isScrollInProgress) {
+        if (!list.isScrollInProgress) following = !list.canScrollForward
+    }
+    LaunchedEffect(rows.size) {
+        if (rows.isNotEmpty()) list.toEnd()
+    }
+    val growth = live?.let { it.shown.size * 100_000 + (it.tail.text.length + it.tail.thinking.length) } ?: 0
+    LaunchedEffect(growth) {
+        if (growth > 0 && following) list.toEnd()
     }
 
     Scaffold(
@@ -119,7 +157,7 @@ fun ChatScreen(chatId: String?, onBack: () -> Unit, onOpened: (String) -> Unit =
                 },
                 title = {
                     Text(
-                        state.chat?.title?.ifBlank { null } ?: stringResource(R.string.new_chat),
+                        state.chat?.title?.ifBlank { null } ?: stringResource(if (agent) R.string.new_agent_chat else R.string.new_chat),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -130,6 +168,10 @@ fun ChatScreen(chatId: String?, onBack: () -> Unit, onOpened: (String) -> Unit =
                             Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.more))
                         }
                         DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                            DropdownMenuItem(text = { Text(stringResource(R.string.rename_chat)) }, onClick = {
+                                menu = false
+                                renaming = true
+                            })
                             DropdownMenuItem(text = { Text(stringResource(R.string.continue_reply)) }, onClick = {
                                 menu = false
                                 model.continueChat()
@@ -173,7 +215,7 @@ fun ChatScreen(chatId: String?, onBack: () -> Unit, onOpened: (String) -> Unit =
                 if (live != null && live.status.isNotBlank()) {
                     Text(live.status, style = MaterialTheme.typography.labelSmall, color = palette.inkFaint, modifier = Modifier.padding(horizontal = 16.dp))
                 }
-                Composer(model, state)
+                Composer(model, state, agent)
             }
         },
     ) { padding ->
@@ -197,9 +239,10 @@ fun ChatScreen(chatId: String?, onBack: () -> Unit, onOpened: (String) -> Unit =
                 when {
                     message.isUser -> Column {
                         UserBubble(message)
-                        if (!message.machine && live == null) {
-                            TextButton(onClick = { editing = message }, modifier = Modifier.align(Alignment.End)) {
-                                Text(stringResource(R.string.edit))
+                        Row(Modifier.align(Alignment.End), verticalAlignment = Alignment.CenterVertically) {
+                            message.text?.takeIf { it.isNotBlank() }?.let { words -> CopyButton { copy(words) } }
+                            if (!message.machine && live == null) {
+                                TextButton(onClick = { editing = message }) { Text(stringResource(R.string.edit)) }
                             }
                         }
                     }
@@ -213,8 +256,10 @@ fun ChatScreen(chatId: String?, onBack: () -> Unit, onOpened: (String) -> Unit =
                     else -> Column {
                         Steps(message.steps, onShow = { showing = it })
                         ReplyFoot(message)
-                        if (live == null && message == rows.lastOrNull()) {
-                            Row {
+                        val words = replyText(message)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            if (words.isNotBlank()) CopyButton { copy(words) }
+                            if (live == null && message == rows.lastOrNull()) {
                                 TextButton(onClick = { model.regenerate(message) }) { Text(stringResource(R.string.regenerate)) }
                             }
                         }
@@ -243,6 +288,22 @@ fun ChatScreen(chatId: String?, onBack: () -> Unit, onOpened: (String) -> Unit =
         state.chat?.id?.let { id -> FileViewer(id, file, onClose = { showing = null }) }
     }
 
+    if (renaming) {
+        var title by remember { mutableStateOf(state.chat?.title.orEmpty()) }
+        AlertDialog(
+            onDismissRequest = { renaming = false },
+            title = { Text(stringResource(R.string.rename_chat)) },
+            text = { OutlinedTextField(value = title, onValueChange = { title = it }, singleLine = true, modifier = Modifier.fillMaxWidth()) },
+            confirmButton = {
+                TextButton(enabled = title.isNotBlank(), onClick = {
+                    model.rename(title)
+                    renaming = false
+                }) { Text(stringResource(R.string.save)) }
+            },
+            dismissButton = { TextButton(onClick = { renaming = false }) { Text(stringResource(R.string.cancel)) } },
+        )
+    }
+
     editing?.let { message ->
         var text by remember(message.id) { mutableStateOf(message.text.orEmpty()) }
         AlertDialog(
@@ -260,28 +321,93 @@ fun ChatScreen(chatId: String?, onBack: () -> Unit, onOpened: (String) -> Unit =
     }
 }
 
+/** To the very end of the transcript: the last row, then down to its foot however tall it is. */
+private suspend fun LazyListState.toEnd() {
+    val last = layoutInfo.totalItemsCount - 1
+    if (last < 0) return
+    scrollToItem(last)
+    scrollBy(1_000_000f)
+}
+
+/** A reply's own words, as the person would copy them: its text steps, in order. */
+private fun replyText(message: Message): String =
+    message.steps.filter { it.kind == "text" }.mapNotNull { it.markdown }.joinToString("\n\n").ifBlank { message.text.orEmpty() }
+
+@Composable
+private fun CopyButton(onClick: () -> Unit) {
+    IconButton(onClick = onClick) {
+        Icon(
+            Icons.Filled.ContentCopy,
+            contentDescription = stringResource(R.string.copy_message),
+            tint = LocalPalette.current.inkFaint,
+        )
+    }
+}
+
+/** The agent modes, as the web page offers them, in the order of how much the model may do. */
+private val AGENT_MODES = listOf("manual", "edit", "auto", "plan")
+
+@Composable
+private fun modeName(mode: String): String = when (mode) {
+    "manual" -> stringResource(R.string.mode_manual)
+    "edit" -> stringResource(R.string.mode_edit)
+    "auto" -> stringResource(R.string.mode_auto)
+    "plan" -> stringResource(R.string.mode_plan)
+    else -> mode.replaceFirstChar { it.uppercase() }
+}
+
 @SuppressLint("MissingPermission")
 @Composable
-private fun Composer(model: ChatViewModel, state: ChatState) {
+private fun Composer(model: ChatViewModel, state: ChatState, agent: Boolean) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var text by rememberSaveable { mutableStateOf("") }
     var chosenModel by rememberSaveable { mutableStateOf<String?>(null) }
+    var chosenEffort by rememberSaveable { mutableStateOf<String?>(null) }
     var planMode by rememberSaveable { mutableStateOf(false) }
+    var agentMode by rememberSaveable { mutableStateOf("edit") }
+    var device by rememberSaveable { mutableStateOf<String?>(null) }
+    var directory by rememberSaveable { mutableStateOf("") }
+    var askDirectory by remember { mutableStateOf(false) }
+    var attachMenu by remember { mutableStateOf(false) }
     var listening by remember { mutableStateOf(false) }
+    var photo by remember { mutableStateOf<Uri?>(null) }
     val recorder = remember { Recorder(scope) }
-    val pick = rememberLauncherForActivityResult(ActivityResultContracts.GetMultipleContents()) { model.attach(it) }
+    val pickFiles = rememberLauncherForActivityResult(ActivityResultContracts.GetMultipleContents()) { model.attach(it) }
+    val pickPhotos = rememberLauncherForActivityResult(ActivityResultContracts.PickMultipleVisualMedia()) { model.attach(it) }
+    val takePhoto = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { taken ->
+        photo?.let { if (taken) model.attach(listOf(it)) }
+        photo = null
+    }
     val askMic = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (granted) {
             recorder.start()
             listening = true
         }
     }
+    // A message the server did not take comes back here, so nothing typed is lost.
+    LaunchedEffect(state.unsent) {
+        state.unsent?.let {
+            if (text.isBlank()) text = it
+            model.clearUnsent()
+        }
+    }
     val chat = state.chat
-    val current = chat?.model ?: chosenModel ?: state.models.firstOrNull { it.default }?.id
+    val newAgent = agent && chat == null
+    // The first linked device is the one a new agent chat runs on until another is chosen.
+    val target: LinkedDevice? = state.devices.firstOrNull { it.id == device } ?: state.devices.firstOrNull()
+    val current = chat?.model?.ifBlank { null } ?: chosenModel ?: state.models.firstOrNull { it.default }?.id
     val running = state.live != null && state.live.finished == null
 
     Column(Modifier.fillMaxWidth().padding(8.dp)) {
+        if (newAgent && state.devices.isEmpty() && !state.loading) {
+            Text(
+                stringResource(R.string.agent_no_device),
+                style = MaterialTheme.typography.bodySmall,
+                color = LocalPalette.current.inkMuted,
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+            )
+        }
         if (state.pending.isNotEmpty()) {
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 state.pending.forEach { a ->
@@ -295,28 +421,58 @@ private fun Composer(model: ChatViewModel, state: ChatState) {
             }
         }
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            if (newAgent && state.devices.isNotEmpty()) {
+                DeviceChip(state.devices, target) { device = it }
+                AssistChip(
+                    onClick = { askDirectory = true },
+                    leadingIcon = { Icon(Icons.Filled.Folder, contentDescription = null) },
+                    label = { Text(directory.ifBlank { stringResource(R.string.agent_directory) }, maxLines = 1) },
+                )
+            }
             ModelChip(state.models, current) { id ->
                 if (chat == null) chosenModel = id else model.change("model", id)
             }
             val efforts = state.models.firstOrNull { it.id == current }?.efforts.orEmpty()
             if (efforts.isNotEmpty()) {
-                EffortChip(efforts, chat?.effort) { model.change("effort", it ?: "off") }
+                // A new chat keeps the choice until its first message makes it; an open one
+                // changes at once, as the web page's control does.
+                EffortChip(efforts, if (chat == null) chosenEffort else chat.effort?.ifBlank { null }) { picked ->
+                    if (chat == null) chosenEffort = picked else model.change("effort", picked ?: "off")
+                }
             }
-            if (chat == null || !chat.isAgent) {
-                FilterChip(
+            when {
+                newAgent -> ModeChip(agentMode) { agentMode = it }
+
+                chat != null && chat.isAgent -> ModeChip(chat.mode.ifBlank { "edit" }) { model.change("mode", it) }
+
+                else -> FilterChip(
                     selected = if (chat == null) planMode else chat.mode == "plan",
                     onClick = {
                         if (chat == null) planMode = !planMode else model.change("mode", if (chat.mode == "plan") "" else "plan")
                     },
                     label = { Text(stringResource(R.string.mode_plan)) },
                 )
-            } else {
-                AssistChip(onClick = {}, label = { Text(chat.mode.replaceFirstChar { it.uppercase() }) })
             }
         }
         Row(verticalAlignment = Alignment.Bottom) {
-            IconButton(onClick = { pick.launch("*/*") }) {
-                Icon(Icons.Filled.AttachFile, contentDescription = stringResource(R.string.attach))
+            Box {
+                IconButton(onClick = { attachMenu = true }) {
+                    Icon(Icons.Filled.AttachFile, contentDescription = stringResource(R.string.attach))
+                }
+                DropdownMenu(expanded = attachMenu, onDismissRequest = { attachMenu = false }) {
+                    DropdownMenuItem(text = { Text(stringResource(R.string.attach_take_photo)) }, onClick = {
+                        attachMenu = false
+                        model.photoTarget().also { photo = it }.let { takePhoto.launch(it) }
+                    })
+                    DropdownMenuItem(text = { Text(stringResource(R.string.attach_choose_photos)) }, onClick = {
+                        attachMenu = false
+                        pickPhotos.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                    })
+                    DropdownMenuItem(text = { Text(stringResource(R.string.attach_choose_files)) }, onClick = {
+                        attachMenu = false
+                        pickFiles.launch("*/*")
+                    })
+                }
             }
             TextField(
                 value = text,
@@ -347,12 +503,87 @@ private fun Composer(model: ChatViewModel, state: ChatState) {
                 IconButton(onClick = model::stop) { Icon(Icons.Filled.Stop, contentDescription = stringResource(R.string.stop)) }
             } else {
                 IconButton(
-                    enabled = text.isNotBlank() || state.pending.isNotEmpty(),
+                    enabled = (text.isNotBlank() || state.pending.isNotEmpty()) && !state.uploading && (!newAgent || target != null),
                     onClick = {
-                        model.send(text, model = chosenModel, mode = if (planMode) "plan" else null)
+                        model.send(
+                            text,
+                            model = chosenModel,
+                            mode = if (newAgent) {
+                                agentMode
+                            } else if (planMode) {
+                                "plan"
+                            } else {
+                                null
+                            },
+                            effort = chosenEffort,
+                            agent = if (newAgent) target?.let { AgentTarget(it.id, directory) } else null,
+                        )
                         text = ""
                     },
                 ) { Icon(Icons.AutoMirrored.Filled.Send, contentDescription = stringResource(R.string.send)) }
+            }
+        }
+    }
+
+    if (askDirectory) {
+        var typed by remember { mutableStateOf(directory) }
+        AlertDialog(
+            onDismissRequest = { askDirectory = false },
+            title = { Text(stringResource(R.string.agent_directory)) },
+            text = {
+                OutlinedTextField(
+                    value = typed,
+                    onValueChange = { typed = it },
+                    singleLine = true,
+                    placeholder = { Text(stringResource(R.string.agent_directory_hint)) },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    directory = typed.trim()
+                    askDirectory = false
+                }) { Text(stringResource(R.string.save)) }
+            },
+            dismissButton = { TextButton(onClick = { askDirectory = false }) { Text(stringResource(R.string.cancel)) } },
+        )
+    }
+}
+
+@Composable
+private fun DeviceChip(devices: List<LinkedDevice>, current: LinkedDevice?, onPick: (String) -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    Box {
+        AssistChip(
+            onClick = { open = true },
+            leadingIcon = { Icon(Icons.Filled.Terminal, contentDescription = stringResource(R.string.agent_device)) },
+            label = { Text(current?.let { it.name.ifBlank { it.host } } ?: "—", maxLines = 1) },
+        )
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            devices.forEach { d ->
+                DropdownMenuItem(
+                    text = { Text(listOf(d.name, d.host).filter { it.isNotBlank() }.distinct().joinToString(" · ")) },
+                    onClick = {
+                        open = false
+                        onPick(d.id)
+                    },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ModeChip(current: String, onPick: (String) -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    Box {
+        AssistChip(onClick = { open = true }, label = { Text(modeName(current)) })
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            AGENT_MODES.forEach { m ->
+                DropdownMenuItem(text = { Text(modeName(m)) }, onClick = {
+                    open = false
+                    onPick(m)
+                })
             }
         }
     }

@@ -1,19 +1,24 @@
 package eu.llembas.android
 
+import eu.llembas.android.api.AgentTarget
 import eu.llembas.android.api.ApiClient
 import eu.llembas.android.api.ApiException
 import eu.llembas.android.api.CardAnswer
 import eu.llembas.android.api.ShowCard
 import eu.llembas.android.api.normaliseBase
+import eu.llembas.android.ui.unreachable
 import kotlinx.coroutines.test.runTest
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Test
+import java.net.ConnectException
+import java.net.UnknownHostException
 
 class ClientTest {
     private lateinit var server: MockWebServer
@@ -32,6 +37,35 @@ class ClientTest {
     fun anAddressBecomesABase() {
         assertEquals("https://llm.example.org", normaliseBase(" llm.example.org/ "))
         assertEquals("http://10.1.2.3:8080", normaliseBase("http://10.1.2.3:8080"))
+    }
+
+    @Test
+    fun anAgentChatNamesItsDeviceAndFolder() = runTest {
+        server.enqueue(MockResponse().setResponseCode(201).setBody("""{"chat":{"id":"c1","kind":"agent"}}"""))
+        val made = client().createChat("Look around", mode = "edit", agent = AgentTarget("tok1", " ~/src/shire "))
+        assertEquals("agent", made.chat.kind)
+        val body = server.takeRequest().body.readUtf8()
+        assertTrue(body, body.contains("\"kind\":\"agent\""))
+        assertTrue(body, body.contains("\"device\":\"tok1\""))
+        assertTrue(body, body.contains("\"directory\":\"~/src/shire\""))
+        assertTrue(body, body.contains("\"mode\":\"edit\""))
+    }
+
+    @Test
+    fun aPlainChatSaysNothingOfDevices() = runTest {
+        server.enqueue(MockResponse().setResponseCode(201).setBody("""{"chat":{"id":"c2"}}"""))
+        client().createChat("Hello", effort = "low")
+        val body = server.takeRequest().body.readUtf8()
+        assertFalse(body, body.contains("device"))
+        assertFalse(body, body.contains("kind"))
+        assertTrue(body, body.contains("\"effort\":\"low\""))
+    }
+
+    @Test
+    fun unreachableIsNotARefusal() {
+        assertTrue(unreachable(UnknownHostException("llm.example.org")))
+        assertTrue(unreachable(ConnectException("refused")))
+        assertFalse(unreachable(ApiException(403, "No.")))
     }
 
     @Test

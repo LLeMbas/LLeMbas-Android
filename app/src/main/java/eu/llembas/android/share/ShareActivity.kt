@@ -26,6 +26,7 @@ import eu.llembas.android.MainActivity
 import eu.llembas.android.R
 import eu.llembas.android.lembas
 import eu.llembas.android.push.Notifications
+import eu.llembas.android.ui.explain
 import eu.llembas.android.ui.theme.LembasTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -103,7 +104,7 @@ class ShareActivity : ComponentActivity() {
             )
             finish()
         } catch (e: Exception) {
-            failure.value = e.message ?: e.javaClass.simpleName
+            failure.value = explain(e)
         }
     }
 }

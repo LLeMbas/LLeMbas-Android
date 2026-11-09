@@ -7,6 +7,15 @@ is in alpha and releases come off `main`.
 
 ### Added
 
+- **New agent chat**, on the Agents tab: pick one of the devices linked right now (a computer
+  running `lembas service`), optionally a folder on it, and the mode (Manual, Edit, Auto, Plan),
+  and the first message starts the chat there. With no device linked, the screen says how to
+  link one. An open agent chat's mode can be changed from the same chip.
+- **Photos**: the attach button offers Take a photo (the camera app, no camera permission for
+  LLeMbas itself), Choose photos (Android's photo picker) and Choose files.
+- **Copy** a reply or one of your messages with the copy button under it.
+- **Rename chat** in the chat's menu.
+- **Try again** beside an error on the chat list.
 - **Test builds for every change**: each push to `dev` leaves an installable APK on the CI run,
   signed with a public test key so a newer test build installs over an older one. The version
   in Settings › About carries the run's number.
@@ -14,6 +23,25 @@ is in alpha and releases come off `main`.
 ### Changed
 
 - A beta (`vX.Y.Z-beta.N`) is published on GitHub as a pre-release by itself.
+- **The chat list is read again whenever you come back to it**, from a chat or another app, so a
+  new chat, a new title or a finished reply shows without pulling to refresh.
+- **A reply being written stays in view**: the chat follows it to the end, unless you have
+  scrolled up to read, and picks up again once you scroll back down.
+- **An instance that cannot be reached says so in one sentence** -- no network, an address that
+  only resolves at home, a server that is down -- instead of a raw network error, everywhere:
+  sign-in, the chats, a chat, Files, the viewer, the assistant and Share.
+- The effort chosen for a **new** chat is now sent with its first message (it was lost until the
+  chat existed).
+- The agent mode "Manual" is translated, and "Plan" no longer reads as a price plan in German,
+  French and Hungarian.
+
+### Fixed
+
+- **A message that could not be sent is not lost**: its words and attachments go back into the
+  composer, with the reason.
+- Leaving a chat while a reply was streaming could show a "cancelled" error on the next one.
+- When the server refused the stream of a reply (the chat deleted elsewhere, the sign-in
+  revoked), the half-drawn reply stayed on screen; the chat is now read again.
 
 - **Pinned to LLeMbas server 2.0.0-beta.4**: the contract, the theme and the strings come from that
   release. Nothing a person sees changes; the server's API is the same as in beta.1.

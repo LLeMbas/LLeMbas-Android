@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The one folder the app shares with another app: the cache folder a photo for the composer
+     is taken into. The camera app may write the one file it was given, and nothing else. -->
+<paths>
+    <cache-path name="camera" path="camera/" />
+</paths>

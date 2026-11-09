@@ -33,6 +33,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.rememberSwipeToDismissBoxState
@@ -40,6 +41,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -49,6 +52,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -57,6 +61,7 @@ import eu.llembas.android.api.Chat
 import eu.llembas.android.api.Doorstep
 import eu.llembas.android.api.fit
 import eu.llembas.android.lembas
+import eu.llembas.android.ui.explain
 import eu.llembas.android.ui.signin.refusal
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -76,10 +81,15 @@ class ChatsViewModel(app: Application) : AndroidViewModel(app) {
     private var refused: Int? = null
     private var checked = false
 
-    fun load(kind: String) {
+    /**
+     * Read the list. [quiet] is the reload on coming back to the screen: the rows already shown
+     * stay without a spinner, and only a change replaces them.
+     */
+    fun load(kind: String, quiet: Boolean = false) {
+        val switched = kind != this.kind
         this.kind = kind
         viewModelScope.launch {
-            _state.update { it.copy(loading = true, error = null) }
+            _state.update { it.copy(loading = !quiet || switched, error = null, chats = if (switched) emptyList() else it.chats) }
             try {
                 val api = getApplication<Application>().lembas.instances.client() ?: return@launch
                 // An instance signed in to before it was downgraded, or by 0.1 against a 1.x
@@ -98,7 +108,7 @@ class ChatsViewModel(app: Application) : AndroidViewModel(app) {
                 val page = api.chats(kind = kind)
                 _state.value = ChatsState(chats = page.chats, more = page.more)
             } catch (e: Exception) {
-                _state.update { it.copy(loading = false, error = e.message) }
+                _state.update { it.copy(loading = false, error = getApplication<Application>().explain(e)) }
             }
         }
     }
@@ -111,7 +121,7 @@ class ChatsViewModel(app: Application) : AndroidViewModel(app) {
                 val page = api.chats(kind = kind, before = last.id)
                 _state.update { it.copy(chats = it.chats + page.chats, more = page.more) }
             } catch (e: Exception) {
-                _state.update { it.copy(error = e.message) }
+                _state.update { it.copy(error = getApplication<Application>().explain(e)) }
             }
         }
     }
@@ -124,7 +134,7 @@ class ChatsViewModel(app: Application) : AndroidViewModel(app) {
                 getApplication<Application>().lembas.instances.client()
                     ?.updateChat(chat.id, buildJsonObject { put("archived", true) })
             }.onFailure { e ->
-                _state.update { it.copy(error = e.message) }
+                _state.update { it.copy(error = getApplication<Application>().explain(e)) }
                 load(kind)
             }
         }
@@ -133,11 +143,25 @@ class ChatsViewModel(app: Application) : AndroidViewModel(app) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ChatsScreen(onOpen: (String) -> Unit, onNew: () -> Unit, onSettings: () -> Unit, onFiles: () -> Unit, model: ChatsViewModel = viewModel()) {
+fun ChatsScreen(
+    onOpen: (String) -> Unit,
+    onNew: () -> Unit,
+    onNewAgent: () -> Unit,
+    onSettings: () -> Unit,
+    onFiles: () -> Unit,
+    model: ChatsViewModel = viewModel(),
+) {
     val state by model.state.collectAsStateWithLifecycle()
     var tab by rememberSaveable { mutableIntStateOf(0) }
     val kind = if (tab == 0) "chat" else "agent"
-    LaunchedEffect(kind) { model.load(kind) }
+    // Read again each time the list comes back into view -- from a chat, from another app --
+    // so a new chat, a new title or a finished reply's dot is there without a pull.
+    var shown by remember { mutableStateOf(false) }
+    LifecycleResumeEffect(kind) {
+        model.load(kind, quiet = shown)
+        shown = true
+        onPauseOrDispose { }
+    }
 
     Scaffold(
         topBar = {
@@ -154,13 +178,11 @@ fun ChatsScreen(onOpen: (String) -> Unit, onNew: () -> Unit, onSettings: () -> U
             )
         },
         floatingActionButton = {
-            if (tab == 0) {
-                ExtendedFloatingActionButton(
-                    onClick = onNew,
-                    icon = { Icon(Icons.Filled.Add, contentDescription = null) },
-                    text = { Text(stringResource(R.string.new_chat)) },
-                )
-            }
+            ExtendedFloatingActionButton(
+                onClick = if (tab == 0) onNew else onNewAgent,
+                icon = { Icon(Icons.Filled.Add, contentDescription = null) },
+                text = { Text(stringResource(if (tab == 0) R.string.new_chat else R.string.new_agent_chat)) },
+            )
         },
     ) { padding ->
         Column(Modifier.padding(padding).fillMaxSize()) {
@@ -169,10 +191,14 @@ fun ChatsScreen(onOpen: (String) -> Unit, onNew: () -> Unit, onSettings: () -> U
                 Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text(stringResource(R.string.tab_agents)) })
             }
             state.error?.let {
-                Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(16.dp))
+                Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    // The sentence gives; the button keeps its size.
+                    Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.weight(1f))
+                    TextButton(onClick = { model.load(kind) }) { Text(stringResource(R.string.retry)) }
+                }
             }
             PullToRefreshBox(isRefreshing = state.loading, onRefresh = { model.load(kind) }, modifier = Modifier.fillMaxSize()) {
-                if (state.chats.isEmpty() && !state.loading) {
+                if (state.chats.isEmpty() && !state.loading && state.error == null) {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Text(
                             stringResource(if (tab == 0) R.string.empty_chats else R.string.empty_agents),

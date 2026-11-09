@@ -3,20 +3,25 @@ package eu.llembas.android.ui.chat
 import android.app.Application
 import android.net.Uri
 import android.provider.OpenableColumns
+import androidx.core.content.FileProvider
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import eu.llembas.android.api.AgentTarget
 import eu.llembas.android.api.ApiClient
 import eu.llembas.android.api.ApiException
 import eu.llembas.android.api.Attachment
 import eu.llembas.android.api.Card
 import eu.llembas.android.api.CardAnswer
 import eu.llembas.android.api.Chat
+import eu.llembas.android.api.LinkedDevice
 import eu.llembas.android.api.LiveReply
 import eu.llembas.android.api.Message
 import eu.llembas.android.api.ModelInfo
 import eu.llembas.android.api.StreamClient
 import eu.llembas.android.api.Turn
 import eu.llembas.android.lembas
+import eu.llembas.android.ui.explain
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,6 +31,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import java.io.File
 
 data class ChatState(
     val chat: Chat? = null,
@@ -33,10 +39,14 @@ data class ChatState(
     val more: Boolean = false,
     val live: LiveReply? = null,
     val models: List<ModelInfo> = emptyList(),
+    /** For a new agent chat: the devices linked right now, which it can run on. */
+    val devices: List<LinkedDevice> = emptyList(),
     val pending: List<Attachment> = emptyList(),
     val uploading: Boolean = false,
     val loading: Boolean = false,
     val error: String? = null,
+    /** A message that could not be sent, handed back to the composer once. */
+    val unsent: String? = null,
     /** A card somebody answered elsewhere first: said once, then cleared. */
     val notice: String? = null,
 )
@@ -55,19 +65,27 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
         ?: throw ApiException(401, "Not signed in.")
 
     private fun fail(e: Throwable) {
-        _state.update { it.copy(error = e.message ?: e.javaClass.simpleName, loading = false, uploading = false) }
+        // A follow that was replaced by a newer one is cancelled, not failed: nothing to say.
+        if (e is CancellationException) return
+        _state.update { it.copy(error = getApplication<Application>().explain(e), loading = false, uploading = false) }
     }
 
     fun clearError() = _state.update { it.copy(error = null, notice = null) }
 
-    fun open(chatId: String?) {
+    fun clearUnsent() = _state.update { it.copy(unsent = null) }
+
+    fun rename(title: String) = change("title", title.trim())
+
+    /** Open a chat, or (no id) get a new one ready: an agent chat also needs the linked devices. */
+    fun open(chatId: String?, agent: Boolean = false) {
         viewModelScope.launch {
             try {
                 val client = api()
-                _state.update { it.copy(loading = chatId != null) }
+                _state.update { it.copy(loading = chatId != null || agent, error = null) }
                 val models = runCatching { client.models(chatId) }.getOrDefault(emptyList())
                 if (chatId == null) {
-                    _state.update { it.copy(models = models, loading = false) }
+                    val devices = if (agent) client.devices() else emptyList()
+                    _state.update { it.copy(models = models, devices = devices, loading = false) }
                     return@launch
                 }
                 val detail = client.chat(chatId)
@@ -101,8 +119,15 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
                 StreamClient(api()).follow(chat.id, messageId).collect { frame ->
                     _state.update { s -> s.copy(live = (s.live ?: LiveReply(messageId)).apply(frame.event, frame.data)) }
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 fail(e)
+                // The reply goes on on the server; what it has written so far is read back
+                // rather than left half-drawn.
+                _state.update { it.copy(live = null) }
+                refresh()
+                return@launch
             }
             val ended = _state.value.live
             _state.update { s ->
@@ -136,8 +161,9 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
         turn.reply?.let { follow(it.id) }
     }
 
-    fun send(text: String, model: String? = null, mode: String? = null, effort: String? = null, temporary: Boolean = false) {
-        val files = _state.value.pending.map { it.id }
+    fun send(text: String, model: String? = null, mode: String? = null, effort: String? = null, temporary: Boolean = false, agent: AgentTarget? = null) {
+        val attached = _state.value.pending
+        val files = attached.map { it.id }
         if (text.isBlank() && files.isEmpty()) return
         viewModelScope.launch {
             try {
@@ -145,13 +171,15 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
                 val chat = _state.value.chat
                 _state.update { it.copy(pending = emptyList()) }
                 if (chat == null) {
-                    val made = client.createChat(text, files, model = model, temporary = temporary, effort = effort, mode = mode)
+                    val made = client.createChat(text, files, model = model, temporary = temporary, effort = effort, mode = mode, agent = agent)
                     _state.update { it.copy(chat = made.chat, messages = listOfNotNull(made.message, made.reply)) }
                     made.reply?.let { follow(it.id) }
                 } else {
                     took(client.sendMessage(chat.id, text, files))
                 }
             } catch (e: Exception) {
+                // Nothing was sent: the words and the attachments go back to the composer.
+                _state.update { it.copy(pending = attached + it.pending, unsent = text) }
                 fail(e)
             }
         }
@@ -221,12 +249,27 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
                     val mime = resolver.getType(uri) ?: "application/octet-stream"
                     val stored = api().upload(name, mime, bytes, _state.value.chat?.id)
                     _state.update { it.copy(pending = it.pending + stored) }
+                    // A photo the camera took for this message is the server's now.
+                    if (uri.authority == photoAuthority) runCatching { resolver.delete(uri, null, null) }
                 }
             } catch (e: Exception) {
                 fail(e)
             }
             _state.update { it.copy(uploading = false) }
         }
+    }
+
+    private val photoAuthority get() = "${getApplication<Application>().packageName}.files"
+
+    /**
+     * Where the camera writes a photo for the composer: a file in the app's cache, shared with
+     * the camera app through the FileProvider for exactly this one capture.
+     */
+    fun photoTarget(): Uri {
+        val app = getApplication<Application>()
+        val dir = File(app.cacheDir, "camera").apply { mkdirs() }
+        val file = File(dir, "photo-${System.currentTimeMillis()}.jpg")
+        return FileProvider.getUriForFile(app, photoAuthority, file)
     }
 
     fun unattach(attachment: Attachment) {
