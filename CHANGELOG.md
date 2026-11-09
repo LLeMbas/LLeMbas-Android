@@ -5,6 +5,10 @@ is in alpha and releases come off `main`.
 
 ## [Unreleased]
 
+## [1.0.0-beta.3] — 2026-11-09
+
+For LLeMbas server 2.0 (2.0.0-beta.6 or later for scheduled tasks).
+
 ### Changed
 
 - **A new look, shaped like the AI apps people know.** The app opens on a **new chat** -- the
