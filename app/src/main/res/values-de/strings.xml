@@ -85,8 +85,8 @@
     <string name="task_subagent">Subagent</string>
     <string name="task_command">Befehl</string>
     <string name="task_member">Teammitglied</string>
-    <string name="activity_until_compact">%1$s bis zur automatischen Verdichtung</string>
-    <string name="activity_compact_off">Automatische Verdichtung ist aus.</string>
+    <string name="activity_until_compact">%1$s bis zum automatischen Zusammenfassen</string>
+    <string name="activity_compact_off">Automatisches Zusammenfassen ist aus.</string>
     <string name="activity_compact">Zusammenfassen</string>
     <string name="agents_n_queued">%1$s in der Warteschlange</string>
     <string name="agents_n_waiting">%1$s warten</string>

@@ -1,6 +1,7 @@
 package eu.llembas.android
 
 import eu.llembas.android.api.Activity
+import eu.llembas.android.api.ActivityEnvelope
 import eu.llembas.android.api.ActivityLogic
 import eu.llembas.android.api.AgentsSetting
 import eu.llembas.android.api.Chat
@@ -14,6 +15,7 @@ import eu.llembas.android.ui.chat.Draft
 import eu.llembas.android.ui.chat.offersTeam
 import eu.llembas.android.ui.chat.subagentsCap
 import eu.llembas.android.ui.chat.subagentsNamedOnly
+import kotlinx.serialization.KSerializer
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -27,6 +29,30 @@ import org.junit.Test
  */
 class SubagentsTest {
     private val serving = ModelInfo(id = "qwen", tools = true, parallel = 4)
+
+    private fun <T> read(name: String, serializer: KSerializer<T>): T =
+        LembasJson.decodeFromString(serializer, requireNotNull(javaClass.classLoader!!.getResource("$name.json")).readText())
+
+    @Test
+    fun theContractSaysItAll() {
+        val list = read("models", ModelList.serializer())
+        assertEquals(32, list.subagentsCap)
+        assertEquals(listOf(true, true, false), list.models.map { it.subagents?.offered })
+        assertEquals(listOf(false, true, false), list.models.map { it.subagents?.namedOnly })
+
+        val chat = read("chat", Chat.serializer())
+        assertEquals(SubagentsOffer(offered = true, namedOnly = false, cap = 32), chat.subagents)
+        val agentChat = read("chat_agent", Chat.serializer())
+        assertEquals(SubagentsOffer(offered = false), agentChat.subagents)
+
+        val activity = read("activity", ActivityEnvelope.serializer()).activity
+        assertEquals(true, activity.subagentsOffered)
+        val context = activity.context!!
+        assertEquals(true, context.autoCompact)
+        assertEquals(true, context.compactable)
+        // The server's count and the app's own agree on the same facts.
+        assertEquals(context.untilCompact, ActivityLogic.untilAutoCompact(context.copy(untilCompact = null, autoCompact = null)))
+    }
 
     @Test
     fun theServersWordWinsOverTheGuess() {

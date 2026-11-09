@@ -5,6 +5,9 @@ is in alpha and releases come off `main`.
 
 ## [Unreleased]
 
+For LLeMbas server 2.0.0-beta.7 (an older 2.0 server works; the app then guesses whether
+subagents are offered and works out auto-compact itself).
+
 ### Changed
 
 - **Subagents, by that name.** Everything the app says about the work a chat hands off now
