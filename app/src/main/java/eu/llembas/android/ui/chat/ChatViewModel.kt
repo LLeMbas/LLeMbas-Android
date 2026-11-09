@@ -61,8 +61,10 @@ data class ChatState(
     val activityAt: Long = 0,
     /** The strip's counts, from the events route (or the first read). */
     val summary: ActivitySummary? = null,
-    /** Whether this chat may have a team: the server's word for a chat that exists. */
+    /** Whether this chat is offered subagents: the activity's word for a chat that exists. */
     val teamOffered: Boolean = false,
+    /** The instance's cap on a chat's subagents, from the models list; null from an older server. */
+    val modelsCap: Int? = null,
     /** Whether the events route is followed; without it an open panel polls. */
     val activityLive: Boolean = false,
     /** A Compact asked for from the activity sheet and not answered yet. */
@@ -95,8 +97,22 @@ val ChatState.modelInfo: ModelInfo? get() = models.firstOrNull { it.id == modelI
 val ChatState.level: String?
     get() = modelInfo?.takeIf { it.levelControl != "none" }?.level(if (chat == null) draft.effort else chat.effort?.ifBlank { null })
 
-/** Whether a team may be asked for: the server's word for a chat that exists, the model's facts for a new one. */
-fun ChatState.offersTeam(agent: Boolean): Boolean = if (chat != null) teamOffered else !agent && modelInfo?.mayHaveTeam == true
+/**
+ * Whether the Subagents setting is shown (plan rule 4): the chat's own word for a chat that
+ * exists (`subagents.offered`, else the activity's), the model's for a new one.
+ */
+fun ChatState.offersTeam(agent: Boolean): Boolean = if (chat != null) chat.subagents?.offered ?: teamOffered else !agent && modelInfo?.mayHaveTeam == true
+
+/**
+ * Whether subagents need a model the person names in the chat: the chat's own serves one
+ * request at a time. The setting then says so; there is no default to fall back on.
+ */
+val ChatState.subagentsNamedOnly: Boolean
+    get() = (if (chat != null) chat.subagents?.namedOnly else modelInfo?.subagents?.namedOnly) ?: false
+
+/** The most subagents a chat may have here: the chat's cap, else the instance's, else the spec's. */
+val ChatState.subagentsCap: Int
+    get() = (chat?.subagents?.cap ?: modelsCap ?: AgentsSetting.CAP).coerceAtLeast(1)
 
 /** The team's size in force. */
 val ChatState.agents: AgentsSetting get() = chat?.agents ?: draft.agents ?: AgentsSetting()
@@ -170,7 +186,9 @@ class ChatViewModel(app: Application) :
             try {
                 val client = api()
                 _state.update { it.copy(loading = chatId != null || agent, error = null) }
-                val models = runCatching { client.models(chatId) }.getOrDefault(emptyList())
+                val list = runCatching { client.modelList(chatId) }.getOrNull()
+                val models = list?.models.orEmpty()
+                _state.update { it.copy(modelsCap = list?.subagentsCap) }
                 if (chatId == null) {
                     val devices = if (agent) client.devices() else emptyList()
                     _state.update { it.copy(models = models, devices = devices, loading = false) }
@@ -184,7 +202,7 @@ class ChatViewModel(app: Application) :
                 // Whether a team is offered and what runs in the background: the cheap read,
                 // without the context count. A server without the panel has no answer.
                 runCatching { client.activity(chatId, context = false) }.onSuccess { a ->
-                    _state.update { it.copy(teamOffered = a.teamOffered, summary = a.summary) }
+                    _state.update { it.copy(teamOffered = a.subagentsOffered ?: a.teamOffered, summary = a.summary) }
                 }
             } catch (e: Exception) {
                 fail(e)
@@ -348,7 +366,9 @@ class ChatViewModel(app: Application) :
         // Another model may serve one request at a time, or more: whether a team is offered
         // follows it.
         if (key == "model") {
-            runCatching { api.activity(chat.id, context = false) }.onSuccess { r -> _state.update { it.copy(teamOffered = r.teamOffered) } }
+            runCatching { api.activity(chat.id, context = false) }.onSuccess { r ->
+                _state.update { it.copy(teamOffered = r.subagentsOffered ?: r.teamOffered) }
+            }
         }
     }
 
@@ -372,7 +392,7 @@ class ChatViewModel(app: Application) :
         if (_state.value.summary == null) {
             // A chat its first message just made: whether a team is offered, read once.
             runCatching { client.activity(chat.id, context = false) }.onSuccess { a ->
-                _state.update { it.copy(teamOffered = a.teamOffered, summary = a.summary) }
+                _state.update { it.copy(teamOffered = a.subagentsOffered ?: a.teamOffered, summary = a.summary) }
             }
         }
         try {
@@ -410,7 +430,7 @@ class ChatViewModel(app: Application) :
                         activity = if (context) read else read.copy(context = s.activity?.context),
                         activityAt = SystemClock.elapsedRealtime(),
                         summary = read.summary,
-                        teamOffered = read.teamOffered,
+                        teamOffered = read.subagentsOffered ?: read.teamOffered,
                     )
                 }
             } catch (e: Exception) {

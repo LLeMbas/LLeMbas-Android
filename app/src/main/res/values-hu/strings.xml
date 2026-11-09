@@ -113,6 +113,7 @@
     <string name="team_most">Legfeljebb</string>
     <string name="team_hint">A legkevesebb és a legtöbb ehhez a csevegéshez, a saját ügynökével együtt. Egy fölött munkát adhat alügynököknek, és vezeti őket.</string>
     <string name="team_chip">Alügynökök %1$s–%2$s</string>
+    <string name="subagents_named_only">Ez a modell egyszerre csak egy kérést szolgál ki: az alügynököknek másik modell kell, másik szerveren, a csevegésben megnevezve.</string>
     <string name="thinking_switch">Gondolkodjon válasz előtt</string>
     <string name="level_off">ki</string>
     <string name="level_default">alapértelmezett</string>

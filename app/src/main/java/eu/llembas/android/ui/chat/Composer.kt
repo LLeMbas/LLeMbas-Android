@@ -429,13 +429,26 @@ fun TuneContent(state: ChatState, actions: ChatActions, agent: Boolean, modifier
                 color = palette.inkMuted,
                 modifier = Modifier.padding(horizontal = 24.dp),
             )
-            val now = state.agents
-            Column(Modifier.padding(horizontal = 24.dp)) {
-                AgentsSlider(stringResource(R.string.team_fewest), now.min) { v ->
-                    setTeam(actions, chat == null, AgentsSetting(v, maxOf(v, now.max)))
-                }
-                AgentsSlider(stringResource(R.string.team_most), now.max) { v ->
-                    setTeam(actions, chat == null, AgentsSetting(minOf(now.min, v), v))
+            if (state.subagentsNamedOnly) {
+                // The chat's model serves one request at a time: no default to fall back on.
+                Text(
+                    stringResource(R.string.subagents_named_only),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = palette.warning,
+                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp),
+                )
+            }
+            val cap = state.subagentsCap
+            val now = state.agents.let { AgentsSetting(it.min.coerceIn(1, cap), it.max.coerceIn(1, cap)) }
+            // An instance that allows only one has nothing to choose between.
+            if (cap > 1) {
+                Column(Modifier.padding(horizontal = 24.dp)) {
+                    AgentsSlider(stringResource(R.string.team_fewest), now.min, cap) { v ->
+                        setTeam(actions, chat == null, AgentsSetting(v, maxOf(v, now.max)))
+                    }
+                    AgentsSlider(stringResource(R.string.team_most), now.max, cap) { v ->
+                        setTeam(actions, chat == null, AgentsSetting(minOf(now.min, v), v))
+                    }
                 }
             }
         }
@@ -560,11 +573,11 @@ private fun DeviceChoices(devices: List<LinkedDevice>, current: LinkedDevice?, o
 }
 
 /**
- * One end of the team's size: its label and value on a row of their own, so the two sliders
- * line up whatever the words, and the slider under them.
+ * One end of the Subagents setting: its label and value on a row of their own, so the two
+ * sliders line up whatever the words, and the slider under them, from 1 to the instance's [cap].
  */
 @Composable
-fun AgentsSlider(label: String, value: Int, onChange: (Int) -> Unit) {
+fun AgentsSlider(label: String, value: Int, cap: Int, onChange: (Int) -> Unit) {
     var shown by remember(value) { mutableStateOf(value.toFloat()) }
     Column(Modifier.padding(top = 8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -574,9 +587,11 @@ fun AgentsSlider(label: String, value: Int, onChange: (Int) -> Unit) {
         Slider(
             value = shown,
             onValueChange = { shown = it },
-            onValueChangeFinished = { onChange(Math.round(shown).coerceIn(1, AgentsSetting.CAP)) },
-            valueRange = 1f..AgentsSetting.CAP.toFloat(),
-            // Continuous: 31 tick marks would be noise, and the value is rounded anyway.
+            onValueChangeFinished = { onChange(Math.round(shown).coerceIn(1, cap)) },
+            valueRange = 1f..cap.toFloat(),
+            // Up to the instance's cap: a tick per value for a few, continuous past that, where
+            // tick marks would be noise (the value is rounded anyway).
+            steps = if (cap <= 8) cap - 2 else 0,
         )
     }
 }

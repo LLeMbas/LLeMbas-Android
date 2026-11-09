@@ -24,6 +24,7 @@ import eu.llembas.android.api.ScheduleRun
 import eu.llembas.android.api.SchedulingModel
 import eu.llembas.android.api.SchedulingModels
 import eu.llembas.android.api.Step
+import eu.llembas.android.api.SubagentsOffer
 import eu.llembas.android.api.Tail
 import eu.llembas.android.api.ToolBlock
 import eu.llembas.android.api.ToolCall
@@ -182,6 +183,11 @@ object Fakes {
     /** A chat on a model with effort levels, a team and a plan: the tune sheet with everything. */
     val tuned = transcript.copy(
         chat = chat.copy(model = "gpt-oss", effort = "high", mode = "plan", agents = AgentsSetting(1, 4)),
+    )
+
+    /** A chat whose model serves one request at a time, on an instance that caps subagents at 6. */
+    val tunedOneAtATime = tuned.copy(
+        chat = tuned.chat!!.copy(agents = AgentsSetting(2, 3), subagents = SubagentsOffer(offered = true, namedOnly = true, cap = 6)),
     )
 
     val chats = ChatsState(

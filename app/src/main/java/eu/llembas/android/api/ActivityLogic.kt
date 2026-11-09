@@ -60,9 +60,13 @@ object ActivityLogic {
     /**
      * How many tokens are left before the chat compacts itself: the window's [ContextUse.threshold]
      * per cent, less what is used. Null when it never will -- the threshold is 0 (off) or 100,
-     * or the window is unknown -- since a count against an unknown window is a guess.
+     * or the window is unknown -- since a count against an unknown window is a guess. The
+     * server's [ContextUse.untilCompact] and [ContextUse.autoCompact] win where it says them.
      */
     fun untilAutoCompact(context: ContextUse): Int? {
+        // The server's own count, where it gives one.
+        if (context.autoCompact == false) return null
+        context.untilCompact?.let { return it.coerceAtLeast(0) }
         if (context.limit <= 0 || context.threshold !in 1..99) return null
         return (context.limit.toLong() * context.threshold / 100 - context.used).toInt().coerceAtLeast(0)
     }

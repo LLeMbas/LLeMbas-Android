@@ -144,7 +144,10 @@ class ApiClient(val base: String, private val token: String, val http: OkHttpCli
     // --- Account -----------------------------------------------------------------------------
     suspend fun me(): Me = get("/me")
 
-    suspend fun models(chatId: String? = null): List<ModelInfo> = get<ModelList>(if (chatId != null) "/models?chat=$chatId" else "/models").models
+    suspend fun models(chatId: String? = null): List<ModelInfo> = modelList(chatId).models
+
+    /** The models with the instance's subagent cap; with [chatId], whether each is offered subagents on that chat. */
+    suspend fun modelList(chatId: String? = null): ModelList = get(if (chatId != null) "/models?chat=$chatId" else "/models")
 
     suspend fun folders(): List<Folder> = get<FolderList>("/folders").folders
 

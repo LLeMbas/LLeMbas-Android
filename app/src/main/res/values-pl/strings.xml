@@ -113,6 +113,7 @@
     <string name="team_most">Najwięcej</string>
     <string name="team_hint">Najmniej i najwięcej dla tego czatu, łącznie z jego własnym agentem. Powyżej jednego może przekazywać pracę subagentom i nimi kierować.</string>
     <string name="team_chip">Subagenci %1$s–%2$s</string>
+    <string name="subagents_named_only">Ten model obsługuje tylko jedno żądanie naraz: subagenci potrzebują innego modelu, na innym serwerze, nazwanego w czacie.</string>
     <string name="thinking_switch">Rozumuj przed odpowiedzią</string>
     <string name="level_off">wył.</string>
     <string name="level_default">domyślna</string>

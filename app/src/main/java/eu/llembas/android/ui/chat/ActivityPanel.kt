@@ -63,6 +63,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
@@ -373,7 +374,7 @@ private fun Empty(text: String) {
 @Composable
 private fun ContextSection(context: ContextUse?, canCompact: Boolean, compacting: Boolean, onCompact: () -> Unit) {
     val palette = LocalPalette.current
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         if (context == null) {
             Empty(stringResource(R.string.activity_not_measured))
         } else {
@@ -405,9 +406,12 @@ private fun ContextSection(context: ContextUse?, canCompact: Boolean, compacting
                 }
             }
             // Each row a fixed grid: swatch, the name that gives, two number columns of their own
-            // width -- the numbers line up whatever the names say in which language.
+            // width -- the numbers line up whatever the names say in which language. The columns
+            // are as wide as five of their own figures, so large type widens them with it.
+            val figures = MaterialTheme.typography.bodySmall.fontSize * 4.6f
+            val column = with(LocalDensity.current) { figures.toDp() }
             context.categories.forEach { part ->
-                Row(Modifier.fillMaxWidth().heightIn(min = 24.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.fillMaxWidth().heightIn(min = 22.dp), verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.size(10.dp).clip(RoundedCornerShape(2.dp)).background(categoryColour(palette, part.key)))
                     Text(
                         categoryName(part.key),
@@ -420,14 +424,16 @@ private fun ContextSection(context: ContextUse?, canCompact: Boolean, compacting
                         ActivityLogic.compactTokens(part.tokens),
                         style = MaterialTheme.typography.bodySmall,
                         textAlign = TextAlign.End,
-                        modifier = Modifier.width(56.dp),
+                        maxLines = 1,
+                        modifier = Modifier.width(column),
                     )
                     Text(
                         part.percent?.let { "${ActivityLogic.percent(it)}%" } ?: "—",
                         style = MaterialTheme.typography.bodySmall,
                         color = palette.inkMuted,
                         textAlign = TextAlign.End,
-                        modifier = Modifier.width(56.dp),
+                        maxLines = 1,
+                        modifier = Modifier.padding(start = 4.dp).width(column),
                     )
                 }
             }
@@ -446,14 +452,16 @@ private fun ContextSection(context: ContextUse?, canCompact: Boolean, compacting
                 when {
                     context == null -> ""
                     until != null -> stringResource(R.string.activity_until_compact, ActivityLogic.compactTokens(until))
-                    context.threshold <= 0 -> stringResource(R.string.activity_compact_off)
+                    context.autoCompact == false || context.threshold <= 0 -> stringResource(R.string.activity_compact_off)
                     else -> ""
                 },
                 style = MaterialTheme.typography.bodySmall,
                 color = palette.inkMuted,
                 modifier = Modifier.weight(1f).padding(end = 8.dp),
             )
-            OutlinedButton(onClick = onCompact, enabled = canCompact && !compacting && context != null) {
+            // The server says when there is nothing to summarise yet (`compactable`); an older
+            // one does not, and then its refusal says it in words.
+            OutlinedButton(onClick = onCompact, enabled = canCompact && !compacting && context != null && context.compactable != false) {
                 if (compacting) {
                     CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
                     Spacer(Modifier.width(8.dp))

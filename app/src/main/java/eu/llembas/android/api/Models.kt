@@ -95,6 +95,8 @@ data class ModelInfo(
     /** The picture's path on the instance (`/api/v2/models/images/…`), read with the token. */
     val image: String? = null,
     val default: Boolean = false,
+    /** Whether a new chat on this model is offered subagents (server 2.0.0-beta.7); null from an older one. */
+    val subagents: SubagentsOffer? = null,
 ) {
     /**
      * The levels, for a server that says them; an older one said only `efforts`, offered after
@@ -118,12 +120,12 @@ data class ModelInfo(
     val onLevel: String get() = offered.firstOrNull { it != "off" } ?: effort
 
     /**
-     * Whether a new chat on this model may have a team, as far as the app can tell: the model
-     * serves two requests at once (`parallel` ≥ 2, or no stated limit) and takes tools. The
-     * server also needs subagents on, which only an existing chat's activity says
-     * (`team_offered`); a setting it does not use is kept and does nothing.
+     * Whether a new chat on this model is offered subagents: the server's word
+     * (`subagents.offered`) when it says it. An older server did not, and then the app guesses
+     * from the model alone: it serves two requests at once (`parallel` ≥ 2, or no stated
+     * limit) and takes tools.
      */
-    val mayHaveTeam: Boolean get() = tools && (parallel == null || parallel >= 2)
+    val mayHaveTeam: Boolean get() = subagents?.offered ?: (tools && (parallel == null || parallel >= 2))
 
     companion object {
         val CONTROLS = setOf("none", "switch", "slider")
@@ -131,7 +133,20 @@ data class ModelInfo(
 }
 
 @Serializable
-data class ModelList(val models: List<ModelInfo> = emptyList())
+data class ModelList(
+    val models: List<ModelInfo> = emptyList(),
+    /** The instance's cap on a chat's subagents (server 2.0.0-beta.7); null from an older one. */
+    @SerialName("subagents_cap") val subagentsCap: Int? = null,
+)
+
+/**
+ * Whether subagents are offered (harness spec 3.3.0, `subagents.md` §4): [offered] when
+ * subagents are on and at least one model could serve; [namedOnly] when only a model the person
+ * names in the chat could -- the chat's own serves one request at a time -- and the setting then
+ * says so. [cap] is the instance's most, on a chat (not on a model).
+ */
+@Serializable
+data class SubagentsOffer(val offered: Boolean = false, @SerialName("named_only") val namedOnly: Boolean = false, val cap: Int? = null)
 
 @Serializable
 data class Folder(val id: String, val name: String = "", @SerialName("parent_id") val parentId: String? = null, val kind: String = "", val position: Int = 0)
@@ -172,6 +187,8 @@ data class Chat(
     val plan: JsonObject? = null,
     /** The team's size: how many agents, its own included, the chat may have. */
     val agents: AgentsSetting? = null,
+    /** Whether this chat is offered subagents, and the cap (server 2.0.0-beta.7); null from an older one. */
+    val subagents: SubagentsOffer? = null,
 ) {
     val isAgent: Boolean get() = kind == "agent"
 }
@@ -588,6 +605,14 @@ data class ContextUse(
     val percent: Double? = null,
     val measured: Boolean = false,
     val threshold: Int = 0,
+    /**
+     * The compaction facts (server 2.0.0-beta.7): whether the chat compacts by itself, how many
+     * tokens before it does (null: never, or not known), and whether Compact can run now.
+     * Null from an older server; the app then works the first two out from [threshold].
+     */
+    @SerialName("auto_compact") val autoCompact: Boolean? = null,
+    @SerialName("until_compact") val untilCompact: Int? = null,
+    val compactable: Boolean? = null,
     @SerialName("tools_count") val toolsCount: Int = 0,
     @SerialName("mcp_count") val mcpCount: Int = 0,
     val categories: List<ContextPart> = emptyList(),
@@ -613,6 +638,8 @@ data class Activity(
     val agents: List<ActivityAgent> = emptyList(),
     val team: ActivityTeam? = null,
     @SerialName("team_offered") val teamOffered: Boolean = false,
+    /** The same fact by the word a person reads (server 2.0.0-beta.7). */
+    @SerialName("subagents_offered") val subagentsOffered: Boolean? = null,
     val context: ContextUse? = null,
     val outputs: List<Output> = emptyList(),
     val plan: JsonObject? = null,

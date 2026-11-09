@@ -113,6 +113,7 @@
     <string name="team_most">Höchstens</string>
     <string name="team_hint">Die wenigsten und die meisten für diesen Chat, sein eigener Agent eingeschlossen. Ab zwei kann er Arbeit an Subagenten abgeben und sie leiten.</string>
     <string name="team_chip">Subagenten %1$s–%2$s</string>
+    <string name="subagents_named_only">Dieses Modell beantwortet nur eine Anfrage auf einmal: Subagenten brauchen ein anderes Modell auf einem anderen Server, im Chat genannt.</string>
     <string name="thinking_switch">Vor der Antwort nachdenken</string>
     <string name="level_off">aus</string>
     <string name="level_default">Standard</string>

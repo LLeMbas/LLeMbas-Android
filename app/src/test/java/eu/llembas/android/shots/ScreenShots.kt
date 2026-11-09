@@ -103,8 +103,9 @@ class ScreenShots {
     }
 
     @Test
-    fun tune() = shoot("07-tune") {
-        SheetOver { TuneContent(Fakes.tuned, NoChatActions, agent = false) }
+    fun tune() {
+        shoot("07-tune") { SheetOver { TuneContent(Fakes.tuned, NoChatActions, agent = false) } }
+        shoot("07-tune-one-at-a-time") { SheetOver { TuneContent(Fakes.tunedOneAtATime, NoChatActions, agent = false) } }
     }
 
     @Test
@@ -140,7 +141,8 @@ class ScreenShots {
         shoot("14-activity", content = sheet)
         shoot("14-activity", Phone.Small, content = sheet)
         shoot("14-activity", Phone.Small, fontScale = 1.5f, content = sheet)
-        shoot("15-activity-open", content = open)
+        shoot("14-activity", Phone.Scroll, content = sheet)
+        shoot("15-activity-open", Phone.Scroll, content = open)
         shoot("16-activity-new-chat") {
             SheetOver { ActivityContent(eu.llembas.android.api.Activity(), readAt = 0, now = 0, actions = NoActivityActions, canCompact = false) }
         }

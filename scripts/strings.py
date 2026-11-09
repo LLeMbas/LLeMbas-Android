@@ -127,6 +127,7 @@ STRINGS: dict[str, str] = {
     "team_most": "Most",
     "team_hint": "The fewest and most for this chat, its own agent included. Above one, it can hand work to subagents while it leads them.",
     "team_chip": "Subagents %1$s–%2$s",
+    "subagents_named_only": "This model serves one request at a time: subagents need another model, on another server, named in the chat.",
     "thinking_switch": "Think before answering",
     "level_off": "off",
     "level_default": "default",

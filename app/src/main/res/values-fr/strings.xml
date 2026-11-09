@@ -113,6 +113,7 @@
     <string name="team_most">Au plus</string>
     <string name="team_hint">Le minimum et le maximum pour ce chat, son propre agent compris. Au-delà d\'un, il peut confier du travail à des sous-agents et les diriger.</string>
     <string name="team_chip">Sous-agents %1$s–%2$s</string>
+    <string name="subagents_named_only">Ce modèle ne traite qu\'une requête à la fois : les sous-agents ont besoin d\'un autre modèle, sur un autre serveur, nommé dans le chat.</string>
     <string name="thinking_switch">Réfléchir avant de répondre</string>
     <string name="level_off">désactivé</string>
     <string name="level_default">par défaut</string>

@@ -113,6 +113,7 @@
     <string name="team_most">Nejvíce</string>
     <string name="team_hint">Nejméně a nejvíce pro tento chat, včetně jeho vlastního agenta. Nad jednoho může předávat práci subagentům a vést je.</string>
     <string name="team_chip">Subagenti %1$s–%2$s</string>
+    <string name="subagents_named_only">Tento model obslouží jen jeden požadavek najednou: subagenti potřebují jiný model, na jiném serveru, pojmenovaný v chatu.</string>
     <string name="thinking_switch">Přemýšlet před odpovědí</string>
     <string name="level_off">vypnuto</string>
     <string name="level_default">výchozí</string>

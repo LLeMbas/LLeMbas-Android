@@ -9,7 +9,11 @@ is in alpha and releases come off `main`.
 
 - **Subagents, by that name.** Everything the app says about the work a chat hands off now
   calls it a subagent -- the strip, the activity sheet and the chat's options. The team's size
-  in Options is **Subagents**, fewest and most.
+  in Options is **Subagents**, fewest and most -- shown when the instance says subagents are
+  offered for the chat (or, for a new chat, for the model chosen), and only up to the most the
+  instance allows. When the chat's model serves one request at a time, the setting says that
+  subagents need another model, on another server, named in the chat. Which model a subagent
+  runs on is not a setting: it is the chat's own, unless you name another in the chat.
 - **The activity sheet, laid out as a side panel is on a computer**, and always one tap away:
   the button at the top of every chat (a new one too) opens it as a sheet. **Context**: how
   much of the window is used, in per cent and in tokens of the window, a bar split by what
