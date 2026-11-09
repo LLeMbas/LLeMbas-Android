@@ -486,6 +486,9 @@ data class PushPayload(
     @SerialName("message_id") val messageId: String? = null,
     @SerialName("interaction_id") val interactionId: String? = null,
     val ask: String? = null,
+    /** A scheduled task's result or failure (`kind` `schedule` or `schedule_failed`). */
+    @SerialName("schedule_id") val scheduleId: String? = null,
+    @SerialName("run_id") val runId: String? = null,
 )
 
 // --- The activity panel (`GET /chats/{chat}/activity`) -------------------------------------

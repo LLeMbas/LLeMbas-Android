@@ -65,16 +65,83 @@ data class ChatState(
     val teamOffered: Boolean = false,
     /** Whether the events route is followed; without it an open panel polls. */
     val activityLive: Boolean = false,
+    /** What a chat not made yet will be made with: chosen in the top bar and the tune sheet. */
+    val draft: Draft = Draft(),
 )
+
+/**
+ * The choices for a chat its first message makes. Nothing here is sent until then; an open
+ * chat changes at once instead (`PATCH`), as the web page's controls do.
+ */
+data class Draft(
+    val model: String? = null,
+    val effort: String? = null,
+    val agents: AgentsSetting? = null,
+    val plan: Boolean = false,
+    val agentMode: String = "edit",
+    val device: String? = null,
+    val directory: String = "",
+)
+
+/** The model in force: the chat's, else the one chosen for the new chat, else the default. */
+val ChatState.modelId: String?
+    get() = chat?.model?.ifBlank { null } ?: draft.model ?: models.firstOrNull { it.default }?.id ?: models.firstOrNull()?.id
+
+val ChatState.modelInfo: ModelInfo? get() = models.firstOrNull { it.id == modelId }
+
+/** The thinking level in force, by the model's levels; null for a model with no choice. */
+val ChatState.level: String?
+    get() = modelInfo?.takeIf { it.levelControl != "none" }?.level(if (chat == null) draft.effort else chat.effort?.ifBlank { null })
+
+/** Whether a team may be asked for: the server's word for a chat that exists, the model's facts for a new one. */
+fun ChatState.offersTeam(agent: Boolean): Boolean = if (chat != null) teamOffered else !agent && modelInfo?.mayHaveTeam == true
+
+/** The team's size in force. */
+val ChatState.agents: AgentsSetting get() = chat?.agents ?: draft.agents ?: AgentsSetting()
+
+/** Whether a reply is being written right now. */
+val ChatState.running: Boolean get() = live != null && live.finished == null
+
+/** The linked device a new agent chat runs on: the chosen one, else the first. */
+val ChatState.device: LinkedDevice? get() = devices.firstOrNull { it.id == draft.device } ?: devices.firstOrNull()
+
+/**
+ * What the chat screen asks of its model. Every action has a do-nothing default, so the
+ * screenshot tests draw the screen with fake data and no server behind it.
+ */
+interface ChatActions {
+    fun send(text: String) {}
+    fun stop() {}
+    fun regenerate(message: Message) {}
+    fun edit(message: Message, text: String) {}
+    fun continueChat() {}
+    fun executePlan() {}
+    fun answer(card: Card, answer: CardAnswer) {}
+    fun change(key: String, value: String?) {}
+    fun setAgents(agents: AgentsSetting) {}
+    fun updateDraft(change: (Draft) -> Draft) {}
+    fun attach(uris: List<Uri>) {}
+    fun unattach(attachment: Attachment) {}
+    fun photoTarget(): Uri? = null
+    fun rename(title: String) {}
+    fun delete(then: () -> Unit) {}
+    fun older() {}
+    fun clearUnsent() {}
+}
 
 /**
  * One chat: its transcript, the reply being written, and every control. A new chat has no id
  * until its first message makes it, as on the web page -- there is no empty chat.
  */
-class ChatViewModel(app: Application) : AndroidViewModel(app) {
+class ChatViewModel(app: Application) :
+    AndroidViewModel(app),
+    ChatActions {
     private val _state = MutableStateFlow(ChatState())
     val state = _state.asStateFlow()
     private var following: Job? = null
+
+    /** Whether this screen makes an agent chat (until its first message makes it). */
+    private var agentChat = false
     private var api: ApiClient? = null
 
     private suspend fun api(): ApiClient = api ?: getApplication<Application>().lembas.instances.client()?.also { api = it }
@@ -88,12 +155,15 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
 
     fun clearError() = _state.update { it.copy(error = null, notice = null) }
 
-    fun clearUnsent() = _state.update { it.copy(unsent = null) }
+    override fun clearUnsent() = _state.update { it.copy(unsent = null) }
 
-    fun rename(title: String) = change("title", title.trim())
+    override fun updateDraft(change: (Draft) -> Draft) = _state.update { it.copy(draft = change(it.draft)) }
+
+    override fun rename(title: String) = change("title", title.trim())
 
     /** Open a chat, or (no id) get a new one ready: an agent chat also needs the linked devices. */
     fun open(chatId: String?, agent: Boolean = false) {
+        agentChat = agent
         viewModelScope.launch {
             try {
                 val client = api()
@@ -120,7 +190,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun older() {
+    override fun older() {
         val chat = _state.value.chat ?: return
         val first = _state.value.messages.firstOrNull() ?: return
         viewModelScope.launch {
@@ -182,15 +252,24 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
         turn.reply?.let { follow(it.id) }
     }
 
-    fun send(
-        text: String,
-        model: String? = null,
-        mode: String? = null,
-        effort: String? = null,
-        temporary: Boolean = false,
-        agent: AgentTarget? = null,
-        agents: AgentsSetting? = null,
-    ) {
+    /**
+     * Send [text] (and what is attached). A chat that does not exist yet is made by it, with the
+     * draft's choices -- each only where the model offers it.
+     */
+    override fun send(text: String) {
+        val now = _state.value
+        val draft = now.draft
+        val newAgent = agentChat && now.chat == null
+        val model = draft.model
+        val mode = when {
+            newAgent -> draft.agentMode
+            draft.plan -> "plan"
+            else -> null
+        }
+        val effort = draft.effort?.takeIf { picked -> now.modelInfo?.offered?.contains(picked) == true }
+        val agent = if (newAgent) now.device?.let { AgentTarget(it.id, draft.directory) } else null
+        val agents = draft.agents
+        val temporary = false
         val attached = _state.value.pending
         val files = attached.map { it.id }
         if (text.isBlank() && files.isEmpty()) return
@@ -223,33 +302,33 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun stop() {
+    override fun stop() {
         val chat = _state.value.chat ?: return
         val live = _state.value.live ?: return
         viewModelScope.launch { runCatching { api().stop(chat.id, live.messageId) }.onFailure(::fail) }
     }
 
-    fun regenerate(message: Message) = control { api, chat ->
+    override fun regenerate(message: Message) = control { api, chat ->
         val turn = api.regenerate(chat.id, message.id)
         _state.update { s -> s.copy(messages = s.messages.map { if (it.id == message.id) turn.reply ?: it else it }) }
         turn.reply?.let { follow(it.id) }
     }
 
-    fun edit(message: Message, text: String) = control { api, chat ->
+    override fun edit(message: Message, text: String) = control { api, chat ->
         val turn = api.edit(chat.id, message.id, text)
         // Everything after the edited turn is gone on the server; read it back.
         refresh()
         turn.reply?.let { follow(it.id) }
     }
 
-    fun continueChat() = control { api, chat -> took(api.continueChat(chat.id)) }
+    override fun continueChat() = control { api, chat -> took(api.continueChat(chat.id)) }
 
-    fun executePlan() = control { api, chat ->
+    override fun executePlan() = control { api, chat ->
         took(api.executePlan(chat.id))
         refresh()
     }
 
-    fun answer(card: Card, answer: CardAnswer) = control { api, chat ->
+    override fun answer(card: Card, answer: CardAnswer) = control { api, chat ->
         try {
             api.answer(chat.id, card.id, answer)
         } catch (e: ApiException) {
@@ -261,7 +340,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
         _state.update { s -> s.copy(live = s.live?.let { l -> l.copy(cards = l.cards.filterNot { it.id == card.id }) }) }
     }
 
-    fun change(key: String, value: String?) = control { api, chat ->
+    override fun change(key: String, value: String?) = control { api, chat ->
         val updated = api.updateChat(chat.id, JsonObject(mapOf(key to JsonPrimitive(value))))
         _state.update { it.copy(chat = updated) }
         // Another model may serve one request at a time, or more: whether a team is offered
@@ -272,7 +351,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** The team's size, both ends; the server refuses a pair outside its bounds in its words. */
-    fun setAgents(agents: AgentsSetting) = control { api, chat ->
+    override fun setAgents(agents: AgentsSetting) = control { api, chat ->
         val updated = api.setAgents(chat.id, agents)
         _state.update { it.copy(chat = updated) }
     }
@@ -344,12 +423,12 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
         loadActivity(context = false)
     }
 
-    fun delete(then: () -> Unit) = control { api, chat ->
+    override fun delete(then: () -> Unit) = control { api, chat ->
         api.deleteChat(chat.id)
         then()
     }
 
-    fun attach(uris: List<Uri>) {
+    override fun attach(uris: List<Uri>) {
         if (uris.isEmpty()) return
         viewModelScope.launch {
             _state.update { it.copy(uploading = true) }
@@ -381,14 +460,14 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
      * Where the camera writes a photo for the composer: a file in the app's cache, shared with
      * the camera app through the FileProvider for exactly this one capture.
      */
-    fun photoTarget(): Uri {
+    override fun photoTarget(): Uri {
         val app = getApplication<Application>()
         val dir = File(app.cacheDir, "camera").apply { mkdirs() }
         val file = File(dir, "photo-${System.currentTimeMillis()}.jpg")
         return FileProvider.getUriForFile(app, photoAuthority, file)
     }
 
-    fun unattach(attachment: Attachment) {
+    override fun unattach(attachment: Attachment) {
         _state.update { s -> s.copy(pending = s.pending.filterNot { it.id == attachment.id }) }
     }
 

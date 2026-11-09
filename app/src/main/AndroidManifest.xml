@@ -124,6 +124,11 @@
             android:name=".push.CardActionReceiver"
             android:exported="false" />
 
+        <!-- A scheduled task's Pause, from its notification. -->
+        <receiver
+            android:name=".push.ScheduleActionReceiver"
+            android:exported="false" />
+
         <!-- A photo for the composer: the camera app writes into one file in the cache. -->
         <provider
             android:name="androidx.core.content.FileProvider"

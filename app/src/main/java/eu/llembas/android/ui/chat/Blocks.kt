@@ -54,83 +54,13 @@ import eu.llembas.android.api.ToolCall
 import eu.llembas.android.ui.MarkdownText
 import eu.llembas.android.ui.theme.LocalPalette
 
-private val Rounded = RoundedCornerShape(10.dp)
+private val Rounded = RoundedCornerShape(12.dp)
 
-/** The person's own turn: their words as typed (never markdown), and what they attached. */
+/** A reply's steps, as the transcript draws them ([StepsCompact]); the assistant's sheet uses it. */
 @Composable
-fun UserBubble(message: Message, modifier: Modifier = Modifier) {
-    val palette = LocalPalette.current
-    Column(
-        modifier
-            .fillMaxWidth()
-            .padding(start = 48.dp)
-            .background(palette.bubbleUser, Rounded)
-            .border(1.dp, palette.border, Rounded)
-            .padding(12.dp),
-    ) {
-        if (!message.text.isNullOrBlank()) Text(message.text, color = palette.ink)
-        message.attachments.forEach { a ->
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
-                Icon(Icons.Filled.AttachFile, contentDescription = null, modifier = Modifier.size(16.dp), tint = palette.inkMuted)
-                Spacer(Modifier.width(4.dp))
-                Text(a.name, style = MaterialTheme.typography.bodySmall, color = palette.inkMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            }
-        }
-        if (message.queued) {
-            Text(stringResource(R.string.queued), style = MaterialTheme.typography.labelSmall, color = palette.inkFaint)
-        }
-    }
-}
+fun Steps(steps: List<Step>, modifier: Modifier = Modifier, onShow: ((ShowCard) -> Unit)? = null) = StepsCompact(steps, modifier, onShow)
 
-/**
- * A reply's steps, in the order they happened: the same table of contents the web page draws.
- * [onShow] opens a `show` card's file; without it (the assistant's sheet) the card only names it.
- */
-@Composable
-fun Steps(steps: List<Step>, modifier: Modifier = Modifier, onShow: ((ShowCard) -> Unit)? = null) {
-    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        steps.forEach { step ->
-            when (step.kind) {
-                "thinking" -> Thinking(step)
-                "text" -> MarkdownText(step.markdown.orEmpty(), modifier = Modifier.fillMaxWidth())
-                "tools" -> step.calls.forEach { ToolCallBlock(it, onShow = onShow) }
-                "steer" -> step.messages.forEach { Steered(it.text) }
-            }
-        }
-    }
-}
-
-@Composable
-private fun Thinking(step: Step) {
-    val palette = LocalPalette.current
-    var open by rememberSaveable(step.index, step.open) { mutableStateOf(false) }
-    Column(
-        Modifier.fillMaxWidth().background(palette.bgSunken, Rounded).clickable { open = !open }.padding(10.dp),
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Filled.Psychology, contentDescription = null, modifier = Modifier.size(16.dp), tint = palette.inkFaint)
-            Spacer(Modifier.width(6.dp))
-            Text(
-                stringResource(if (step.open) R.string.thinking else R.string.thought) + (step.label?.let { " $it" } ?: ""),
-                style = MaterialTheme.typography.labelMedium,
-                color = palette.inkMuted,
-            )
-        }
-        AnimatedVisibility(open) {
-            Text(step.text.orEmpty(), style = MaterialTheme.typography.bodySmall, color = palette.inkMuted, modifier = Modifier.padding(top = 6.dp))
-        }
-    }
-}
-
-@Composable
-private fun Steered(text: String) {
-    val palette = LocalPalette.current
-    Row(Modifier.fillMaxWidth().padding(start = 24.dp)) {
-        Text("↳ $text", style = MaterialTheme.typography.bodySmall, color = palette.inkMuted)
-    }
-}
-
-private fun iconFor(kind: String): ImageVector = when (kind) {
+internal fun iconFor(kind: String): ImageVector = when (kind) {
     "shell" -> Icons.Filled.Terminal
     "edit" -> Icons.Filled.Edit
     "read" -> Icons.AutoMirrored.Filled.Article
@@ -249,22 +179,4 @@ private fun ShowCardRow(show: ShowCard, depth: Int, onShow: ((ShowCard) -> Unit)
             }
         }
     }
-}
-
-/** A finished or failed reply's foot: what it cost, and why it stopped if it did. */
-@Composable
-fun ReplyFoot(message: Message) {
-    val palette = LocalPalette.current
-    message.error?.let {
-        Text(it, color = palette.danger, style = MaterialTheme.typography.bodySmall)
-    }
-    val m = message.metrics ?: return
-    if (m.completionTokens == 0 && m.elapsedMs == 0L) return
-    val parts = buildList {
-        message.model?.let { add(it) }
-        if (m.completionTokens > 0) add("${if (m.estimated) "~" else ""}${m.completionTokens} tok")
-        if (m.tokPerSecond > 0) add("${"%.1f".format(m.tokPerSecond)} tok/s")
-        if (m.percent > 0) add("${m.percent}%")
-    }
-    Text(parts.joinToString(" · "), style = MaterialTheme.typography.labelSmall, color = palette.inkFaint, modifier = Modifier.widthIn(max = 600.dp))
 }

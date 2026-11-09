@@ -252,6 +252,41 @@ class ApiClient(val base: String, private val token: String, val http: OkHttpCli
 
     suspend fun stopMember(chatId: String, name: String): List<String> = send<Stopped>("POST", "/chats/$chatId/team/${segment(name)}/stop", null).stopped
 
+    // --- Scheduled tasks (provisional routes; see api/Schedules.kt) ---------------------------
+    suspend fun schedules(): List<Schedule> = get<ScheduleList>("/schedules").schedules
+
+    suspend fun schedule(id: String): Schedule = get<ScheduleEnvelope>("/schedules/${segment(id)}").schedule
+
+    suspend fun scheduleRuns(id: String, before: String? = null): ScheduleRuns =
+        get("/schedules/${segment(id)}/runs" + (before?.let { "?before=${segment(it)}" } ?: ""))
+
+    /** Words to a rule, an instruction and the next runs; nothing is saved. */
+    suspend fun compileSchedule(words: String): SchedulePreview =
+        send<SchedulePreviewEnvelope>("POST", "/schedules/compile", buildJsonObject { put("text", words) }).preview
+
+    /** Save a preview: a new schedule, or (with [id]) the one being edited. */
+    suspend fun saveSchedule(preview: SchedulePreview, id: String? = null): Schedule {
+        val body = buildJsonObject {
+            put("title", preview.title)
+            put("instruction", preview.instruction)
+            preview.rule?.let { put("rule", it) }
+        }
+        return if (id == null) {
+            send<ScheduleEnvelope>("POST", "/schedules", body).schedule
+        } else {
+            send<ScheduleEnvelope>("PATCH", "/schedules/${segment(id)}", body).schedule
+        }
+    }
+
+    suspend fun pauseSchedule(id: String, paused: Boolean): Schedule =
+        send<ScheduleEnvelope>("POST", "/schedules/${segment(id)}/" + if (paused) "pause" else "resume", null).schedule
+
+    suspend fun runScheduleNow(id: String) {
+        send<JsonObject>("POST", "/schedules/${segment(id)}/run", null)
+    }
+
+    suspend fun deleteSchedule(id: String) = empty(authed("$v2/schedules/${segment(id)}").delete().build())
+
     // --- Model pictures --------------------------------------------------------------------------
 
     /**

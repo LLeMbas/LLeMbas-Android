@@ -9,6 +9,7 @@ import android.util.TypedValue
 import android.widget.TextView
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
@@ -56,18 +57,33 @@ fun markwon(context: Context, codeBg: Int, link: Int): Markwon = Markwon.builder
     )
     .build()
 
+/**
+ * [markdown] drawn by Markwon in a TextView. With [onLongPress] the text is not selectable: a
+ * long press is the message's menu instead (which offers Select text); without it, as in the
+ * activity panel's room, the text selects as usual.
+ */
 @Composable
-fun MarkdownText(markdown: String, modifier: Modifier = Modifier, color: Color? = null) {
+fun MarkdownText(markdown: String, modifier: Modifier = Modifier, color: Color? = null, onLongPress: (() -> Unit)? = null) {
     val context = LocalContext.current
     val palette = LocalPalette.current
     val ink = (color ?: palette.ink).toArgb()
     val engine = remember(palette) { markwon(context, palette.codeBg.toArgb(), palette.accent.toArgb()) }
+    val longPress = rememberUpdatedState(onLongPress)
+    val pressable = onLongPress != null
     AndroidView(
         modifier = modifier,
         factory = { ctx ->
             TextView(ctx).apply {
-                setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
-                setTextIsSelectable(true)
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
+                setLineSpacing(0f, 1.2f)
+                if (pressable) {
+                    setOnLongClickListener {
+                        longPress.value?.invoke()
+                        true
+                    }
+                } else {
+                    setTextIsSelectable(true)
+                }
                 movementMethod = LinkMovementMethod.getInstance()
             }
         },

@@ -10,7 +10,10 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Surface
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -18,27 +21,41 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import eu.llembas.android.api.Chat
 import eu.llembas.android.auth.Instance
 import eu.llembas.android.auth.Prefs
 import eu.llembas.android.push.Notifications
 import eu.llembas.android.ui.chat.ChatScreen
-import eu.llembas.android.ui.chats.ChatsScreen
 import eu.llembas.android.ui.files.FilesScreen
+import eu.llembas.android.ui.home.ChatsViewModel
+import eu.llembas.android.ui.home.DrawerActions
+import eu.llembas.android.ui.home.DrawerContent
+import eu.llembas.android.ui.scheduled.ScheduleEditScreen
+import eu.llembas.android.ui.scheduled.ScheduleScreen
+import eu.llembas.android.ui.scheduled.ScheduledScreen
 import eu.llembas.android.ui.settings.SettingsScreen
 import eu.llembas.android.ui.signin.SignInScreen
 import eu.llembas.android.ui.theme.LembasTheme
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 
 private data class Loaded(val instance: Instance?)
 
+/** Where a notification (or the assistant, or a share) asked the app to open. */
+private data class Opening(val chat: String?, val schedule: String?)
+
 class MainActivity : ComponentActivity() {
-    /** A chat a notification, the assistant or a share asked to open; consumed once. */
-    private val opening = mutableStateOf<String?>(null)
+    /** A chat or a schedule a notification, the assistant or a share asked to open; consumed once. */
+    private val opening = mutableStateOf<Opening?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
@@ -63,67 +80,142 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun take(intent: Intent?) {
-        intent?.getStringExtra(Notifications.EXTRA_CHAT)?.let { opening.value = it }
+        val chat = intent?.getStringExtra(Notifications.EXTRA_CHAT)
+        val schedule = intent?.getStringExtra(Notifications.EXTRA_SCHEDULE)
+        if (chat != null || schedule != null) opening.value = Opening(chat, schedule)
     }
 
     @Composable
-    private fun Root(open: String?, opened: () -> Unit) {
+    private fun Root(open: Opening?, opened: () -> Unit) {
         // null while the store is read; then the instance in use, which may be none.
         val loaded by remember { lembas.instances.active.map { Loaded(it) } }.collectAsState(initial = null)
         val instance = loaded?.instance
         when {
             loaded == null -> Box(Modifier.fillMaxSize())
-
             instance == null -> SignInScreen()
+            else -> key(instance.id) { Home(instance, open, opened) }
+        }
+    }
 
-            else -> key(instance.id) {
-                val nav = rememberNavController()
-                LaunchedEffect(open) {
-                    open?.let {
-                        nav.navigate("chat/$it")
-                        opened()
-                    }
+    /**
+     * The signed-in app: a new chat first, as the AI apps open, with every chat, Files,
+     * Scheduled and Settings in the navigation drawer. A chat or a new chat is a top-level
+     * page (opening one replaces the last; Back leaves the app); Files, Scheduled and
+     * Settings open over it and Back returns.
+     */
+    @Composable
+    private fun Home(instance: Instance, open: Opening?, opened: () -> Unit) {
+        val nav = rememberNavController()
+        val drawer = rememberDrawerState(DrawerValue.Closed)
+        val scope = rememberCoroutineScope()
+        val chats: ChatsViewModel = viewModel()
+        val list by chats.state.collectAsStateWithLifecycle()
+        val entry by nav.currentBackStackEntryAsState()
+        val route = entry?.destination?.route
+        val current = entry?.arguments?.getString("id")?.takeIf { route == "chat/{id}" }
+        val top: (String) -> Unit = { target ->
+            scope.launch { drawer.close() }
+            nav.navigate(target) {
+                popUpTo(nav.graph.id) { inclusive = true }
+                launchSingleTop = true
+            }
+        }
+        val over: (String) -> Unit = { target ->
+            scope.launch { drawer.close() }
+            nav.navigate(target)
+        }
+        // The list is read again each time the drawer opens, so a new title or a finished
+        // reply's dot is there without a pull.
+        LaunchedEffect(drawer.isOpen) { if (drawer.isOpen) chats.load() }
+        LaunchedEffect(open) {
+            open?.let {
+                when {
+                    it.chat != null -> top("chat/${it.chat}")
+                    it.schedule != null -> over("schedule/${it.schedule}")
                 }
-                NavHost(nav, startDestination = "chats") {
-                    composable("chats") {
-                        ChatsScreen(
-                            onOpen = { nav.navigate("chat/$it") },
-                            onNew = { nav.navigate("new") },
-                            onNewAgent = { nav.navigate("new-agent") },
-                            onSettings = { nav.navigate("settings") },
-                            onFiles = { nav.navigate("files") },
-                        )
-                    }
-                    composable("new") {
-                        ChatScreen(
-                            chatId = null,
-                            onBack = { nav.popBackStack() },
-                            onOpened = { id ->
-                                nav.navigate("chat/$id") { popUpTo("new") { inclusive = true } }
-                            },
-                        )
-                    }
-                    composable("new-agent") {
-                        ChatScreen(
-                            chatId = null,
-                            agent = true,
-                            onBack = { nav.popBackStack() },
-                            onOpened = { id ->
-                                nav.navigate("chat/$id") { popUpTo("new-agent") { inclusive = true } }
-                            },
-                        )
-                    }
-                    composable("chat/{id}") { entry ->
-                        ChatScreen(chatId = entry.arguments?.getString("id"), onBack = { nav.popBackStack() })
-                    }
-                    composable("files") { FilesScreen(onBack = { nav.popBackStack() }) }
-                    composable("settings") {
-                        SettingsScreen(onBack = { nav.popBackStack() }, onAddInstance = { nav.navigate("add") })
-                    }
-                    // Signing in to one more instance makes it the one in use, which starts a
-                    // fresh navigation for it (the `key` above).
-                    composable("add") { SignInScreen(onDone = { nav.popBackStack("chats", inclusive = false) }) }
+                opened()
+            }
+        }
+        val actions = remember {
+            object : DrawerActions {
+                override fun newChat() = top("new")
+
+                override fun newAgentChat() = top("new-agent")
+
+                override fun open(chatId: String) = top("chat/$chatId")
+
+                override fun archive(chat: Chat) = chats.archive(chat)
+
+                override fun files() = over("files")
+
+                override fun scheduled() = over("scheduled")
+
+                override fun settings() = over("settings")
+
+                override fun more() = chats.more()
+
+                override fun retry() = chats.load()
+            }
+        }
+        val menu: () -> Unit = { scope.launch { drawer.open() } }
+        ModalNavigationDrawer(
+            drawerState = drawer,
+            // The drawer opens by a swipe only from a chat: elsewhere the swipe is Back's.
+            gesturesEnabled = drawer.isOpen || route == "new" || route == "new-agent" || route == "chat/{id}",
+            drawerContent = {
+                DrawerContent(list, current, listOf(instance.name, instance.email).filter { it.isNotBlank() }.joinToString(" · "), actions)
+            },
+        ) {
+            NavHost(nav, startDestination = "new") {
+                composable("new") {
+                    ChatScreen(
+                        chatId = null,
+                        onMenu = menu,
+                        onNewChat = { top("new") },
+                        onLeave = { top("new") },
+                        onOpened = { id -> top("chat/$id") },
+                    )
                 }
+                composable("new-agent") {
+                    ChatScreen(
+                        chatId = null,
+                        agent = true,
+                        onMenu = menu,
+                        onNewChat = { top("new") },
+                        onLeave = { top("new") },
+                        onOpened = { id -> top("chat/$id") },
+                    )
+                }
+                composable("chat/{id}") { e ->
+                    ChatScreen(
+                        chatId = e.arguments?.getString("id"),
+                        onMenu = menu,
+                        onNewChat = { top("new") },
+                        onLeave = { top("new") },
+                    )
+                }
+                composable("files") { FilesScreen(onBack = { nav.popBackStack() }) }
+                composable("scheduled") {
+                    ScheduledScreen(onBack = { nav.popBackStack() }, onOpen = { over("schedule/$it") }, onNew = { over("schedule-new") })
+                }
+                composable("schedule/{id}") { e ->
+                    val id = e.arguments?.getString("id").orEmpty()
+                    ScheduleScreen(id, onBack = { nav.popBackStack() }, onEdit = { over("schedule-edit/$it") }, onOpenChat = { top("chat/$it") })
+                }
+                composable("schedule-new") {
+                    ScheduleEditScreen(null, onBack = { nav.popBackStack() }, onSaved = { id ->
+                        nav.navigate("schedule/$id") { popUpTo("schedule-new") { inclusive = true } }
+                    })
+                }
+                composable("schedule-edit/{id}") { e ->
+                    ScheduleEditScreen(e.arguments?.getString("id"), onBack = { nav.popBackStack() }, onSaved = { nav.popBackStack() })
+                }
+                composable("settings") {
+                    SettingsScreen(onBack = { nav.popBackStack() }, onAddInstance = { over("add") })
+                }
+                // Signing in to one more instance makes it the one in use, which starts a
+                // fresh navigation for it (the `key` above).
+                composable("add") { SignInScreen(onDone = { nav.popBackStack() }) }
             }
         }
     }
