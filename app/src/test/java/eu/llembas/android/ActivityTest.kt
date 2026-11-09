@@ -47,7 +47,9 @@ class ActivityTest {
         assertEquals("low", gptOss.level("low"))
         // A level the model does not offer (an `off` from before) reads as its start level.
         assertEquals("high", gptOss.level("off"))
-        assertFalse(gptOss.mayHaveTeam)
+        // One request at a time: offered all the same, for a model the person names (server 3.3.0 rule).
+        assertTrue(gptOss.mayHaveTeam)
+        assertTrue(gptOss.subagents!!.namedOnly)
         assertNull(gptOss.image)
 
         assertEquals("none", vision.levelControl)
@@ -149,8 +151,8 @@ class ActivityTest {
 
     @Test
     fun autoCompactIsCountedOnlyAgainstAKnownWindow() {
-        val context = read("activity", ActivityEnvelope.serializer()).activity.context!!
-        // 95 % of 128k is 121.6k; 41k used.
+        // The app's own count, without the server's: 95 % of 128k is 121.6k; 41k used.
+        val context = read("activity", ActivityEnvelope.serializer()).activity.context!!.copy(autoCompact = null, untilCompact = null)
         assertEquals(80_600, ActivityLogic.untilAutoCompact(context))
         assertEquals(0, ActivityLogic.untilAutoCompact(context.copy(used = 127_000)))
         assertNull(ActivityLogic.untilAutoCompact(context.copy(threshold = 0)))

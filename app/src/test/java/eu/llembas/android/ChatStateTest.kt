@@ -47,7 +47,9 @@ class ChatStateTest {
     fun aTeamIsOfferedByTheServerOrGuessedForANewChat() {
         assertTrue(ChatState(models = models).offersTeam(agent = false))
         assertFalse(ChatState(models = models).offersTeam(agent = true))
-        assertFalse(ChatState(models = models, draft = Draft(model = "gpt-oss")).offersTeam(agent = false))
+        // gpt-oss serves one at a time: offered, for a model named in the chat; vision-small not at all.
+        assertTrue(ChatState(models = models, draft = Draft(model = "gpt-oss")).offersTeam(agent = false))
+        assertFalse(ChatState(models = models, draft = Draft(model = "vision-small")).offersTeam(agent = false))
         assertTrue(ChatState(models = models, chat = Chat(id = "c", model = "gpt-oss"), teamOffered = true).offersTeam(agent = false))
         assertEquals(AgentsSetting(2, 6), ChatState(draft = Draft(agents = AgentsSetting(2, 6))).agents)
     }
