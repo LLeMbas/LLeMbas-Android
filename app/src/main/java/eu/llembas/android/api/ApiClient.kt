@@ -252,24 +252,44 @@ class ApiClient(val base: String, private val token: String, val http: OkHttpCli
 
     suspend fun stopMember(chatId: String, name: String): List<String> = send<Stopped>("POST", "/chats/$chatId/team/${segment(name)}/stop", null).stopped
 
-    // --- Scheduled tasks (provisional routes; see api/Schedules.kt) ---------------------------
+    // --- Scheduled tasks (`/api/v2/schedules`; shapes in api/Schedules.kt) ----------------------
+
+    /** Every schedule of this person, newest first, each with its last run. */
     suspend fun schedules(): List<Schedule> = get<ScheduleList>("/schedules").schedules
 
     suspend fun schedule(id: String): Schedule = get<ScheduleEnvelope>("/schedules/${segment(id)}").schedule
 
-    suspend fun scheduleRuns(id: String, before: String? = null): ScheduleRuns =
-        get("/schedules/${segment(id)}/runs" + (before?.let { "?before=${segment(it)}" } ?: ""))
+    /** A page of a schedule's runs, newest first; [before] is the last run's id of the page before. */
+    suspend fun scheduleRuns(id: String, before: String? = null, limit: Int = 20): ScheduleRuns =
+        get("/schedules/${segment(id)}/runs?limit=$limit" + (before?.let { "&before=${segment(it)}" } ?: ""))
 
-    /** Words to a rule, an instruction and the next runs; nothing is saved. */
-    suspend fun compileSchedule(words: String): SchedulePreview =
-        send<SchedulePreviewEnvelope>("POST", "/schedules/compile", buildJsonObject { put("text", words) }).preview
+    /** One run and its result in full (Markdown a model wrote: untrusted). */
+    suspend fun scheduleRun(id: String, runId: String): RunResult = get("/schedules/${segment(id)}/runs/${segment(runId)}")
 
-    /** Save a preview: a new schedule, or (with [id]) the one being edited. */
-    suspend fun saveSchedule(preview: SchedulePreview, id: String? = null): Schedule {
+    /** Words to a schedule: title, instruction, rule, the rule in words, the next runs. Saves nothing. */
+    suspend fun compileSchedule(words: String, model: String? = null): ScheduleCompiled = send(
+        "POST",
+        "/schedules/compile",
+        buildJsonObject {
+            put("text", words)
+            model?.let { put("model", it) }
+        },
+    )
+
+    /** A rule read back: cleaned, in words, and its next runs. An empty rule cannot run. */
+    suspend fun previewRule(rule: JsonObject): RulePreview = send("POST", "/schedules/preview", buildJsonObject { put("rule", rule) })
+
+    /**
+     * Save what the compile made of [words]: a new schedule (201), or with [id] the one being
+     * edited. The words go along as the schedule's `request`, so editing starts from them.
+     */
+    suspend fun saveSchedule(compiled: ScheduleCompiled, words: String, id: String? = null): Schedule {
         val body = buildJsonObject {
-            put("title", preview.title)
-            put("instruction", preview.instruction)
-            preview.rule?.let { put("rule", it) }
+            put("title", compiled.title)
+            put("instruction", compiled.instruction)
+            put("rule", compiled.rule)
+            put("target", compiled.target)
+            if (id == null) put("request", words)
         }
         return if (id == null) {
             send<ScheduleEnvelope>("POST", "/schedules", body).schedule
@@ -281,11 +301,21 @@ class ApiClient(val base: String, private val token: String, val http: OkHttpCli
     suspend fun pauseSchedule(id: String, paused: Boolean): Schedule =
         send<ScheduleEnvelope>("POST", "/schedules/${segment(id)}/" + if (paused) "pause" else "resume", null).schedule
 
-    suspend fun runScheduleNow(id: String) {
-        send<JsonObject>("POST", "/schedules/${segment(id)}/run", null)
-    }
+    /** Run it now (202); the next scheduled run is not used up by this one. */
+    suspend fun runScheduleNow(id: String): ScheduleRun = send<RunEnvelope>("POST", "/schedules/${segment(id)}/run", null).run
 
-    suspend fun deleteSchedule(id: String) = empty(authed("$v2/schedules/${segment(id)}").delete().build())
+    /** Delete it; [keepChat] keeps the chat its results went to. */
+    suspend fun deleteSchedule(id: String, keepChat: Boolean = true) = empty(authed("$v2/schedules/${segment(id)}?keep_chat=$keepChat").delete().build())
+
+    /** The models scheduled work may run on, in the order they are tried, and which are free. */
+    suspend fun schedulingModels(): SchedulingModels = get("/schedules/models")
+
+    /** The person's narrowing of that list ([ids] empty: all of them). */
+    suspend fun chooseSchedulingModels(ids: List<String>): SchedulingModels =
+        send("PUT", "/schedules/models", buildJsonObject { put("models", JsonArray(ids.map { JsonPrimitive(it) })) })
+
+    /** The person's events route: a `schedules` frame with the whole list whenever it changes. */
+    fun events(): Request = authed("$v2/events").header("Accept", "text/event-stream").build()
 
     // --- Model pictures --------------------------------------------------------------------------
 

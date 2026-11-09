@@ -6,6 +6,7 @@ import eu.llembas.android.ui.scheduled.ScheduleLogic
 import eu.llembas.android.ui.scheduled.Tone
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.ZoneId
 import java.util.Locale
@@ -38,8 +39,11 @@ class ScheduleLogicTest {
 
     @Test
     fun aScheduleListThatSaysLittleStillParses() {
-        val list = LembasJson.decodeFromString(ScheduleList.serializer(), """{"schedules":[{"id":"s1","paused":true,"later":1}]}""")
-        assertEquals("s1", list.schedules.single().id)
-        assertNull(list.schedules.single().nextRun)
+        val list = LembasJson.decodeFromString(ScheduleList.serializer(), """{"schedules":[{"id":"s1","enabled":false,"model":null,"later":1}]}""")
+        val one = list.schedules.single()
+        assertEquals("s1", one.id)
+        assertTrue(one.paused)
+        assertNull(one.nextRun)
+        assertNull(one.model)
     }
 }

@@ -23,9 +23,11 @@ import eu.llembas.android.ui.chat.TuneContent
 import eu.llembas.android.ui.chat.modelId
 import eu.llembas.android.ui.home.DrawerActions
 import eu.llembas.android.ui.home.DrawerContent
+import eu.llembas.android.ui.scheduled.RunContent
 import eu.llembas.android.ui.scheduled.ScheduleContent
 import eu.llembas.android.ui.scheduled.ScheduleEditContent
 import eu.llembas.android.ui.scheduled.ScheduledContent
+import eu.llembas.android.ui.scheduled.SchedulingModelsContent
 import eu.llembas.android.ui.settings.SettingsActions
 import eu.llembas.android.ui.settings.SettingsContent
 import eu.llembas.android.ui.theme.LocalPalette
@@ -118,6 +120,15 @@ class ScreenShots {
 
     @Test
     fun scheduleEdit() = shoot("11-schedule-edit") { ScheduleEditContent(Fakes.editing, editing = false) }
+
+    @Test
+    fun scheduleRun() {
+        shoot("12-schedule-run") { RunContent(Fakes.run) }
+        shoot("12-schedule-run", Phone.Small) { RunContent(Fakes.run) }
+    }
+
+    @Test
+    fun schedulingModels() = shoot("13-scheduling-models") { SchedulingModelsContent(Fakes.schedulingModels) }
 }
 
 /**

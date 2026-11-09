@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -73,13 +74,18 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import eu.llembas.android.R
 import eu.llembas.android.api.ApiClient
 import eu.llembas.android.api.ApiException
+import eu.llembas.android.api.LembasJson
 import eu.llembas.android.api.Schedule
-import eu.llembas.android.api.SchedulePreview
+import eu.llembas.android.api.ScheduleCompiled
 import eu.llembas.android.api.ScheduleRun
+import eu.llembas.android.api.SchedulesFrame
+import eu.llembas.android.api.StreamClient
 import eu.llembas.android.lembas
 import eu.llembas.android.ui.explain
 import eu.llembas.android.ui.theme.LocalPalette
 import eu.llembas.android.ui.theme.Palette
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -103,11 +109,14 @@ class ScheduledViewModel(app: Application) : AndroidViewModel(app) {
     private val _state = MutableStateFlow(ScheduledState())
     val state = _state.asStateFlow()
 
+    private var live: Job? = null
+
     fun load() {
         viewModelScope.launch {
             _state.update { it.copy(loading = true, error = null) }
             try {
                 _state.value = ScheduledState(schedules = getApplication<Application>().api().schedules())
+                watch()
             } catch (e: Exception) {
                 _state.update {
                     if (e.unsupported()) {
@@ -123,9 +132,37 @@ class ScheduledViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /**
+     * The person's events route while the list is on screen: the whole list again whenever it
+     * changes (a run starting, waiting or finishing, a schedule made or paused elsewhere).
+     * Without it the list is what the last read said, and a pull reads it again.
+     */
+    private fun watch() {
+        if (live?.isActive == true) return
+        live = viewModelScope.launch {
+            val client = runCatching { getApplication<Application>().api() }.getOrNull() ?: return@launch
+            try {
+                StreamClient(client).watch { client.events() }.collect { frame ->
+                    if (frame.event != "schedules") return@collect
+                    val read = runCatching { LembasJson.decodeFromString(SchedulesFrame.serializer(), frame.data) }.getOrNull() ?: return@collect
+                    _state.update { it.copy(schedules = read.schedules) }
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                // An older server, or the stream refused: the list stays as last read.
+            }
+        }
+    }
+
+    fun stop() {
+        live?.cancel()
+        live = null
+    }
+
     /** Pause or resume; the switch moves at once and comes back if the server says no. */
     fun pause(schedule: Schedule, paused: Boolean) {
-        _state.update { s -> s.copy(schedules = s.schedules.map { if (it.id == schedule.id) it.copy(paused = paused) else it }) }
+        _state.update { s -> s.copy(schedules = s.schedules.map { if (it.id == schedule.id) it.copy(enabled = !paused) else it }) }
         viewModelScope.launch {
             try {
                 val saved = getApplication<Application>().api().pauseSchedule(schedule.id, paused)
@@ -143,13 +180,13 @@ class ScheduledViewModel(app: Application) : AndroidViewModel(app) {
 }
 
 @Composable
-fun ScheduledScreen(onBack: () -> Unit, onOpen: (String) -> Unit, onNew: () -> Unit, model: ScheduledViewModel = viewModel()) {
+fun ScheduledScreen(onBack: () -> Unit, onOpen: (String) -> Unit, onNew: () -> Unit, onModels: () -> Unit, model: ScheduledViewModel = viewModel()) {
     val state by model.state.collectAsStateWithLifecycle()
     LifecycleResumeEffect(Unit) {
         model.load()
-        onPauseOrDispose { }
+        onPauseOrDispose { model.stop() }
     }
-    ScheduledContent(state, onBack = onBack, onOpen = onOpen, onNew = onNew, onPause = model::pause, onRetry = model::load)
+    ScheduledContent(state, onBack = onBack, onOpen = onOpen, onNew = onNew, onModels = onModels, onPause = model::pause, onRetry = model::load)
 }
 
 /**
@@ -162,13 +199,20 @@ fun ScheduledContent(
     onBack: () -> Unit = {},
     onOpen: (String) -> Unit = {},
     onNew: () -> Unit = {},
+    onModels: () -> Unit = {},
     onPause: (Schedule, Boolean) -> Unit = { _, _ -> },
     onRetry: () -> Unit = {},
 ) {
     val palette = LocalPalette.current
     Scaffold(
         containerColor = palette.bg,
-        topBar = { BackBar(stringResource(R.string.scheduled), onBack) },
+        topBar = {
+            BackBar(stringResource(R.string.scheduled), onBack) {
+                if (!state.unsupported) {
+                    IconButton(onClick = onModels) { Icon(Icons.Filled.Tune, contentDescription = stringResource(R.string.schedule_models)) }
+                }
+            }
+        },
         floatingActionButton = {
             if (!state.unsupported) {
                 ExtendedFloatingActionButton(
@@ -220,11 +264,12 @@ private fun ScheduleCard(schedule: Schedule, onOpen: () -> Unit, onPause: (Boole
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
-                if (schedule.rule.isNotBlank()) {
-                    Text(schedule.rule, style = MaterialTheme.typography.bodyMedium, color = palette.inkMuted)
+                schedule.description?.takeIf { it.isNotBlank() }?.let {
+                    Text(it, style = MaterialTheme.typography.bodyMedium, color = palette.inkMuted)
                 }
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
-                    schedule.lastRun?.let { StatusChip(it.status, it.missed) }
+                    val shown = if (schedule.running) "running" else schedule.lastRun?.status
+                    shown?.let { StatusChip(it, schedule.lastRun?.missed ?: 0) }
                     val next = when {
                         schedule.paused -> stringResource(R.string.schedule_paused)
                         else -> ScheduleLogic.moment(schedule.nextRun)?.let { stringResource(R.string.schedule_next, it) }
@@ -236,7 +281,7 @@ private fun ScheduleCard(schedule: Schedule, onOpen: () -> Unit, onPause: (Boole
                             color = palette.inkFaint,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.padding(start = if (schedule.lastRun != null) 8.dp else 0.dp),
+                            modifier = Modifier.padding(start = if (shown != null) 8.dp else 0.dp),
                         )
                     }
                 }
@@ -275,7 +320,7 @@ private fun toneColours(palette: Palette, tone: Tone): Pair<Color, Color> = when
 }
 
 @Composable
-private fun BackBar(title: String, onBack: () -> Unit, actions: @Composable () -> Unit = {}) {
+internal fun BackBar(title: String, onBack: () -> Unit, actions: @Composable () -> Unit = {}) {
     val palette = LocalPalette.current
     TopAppBar(
         colors = TopAppBarDefaults.topAppBarColors(containerColor = palette.bg, scrolledContainerColor = palette.bg),
@@ -286,7 +331,7 @@ private fun BackBar(title: String, onBack: () -> Unit, actions: @Composable () -
 }
 
 @Composable
-private fun Message(text: String, retry: (() -> Unit)? = null) {
+internal fun Message(text: String, retry: (() -> Unit)? = null) {
     val palette = LocalPalette.current
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(32.dp),
@@ -341,9 +386,10 @@ class ScheduleViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun runNow() = act { api, s ->
-        api.runScheduleNow(s.id)
-        _state.update { it.copy(notice = getApplication<Application>().getString(R.string.schedule_started)) }
-        id?.let(::open)
+        val run = api.runScheduleNow(s.id)
+        _state.update { st ->
+            st.copy(runs = listOf(run) + st.runs.filter { it.id != run.id }, notice = getApplication<Application>().getString(R.string.schedule_started))
+        }
     }
 
     fun pause(paused: Boolean) = act { api, s -> _state.update { it.copy(schedule = api.pauseSchedule(s.id, paused)) } }
@@ -372,7 +418,7 @@ fun ScheduleScreen(
     id: String,
     onBack: () -> Unit,
     onEdit: (String) -> Unit,
-    onOpenChat: (String) -> Unit,
+    onOpenRun: (String) -> Unit,
     model: ScheduleViewModel = viewModel(key = "schedule-$id"),
 ) {
     val state by model.state.collectAsStateWithLifecycle()
@@ -395,15 +441,15 @@ fun ScheduleScreen(
         onDelete = { model.delete(onBack) },
         onRunNow = model::runNow,
         onPause = model::pause,
-        onOpenRun = { run -> run.chatId?.let(onOpenChat) },
+        onOpenRun = { run -> onOpenRun(run.id) },
         onMore = model::more,
     )
 }
 
 /**
  * One schedule: what it does and when, Run now and Pause side by side (equal halves), the next
- * runs, and its history -- each run's status, when, the model that ran it and why, and Open for
- * its result.
+ * runs, and its history -- each run's status, when, the model that ran it and why, the first
+ * lines of its result; a run opens its result in full.
  */
 @Composable
 fun ScheduleContent(
@@ -477,11 +523,12 @@ private fun ScheduleBody(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Filled.Schedule, contentDescription = null, tint = palette.accent, modifier = Modifier.size(20.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text(schedule.rule, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                        Text(schedule.description.orEmpty(), style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
                     }
                     Text(schedule.instruction, style = MaterialTheme.typography.bodyMedium)
                     val facts = listOfNotNull(
-                        schedule.model.ifBlank { null }?.let { stringResource(R.string.schedule_model, it) },
+                        schedule.model?.takeIf { it.isNotBlank() }?.let { stringResource(R.string.schedule_model, it) },
+                        modeWords(schedule.mode),
                         notifyWords(schedule.notify),
                     )
                     if (facts.isNotEmpty()) {
@@ -540,13 +587,20 @@ private fun ScheduleBody(
 @Composable
 private fun notifyWords(notify: String): String? = when (notify) {
     "always" -> stringResource(R.string.notify_always)
-    "matters", "when_matters" -> stringResource(R.string.notify_matters)
+    "matters" -> stringResource(R.string.notify_matters)
     "never" -> stringResource(R.string.notify_never)
     else -> null
 }
 
 @Composable
-private fun Header(text: String) {
+private fun modeWords(mode: String): String? = when (mode) {
+    "fresh" -> stringResource(R.string.mode_fresh)
+    "continue" -> stringResource(R.string.mode_continue)
+    else -> null
+}
+
+@Composable
+internal fun Header(text: String) {
     Text(
         text,
         style = MaterialTheme.typography.labelLarge,
@@ -555,27 +609,54 @@ private fun Header(text: String) {
     )
 }
 
-/** A run: its status (a fixed column, so the times line up), when, the model, and Open. */
+/**
+ * A run: its status (a fixed column, so the times line up), when, the model, and the first
+ * lines of its result (model output: plain text, never markup) or why it failed or waits. The
+ * whole row opens the run.
+ */
 @Composable
 private fun RunRow(run: ScheduleRun, onOpen: () -> Unit) {
     val palette = LocalPalette.current
-    Surface(shape = RoundedCornerShape(16.dp), color = palette.surfaceRaised, contentColor = palette.ink, modifier = Modifier.fillMaxWidth()) {
-        Row(Modifier.heightIn(min = 64.dp).padding(start = 12.dp, end = 4.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+    Surface(
+        onClick = onOpen,
+        shape = RoundedCornerShape(16.dp),
+        color = palette.surfaceRaised,
+        contentColor = palette.ink,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(Modifier.heightIn(min = 64.dp).padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.Top) {
             Box(Modifier.width(112.dp)) { StatusChip(run.status, run.missed) }
-            Column(Modifier.weight(1f)) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(ScheduleLogic.moment(run.startedAt ?: run.dueAt) ?: "—", style = MaterialTheme.typography.bodyMedium)
-                val model = when {
-                    run.model.isBlank() -> null
-                    run.modelReason.startsWith("switched") -> stringResource(R.string.run_model_switched, run.model)
-                    else -> run.model
-                }
-                model?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = palette.inkMuted, maxLines = 1, overflow = TextOverflow.Ellipsis) }
-                if (run.error.isNotBlank()) {
-                    Text(run.error, style = MaterialTheme.typography.bodySmall, color = palette.danger, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                }
+                RunFacts(run, maxLines = 2)
             }
-            if (run.chatId != null) TextButton(onClick = onOpen) { Text(stringResource(R.string.viewer_open)) }
         }
+    }
+}
+
+/** Under a run's time: the model and why, then the result's first lines, or the trouble. */
+@Composable
+internal fun RunFacts(run: ScheduleRun, maxLines: Int = Int.MAX_VALUE, withPreview: Boolean = true) {
+    val palette = LocalPalette.current
+    val name = run.model.label
+    val from = run.model.switchedFrom
+    val model = when {
+        name == null -> null
+        run.model.reason == "switched" && from != null -> stringResource(R.string.run_model_instead, name, from)
+        else -> name
+    }
+    model?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = palette.inkMuted, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+    if (run.status == "waiting") {
+        ScheduleLogic.moment(run.retryAt)?.let {
+            Text(stringResource(R.string.run_retry_at, it), style = MaterialTheme.typography.bodySmall, color = palette.warning, maxLines = 1)
+        }
+    }
+    run.error?.text?.takeIf { it.isNotBlank() }?.let {
+        val tone = if (run.status == "waiting") palette.inkMuted else palette.danger
+        Text(it, style = MaterialTheme.typography.bodySmall, color = tone, maxLines = maxLines, overflow = TextOverflow.Ellipsis)
+    }
+    if (withPreview && run.preview.isNotBlank()) {
+        Text(run.preview, style = MaterialTheme.typography.bodySmall, color = palette.ink, maxLines = maxLines, overflow = TextOverflow.Ellipsis)
     }
 }
 
@@ -583,7 +664,7 @@ private fun RunRow(run: ScheduleRun, onOpen: () -> Unit) {
 
 data class EditState(
     val words: String = "",
-    val preview: SchedulePreview? = null,
+    val compiled: ScheduleCompiled? = null,
     val compiling: Boolean = false,
     val saving: Boolean = false,
     val error: String? = null,
@@ -596,7 +677,7 @@ class ScheduleEditViewModel(app: Application) : AndroidViewModel(app) {
     private var editing: String? = null
     private var started = false
 
-    /** Begin: empty for a new schedule, the schedule's own words for one being edited. */
+    /** Begin: empty for a new schedule, the words a schedule was made from for one being edited. */
     fun start(id: String?) {
         if (started) return
         started = true
@@ -604,22 +685,22 @@ class ScheduleEditViewModel(app: Application) : AndroidViewModel(app) {
         if (id == null) return
         viewModelScope.launch {
             runCatching { getApplication<Application>().api().schedule(id) }.onSuccess { s ->
-                _state.update { it.copy(words = listOf(s.rule, s.instruction).filter { w -> w.isNotBlank() }.joinToString(": ")) }
+                _state.update { it.copy(words = s.request.ifBlank { s.instruction }) }
             }
         }
     }
 
-    fun words(text: String) = _state.update { it.copy(words = text, preview = null) }
+    fun words(text: String) = _state.update { it.copy(words = text, compiled = null) }
 
-    /** The server reads the words: the rule, the instruction and the next runs come back. */
+    /** The server reads the words: the title, the instruction, the rule and the next runs. */
     fun preview() {
         val words = _state.value.words.trim()
         if (words.isEmpty()) return
         viewModelScope.launch {
             _state.update { it.copy(compiling = true, error = null) }
             try {
-                val preview = getApplication<Application>().api().compileSchedule(words)
-                _state.update { it.copy(preview = preview, compiling = false) }
+                val compiled = getApplication<Application>().api().compileSchedule(words)
+                _state.update { it.copy(compiled = compiled, compiling = false) }
             } catch (e: Exception) {
                 _state.update {
                     it.copy(compiling = false, unsupported = e.unsupported(), error = if (e.unsupported()) null else getApplication<Application>().explain(e))
@@ -629,11 +710,11 @@ class ScheduleEditViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun save(then: (String) -> Unit) {
-        val preview = _state.value.preview ?: return
+        val compiled = _state.value.compiled?.takeIf { it.savable } ?: return
         viewModelScope.launch {
             _state.update { it.copy(saving = true, error = null) }
             try {
-                val saved = getApplication<Application>().api().saveSchedule(preview, editing)
+                val saved = getApplication<Application>().api().saveSchedule(compiled, _state.value.words.trim(), editing)
                 then(saved.id)
             } catch (e: Exception) {
                 _state.update { it.copy(saving = false, error = getApplication<Application>().explain(e)) }
@@ -656,8 +737,9 @@ fun ScheduleEditScreen(
 
 /**
  * A schedule in words: the person says when and what, the server reads it, and the preview
- * shows what it understood -- the rule in words, the instruction, the next five runs -- before
- * anything is saved. Save stays at the foot, out of the way of the keyboard.
+ * shows what it understood -- the title, the rule in words, the instruction, the next five runs
+ * -- before anything is saved. When it could not make out all of it, it says why, and Save
+ * waits for words it can. Save stays at the foot, out of the way of the keyboard.
  */
 @Composable
 fun ScheduleEditContent(
@@ -676,7 +758,7 @@ fun ScheduleEditContent(
             Box(Modifier.background(palette.bg).navigationBarsPadding().imePadding().padding(16.dp)) {
                 Button(
                     onClick = onSave,
-                    enabled = state.preview != null && !state.saving,
+                    enabled = state.compiled?.savable == true && !state.saving,
                     modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
                 ) { Text(stringResource(R.string.save)) }
             }
@@ -708,30 +790,38 @@ fun ScheduleEditContent(
             }
             if (state.unsupported) Text(stringResource(R.string.scheduled_unsupported), color = palette.inkMuted)
             state.error?.let { Text(it, color = palette.danger, style = MaterialTheme.typography.bodyMedium) }
-            state.preview?.let { p ->
-                Surface(shape = RoundedCornerShape(20.dp), color = palette.surfaceRaised, contentColor = palette.ink, modifier = Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(stringResource(R.string.schedule_understood), style = MaterialTheme.typography.labelLarge, color = palette.accent)
-                        if (p.title.isNotBlank()) Text(p.title, style = MaterialTheme.typography.titleMedium)
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Filled.Schedule, contentDescription = null, tint = palette.inkMuted, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text(p.ruleText, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-                        }
-                        Text(p.instruction, style = MaterialTheme.typography.bodyMedium, color = palette.inkMuted)
-                        val next = ScheduleLogic.upcoming(p.nextRuns)
-                        if (next.isNotEmpty()) {
-                            Text(
-                                stringResource(R.string.schedule_next_runs),
-                                style = MaterialTheme.typography.labelLarge,
-                                modifier = Modifier.padding(top = 8.dp),
-                            )
-                            next.forEach { Text(it, style = MaterialTheme.typography.bodyMedium) }
-                        }
-                    }
+            state.compiled?.let { Understood(it) }
+            Spacer(Modifier.height(24.dp))
+        }
+    }
+}
+
+/** What the server made of the words. The title and instruction are a model's: plain text. */
+@Composable
+private fun Understood(c: ScheduleCompiled) {
+    val palette = LocalPalette.current
+    Surface(shape = RoundedCornerShape(20.dp), color = palette.surfaceRaised, contentColor = palette.ink, modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(stringResource(R.string.schedule_understood), style = MaterialTheme.typography.labelLarge, color = palette.accent)
+            c.reason?.takeIf { it.isNotBlank() }?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = palette.warning) }
+            if (c.title.isNotBlank()) Text(c.title, style = MaterialTheme.typography.titleMedium)
+            c.description?.takeIf { it.isNotBlank() }?.let { words ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Filled.Schedule, contentDescription = null, tint = palette.inkMuted, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(words, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
                 }
             }
-            Spacer(Modifier.height(24.dp))
+            if (c.instruction.isNotBlank()) Text(c.instruction, style = MaterialTheme.typography.bodyMedium, color = palette.inkMuted)
+            val next = ScheduleLogic.upcoming(c.nextRuns)
+            if (next.isNotEmpty()) {
+                Text(
+                    stringResource(R.string.schedule_next_runs),
+                    style = MaterialTheme.typography.labelLarge,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
+                next.forEach { Text(it, style = MaterialTheme.typography.bodyMedium) }
+            }
         }
     }
 }

@@ -29,14 +29,23 @@ is in alpha and releases come off `main`.
 ### Added
 
 - **Scheduled**: in the drawer. Each scheduled task with its rule in words, how its last run
-  went and when it runs next, and a switch to pause it. A task's page has Run now, Pause, its
-  next runs and its history (each run's result, the model that ran it -- and when another one
-  stood in because the first was busy -- and Open for the result). A new task is said in words;
-  the instance shows what it understood and the next five runs before anything is saved. Needs
-  a LLeMbas server with scheduling (2.0.0-beta.6); an older one says so.
-- **Notifications for scheduled tasks**, on two channels of their own (results, and failures):
-  on the lock screen they say only that a task finished or failed; unlocked, they show the
-  result's first lines, with **Open** (the run's result) and **Pause**.
+  went (or that it is running now) and when it runs next, and a switch to pause it; the list
+  keeps itself current while it is open. A task's page has Run now (which does not use up the
+  next scheduled run), Pause, its next runs and its history: each run's status, when, the model
+  that ran it -- and which one it stood in for when the first was busy -- the first lines of its
+  result, or why it failed or what it is waiting for and when it tries again. **A run opens its
+  result in full**, with Open its chat. A new task is said in words; the instance shows what it
+  understood -- the title, the rule in words, the instruction and the next five runs -- before
+  anything is saved, and says why when it could not make out all of it. Editing starts from
+  the words the task was made from. **Models for scheduled tasks** (the button at the top of
+  Scheduled): the models scheduled work runs on, in the order they are tried, which are free
+  right now, and a tick to leave one out. Needs a LLeMbas server with scheduling (2.0.0-beta.6);
+  an older one says so.
+- **Notifications for scheduled tasks**, on two channels of their own (results, and failures).
+  They carry no content -- the instance sends only that a task finished or failed, and which
+  run -- and on the lock screen they show only the app's name and that sentence. A tap, or
+  **Open**, goes to the run's result; a failure offers **Pause**, and after three failures in
+  a row the notification asks whether to pause the task.
 - **Screenshots of every screen on each change**: the CI run renders the screens with made-up
   data, light and dark, on a large and a small phone and with large type, and keeps the
   pictures with the run.

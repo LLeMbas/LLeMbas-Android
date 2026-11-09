@@ -10,9 +10,15 @@ import eu.llembas.android.api.LiveReply
 import eu.llembas.android.api.Message
 import eu.llembas.android.api.Metrics
 import eu.llembas.android.api.ModelList
+import eu.llembas.android.api.RunError
+import eu.llembas.android.api.RunModel
+import eu.llembas.android.api.RunResult
+import eu.llembas.android.api.RunTokens
 import eu.llembas.android.api.Schedule
-import eu.llembas.android.api.SchedulePreview
+import eu.llembas.android.api.ScheduleCompiled
 import eu.llembas.android.api.ScheduleRun
+import eu.llembas.android.api.SchedulingModel
+import eu.llembas.android.api.SchedulingModels
 import eu.llembas.android.api.Step
 import eu.llembas.android.api.Tail
 import eu.llembas.android.api.ToolBlock
@@ -23,9 +29,12 @@ import eu.llembas.android.ui.chat.ChatState
 import eu.llembas.android.ui.chat.Draft
 import eu.llembas.android.ui.home.ChatsState
 import eu.llembas.android.ui.scheduled.EditState
+import eu.llembas.android.ui.scheduled.ModelsState
+import eu.llembas.android.ui.scheduled.RunState
 import eu.llembas.android.ui.scheduled.ScheduleState
 import eu.llembas.android.ui.scheduled.ScheduledState
 import eu.llembas.android.ui.settings.SettingsState
+import kotlinx.serialization.json.jsonObject
 import java.time.LocalDate
 
 /** Made-up data for the screenshots: the server's own contract files where they fit. */
@@ -141,8 +150,25 @@ object Fakes {
         selfUpdate = true,
     )
 
-    private val ok =
-        ScheduleRun(id = "r1", dueAt = "2026-03-10T07:30:00+00:00", startedAt = "2026-03-10T07:30:02+00:00", status = "ok", model = "qwen", chatId = "c9")
+    // Scheduled: shaped as the server's contract fixtures are (contract/schedule*.json).
+    private fun rule(text: String) = LembasJson.parseToJsonElement(text).jsonObject
+
+    private val ok = ScheduleRun(
+        id = "r1",
+        scheduleId = "s1",
+        status = "ok",
+        timing = "on_time",
+        dueAt = "2026-03-10T07:30:00+00:00",
+        startedAt = "2026-03-10T07:30:02+00:00",
+        finishedAt = "2026-03-10T07:31:40+00:00",
+        attempts = 1,
+        model = RunModel(id = "qwen", name = "Qwen", reason = "pinned"),
+        tokens = RunTokens(prompt = 1200, completion = 340),
+        chatId = "c9",
+        messageId = "m9",
+        preview = "1. Two new offshore wind farms approved in the North Sea. 2. Solar output hit a March record in Spain.",
+        notified = true,
+    )
     private val nextRuns = listOf(11, 12, 13, 16, 17).map { "2026-03-${it}T07:30:00+00:00" }
 
     val schedules = listOf(
@@ -150,71 +176,137 @@ object Fakes {
             id = "s1",
             title = "Morning news on renewables",
             instruction = "Sum up the news about renewable energy from the last day, in five points.",
-            rule = "Every weekday at 07:30",
+            request = "Every weekday at 7:30, sum up the news about renewable energy in five points",
+            rule = rule("""{"at":{"weekdays":[0,1,2,3,4],"times":["07:30"]}}"""),
+            description = "Every weekday at 07:30",
+            timezone = "Europe/Bratislava",
+            nextRun = nextRuns.first(),
             nextRuns = nextRuns,
-            lastRun = ok,
-            model = "qwen",
+            mode = "fresh",
             notify = "matters",
+            model = "qwen",
+            chatId = "c9",
+            firedCount = 41,
+            lastRun = ok,
         ),
         Schedule(
             id = "s2",
             title = "Check the garden sensors",
             instruction = "Read the sensors and tell me if the soil is too dry.",
-            rule = "Every 3 hours",
+            rule = rule("""{"every":{"hours":3}}"""),
+            description = "Every 3 hours",
+            nextRun = "2026-03-10T12:00:00+00:00",
             nextRuns = listOf("2026-03-10T12:00:00+00:00"),
-            lastRun = ScheduleRun(id = "r2", status = "silent"),
+            mode = "continue",
+            notify = "matters",
+            running = true,
+            lastRun = ScheduleRun(id = "r2", scheduleId = "s2", status = "silent", timing = "on_time"),
         ),
         Schedule(
             id = "s3",
             title = "Weekly backup report",
             instruction = "Summarise last week's backups and anything that failed.",
-            rule = "Every Monday at 09:00",
-            paused = true,
-            lastRun = ScheduleRun(id = "r3", status = "failed", error = "The model could not be reached."),
+            description = "Every Monday at 09:00",
+            enabled = false,
+            failureStreak = 3,
+            lastRun = ScheduleRun(
+                id = "r3",
+                scheduleId = "s3",
+                status = "failed",
+                error = RunError(kind = "unreachable", text = "The model could not be reached."),
+            ),
         ),
         Schedule(
             id = "s4",
             title = "Dentist",
             instruction = "Remind me to call the dentist.",
-            rule = "Once, on Thursday at 10:00",
+            description = "Once, on Thursday 12 March at 10:00",
+            nextRun = "2026-03-12T09:00:00+00:00",
             nextRuns = listOf("2026-03-12T09:00:00+00:00"),
-            lastRun = ScheduleRun(id = "r4", status = "waiting"),
+            notify = "always",
+            lastRun = ScheduleRun(
+                id = "r4",
+                scheduleId = "s4",
+                status = "waiting",
+                waitingFor = "model",
+                retryAt = "2026-03-10T07:35:00+00:00",
+                attempts = 2,
+                error = RunError(kind = "no_model", text = "Waiting for a free model: Qwen: it is answering someone."),
+            ),
         ),
     )
 
     val scheduled = ScheduledState(schedules = schedules)
 
+    private val switched = ScheduleRun(
+        id = "r0",
+        scheduleId = "s1",
+        status = "ok",
+        timing = "late",
+        dueAt = "2026-03-09T07:30:00+00:00",
+        startedAt = "2026-03-09T07:41:00+00:00",
+        model = RunModel(id = "gpt-oss", name = "GPT-OSS", reason = "switched", switchedFrom = "Qwen"),
+        chatId = "c8",
+        preview = "Little happened over the weekend: one grid-storage tender in Austria.",
+    )
+
     val schedule = ScheduleState(
         schedule = schedules[0],
         runs = listOf(
             ok,
-            ScheduleRun(
-                id = "r0",
-                startedAt = "2026-03-09T07:41:00+00:00",
-                status = "ok",
-                model = "gpt-oss",
-                modelReason = "switched: qwen busy",
-                chatId = "c8",
-            ),
-            ScheduleRun(id = "r-1", dueAt = "2026-03-06T07:30:00+00:00", status = "silent", model = "qwen"),
-            ScheduleRun(id = "r-2", dueAt = "2026-03-05T07:30:00+00:00", status = "missed", missed = 2),
+            switched,
+            ScheduleRun(id = "r-1", scheduleId = "s1", dueAt = "2026-03-06T07:30:00+00:00", status = "silent", model = RunModel(id = "qwen", name = "Qwen")),
+            ScheduleRun(id = "r-2", scheduleId = "s1", dueAt = "2026-03-05T07:30:00+00:00", status = "missed", missed = 2),
             ScheduleRun(
                 id = "r-3",
+                scheduleId = "s1",
                 startedAt = "2026-03-04T07:30:00+00:00",
                 status = "failed",
-                model = "qwen",
-                error = "The model stopped answering after 10 minutes.",
+                model = RunModel(id = "qwen", name = "Qwen"),
+                error = RunError(kind = "timeout", text = "The model stopped answering after 10 minutes."),
             ),
+        ),
+    )
+
+    val run = RunState(
+        title = "Morning news on renewables",
+        result = RunResult(
+            run = switched,
+            text = """
+                |Little happened over the weekend. **One thing** worth knowing:
+                |
+                |1. Austria opened a tender for **200 MW** of grid storage, bids due in May.
+                |2. A [report](https://example.org/report) puts Europe's March solar output 18 % above last year.
+                |
+                |```text
+                |storage tender: 200 MW, deadline 2026-05-15
+                |```
+            """.trimMargin(),
+        ),
+    )
+
+    val schedulingModels = ModelsState(
+        models = SchedulingModels(
+            models = listOf(
+                SchedulingModel(id = "gpt-oss", name = "GPT-OSS", free = false, busy = "it is answering someone", chosen = true),
+                SchedulingModel(id = "qwen", name = "Qwen", free = true, chosen = true),
+                SchedulingModel(id = "gemma", name = "Gemma 3 27B", free = true, chosen = false),
+            ),
+            instance = listOf("gpt-oss", "qwen", "gemma"),
+            mine = listOf("gpt-oss", "qwen"),
         ),
     )
 
     val editing = EditState(
         words = "Every weekday at 7:30, sum up the news about renewable energy in five points",
-        preview = SchedulePreview(
+        compiled = ScheduleCompiled(
+            ok = true,
             title = "Morning news on renewables",
-            ruleText = "Every weekday at 07:30",
             instruction = "Sum up the news about renewable energy from the last day, in five points.",
+            rule = rule("""{"at":{"weekdays":[0,1,2,3,4],"times":["07:30"]}}"""),
+            description = "Every weekday at 07:30",
             nextRuns = nextRuns,
+            timezone = "Europe/Bratislava",
         ),
     )
 }

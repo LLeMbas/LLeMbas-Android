@@ -99,6 +99,7 @@ object Notifications {
     const val EXTRA_INSTANCE = "eu.llembas.android.INSTANCE"
 
     const val EXTRA_SCHEDULE = "eu.llembas.android.SCHEDULE"
+    const val EXTRA_RUN = "eu.llembas.android.RUN"
 
     fun show(context: Context, instance: String, payload: PushPayload) {
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) return
@@ -130,48 +131,50 @@ object Notifications {
     }
 
     /**
-     * A scheduled task's result or failure, on its own channel. The result's first lines are
-     * the account's, so the lock screen gets the public version instead: the app's name and
-     * "a scheduled task finished" (or failed), nothing of what it said. Open goes to the run's
-     * result (its chat) or else the schedule; Pause pauses the schedule from here.
+     * A scheduled run's result or failure, on its own channel, built from the server's payload
+     * alone ([ScheduledNotice]): the payload carries ids and one of the server's own fixed
+     * sentences, never the result. Unlocked: the instance's name and that sentence. On the lock
+     * screen the public version: the app's name and "a scheduled task has a result" (or failed).
+     * A tap and Open go to the run; Pause is there when the server offers it.
      */
     private fun scheduled(context: Context, instance: String, payload: PushPayload) {
-        val failed = payload.kind == "schedule_failed"
-        val id = (payload.runId ?: payload.scheduleId ?: payload.url).hashCode()
-        val channel = if (failed) LembasApp.CHANNEL_SCHEDULED_FAILURES else LembasApp.CHANNEL_SCHEDULED
-        val open = opener(context, instance, id, chatId = payload.chatId, scheduleId = payload.scheduleId.takeIf { payload.chatId == null })
+        val notice = ScheduledNotice.from(payload) ?: return
+        val channel = if (notice.failed) LembasApp.CHANNEL_SCHEDULED_FAILURES else LembasApp.CHANNEL_SCHEDULED
+        val fixed = context.getString(if (notice.failed) R.string.scheduled_failed_public else R.string.scheduled_result_public)
+        val open = opener(context, instance, notice.id, chatId = null, scheduleId = notice.scheduleId, runId = notice.runId)
         val public = NotificationCompat.Builder(context, channel)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(context.getString(R.string.app_name))
-            .setContentText(context.getString(if (failed) R.string.scheduled_failed_public else R.string.scheduled_result_public))
+            .setContentText(fixed)
             .build()
+        val body = payload.body.ifBlank { fixed }
         val builder = NotificationCompat.Builder(context, channel)
             .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle(payload.title)
-            .setContentText(payload.body)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(payload.body))
+            .setContentTitle(payload.title.ifBlank { context.getString(R.string.scheduled) })
+            .setContentText(body)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(body))
             .setAutoCancel(true)
             .setContentIntent(open)
-            .setCategory(if (failed) Notification.CATEGORY_ERROR else Notification.CATEGORY_STATUS)
+            .setCategory(if (notice.failed) Notification.CATEGORY_ERROR else Notification.CATEGORY_STATUS)
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
             .setPublicVersion(public)
-            .addAction(0, context.getString(R.string.viewer_open), open)
-        payload.scheduleId?.let { schedule ->
-            builder.addAction(0, context.getString(R.string.schedule_pause), pause(context, instance, schedule, id))
-        }
-        NotificationManagerCompat.from(context).notify(id, builder.build())
+        if (notice.open) builder.addAction(0, context.getString(R.string.viewer_open), open)
+        if (notice.pause) builder.addAction(0, context.getString(R.string.schedule_pause), pause(context, instance, notice.scheduleId, notice.id))
+        NotificationManagerCompat.from(context).notify(notice.id, builder.build())
     }
 
-    private fun opener(context: Context, instance: String, id: Int, chatId: String?, scheduleId: String? = null): PendingIntent = PendingIntent.getActivity(
-        context,
-        id,
-        Intent(context, MainActivity::class.java)
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-            .putExtra(EXTRA_CHAT, chatId)
-            .putExtra(EXTRA_SCHEDULE, scheduleId)
-            .putExtra(EXTRA_INSTANCE, instance),
-        PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-    )
+    private fun opener(context: Context, instance: String, id: Int, chatId: String?, scheduleId: String? = null, runId: String? = null): PendingIntent =
+        PendingIntent.getActivity(
+            context,
+            id,
+            Intent(context, MainActivity::class.java)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                .putExtra(EXTRA_CHAT, chatId)
+                .putExtra(EXTRA_SCHEDULE, scheduleId)
+                .putExtra(EXTRA_RUN, runId)
+                .putExtra(EXTRA_INSTANCE, instance),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
 
     private fun pause(context: Context, instance: String, schedule: String, notification: Int): PendingIntent = PendingIntent.getBroadcast(
         context,

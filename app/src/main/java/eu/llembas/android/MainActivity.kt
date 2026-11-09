@@ -25,6 +25,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -34,24 +35,28 @@ import eu.llembas.android.api.Chat
 import eu.llembas.android.auth.Instance
 import eu.llembas.android.auth.Prefs
 import eu.llembas.android.push.Notifications
+import eu.llembas.android.push.Push
 import eu.llembas.android.ui.chat.ChatScreen
 import eu.llembas.android.ui.files.FilesScreen
 import eu.llembas.android.ui.home.ChatsViewModel
 import eu.llembas.android.ui.home.DrawerActions
 import eu.llembas.android.ui.home.DrawerContent
+import eu.llembas.android.ui.scheduled.RunScreen
 import eu.llembas.android.ui.scheduled.ScheduleEditScreen
 import eu.llembas.android.ui.scheduled.ScheduleScreen
 import eu.llembas.android.ui.scheduled.ScheduledScreen
+import eu.llembas.android.ui.scheduled.SchedulingModelsScreen
 import eu.llembas.android.ui.settings.SettingsScreen
 import eu.llembas.android.ui.signin.SignInScreen
 import eu.llembas.android.ui.theme.LembasTheme
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 private data class Loaded(val instance: Instance?)
 
 /** Where a notification (or the assistant, or a share) asked the app to open. */
-private data class Opening(val chat: String?, val schedule: String?)
+private data class Opening(val chat: String?, val schedule: String?, val run: String? = null, val instance: String? = null)
 
 class MainActivity : ComponentActivity() {
     /** A chat or a schedule a notification, the assistant or a share asked to open; consumed once. */
@@ -82,7 +87,19 @@ class MainActivity : ComponentActivity() {
     private fun take(intent: Intent?) {
         val chat = intent?.getStringExtra(Notifications.EXTRA_CHAT)
         val schedule = intent?.getStringExtra(Notifications.EXTRA_SCHEDULE)
-        if (chat != null || schedule != null) opening.value = Opening(chat, schedule)
+        val run = intent?.getStringExtra(Notifications.EXTRA_RUN)
+        val instance = intent?.getStringExtra(Notifications.EXTRA_INSTANCE)
+        if (chat == null && schedule == null) return
+        opening.value = Opening(chat, schedule, run, instance)
+        // A notification from another of the person's instances: that one comes into use, and
+        // its pages (keyed by the instance) open what was asked.
+        if (instance != null) {
+            lifecycleScope.launch {
+                if (lembas.instances.active.first()?.id != instance && Push.instance(this@MainActivity, instance) != null) {
+                    lembas.instances.use(instance)
+                }
+            }
+        }
     }
 
     @Composable
@@ -129,9 +146,15 @@ class MainActivity : ComponentActivity() {
         LaunchedEffect(drawer.isOpen) { if (drawer.isOpen) chats.load() }
         LaunchedEffect(open) {
             open?.let {
+                // Meant for another instance: left for that one's pages, once it is in use.
+                if (it.instance != null && it.instance != instance.id) return@let
                 when {
                     it.chat != null -> top("chat/${it.chat}")
-                    it.schedule != null -> over("schedule/${it.schedule}")
+
+                    it.schedule != null -> {
+                        over("schedule/${it.schedule}")
+                        it.run?.let { run -> over("schedule/${it.schedule}/run/$run") }
+                    }
                 }
                 opened()
             }
@@ -196,11 +219,32 @@ class MainActivity : ComponentActivity() {
                 }
                 composable("files") { FilesScreen(onBack = { nav.popBackStack() }) }
                 composable("scheduled") {
-                    ScheduledScreen(onBack = { nav.popBackStack() }, onOpen = { over("schedule/$it") }, onNew = { over("schedule-new") })
+                    ScheduledScreen(
+                        onBack = { nav.popBackStack() },
+                        onOpen = { over("schedule/$it") },
+                        onNew = { over("schedule-new") },
+                        onModels = { over("scheduled-models") },
+                    )
+                }
+                composable("scheduled-models") {
+                    SchedulingModelsScreen(onBack = { nav.popBackStack() })
                 }
                 composable("schedule/{id}") { e ->
                     val id = e.arguments?.getString("id").orEmpty()
-                    ScheduleScreen(id, onBack = { nav.popBackStack() }, onEdit = { over("schedule-edit/$it") }, onOpenChat = { top("chat/$it") })
+                    ScheduleScreen(
+                        id,
+                        onBack = { nav.popBackStack() },
+                        onEdit = { over("schedule-edit/$it") },
+                        onOpenRun = { run -> over("schedule/$id/run/$run") },
+                    )
+                }
+                composable("schedule/{id}/run/{run}") { e ->
+                    RunScreen(
+                        e.arguments?.getString("id").orEmpty(),
+                        e.arguments?.getString("run").orEmpty(),
+                        onBack = { nav.popBackStack() },
+                        onOpenChat = { top("chat/$it") },
+                    )
                 }
                 composable("schedule-new") {
                     ScheduleEditScreen(null, onBack = { nav.popBackStack() }, onSaved = { id ->

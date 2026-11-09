@@ -486,9 +486,17 @@ data class PushPayload(
     @SerialName("message_id") val messageId: String? = null,
     @SerialName("interaction_id") val interactionId: String? = null,
     val ask: String? = null,
-    /** A scheduled task's result or failure (`kind` `schedule` or `schedule_failed`). */
+    /**
+     * A scheduled run's result or failure (`kind` `schedule` or `schedule_failed`,
+     * services/schedule/notify.py): the ids, the run's [status], `private` [visibility] (the
+     * text stays off the lock screen), the [actions] the notification may offer (`open`,
+     * `pause`), and [ask] `pause` when it failed so often that it asks whether to pause it.
+     */
     @SerialName("schedule_id") val scheduleId: String? = null,
     @SerialName("run_id") val runId: String? = null,
+    val status: String? = null,
+    val visibility: String? = null,
+    val actions: List<String> = emptyList(),
 )
 
 // --- The activity panel (`GET /chats/{chat}/activity`) -------------------------------------
