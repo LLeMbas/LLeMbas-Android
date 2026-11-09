@@ -5,6 +5,42 @@ is in alpha and releases come off `main`.
 
 ## [Unreleased]
 
+### Changed
+
+- **A new look, shaped like the AI apps people know.** The app opens on a **new chat** -- the
+  model's picture, a greeting, a few suggestions and the message box -- instead of a list.
+  **Chats are in the drawer** (the menu button, or a swipe from the edge): search, New chat, New
+  agent chat, Files, Scheduled, then today's chats, the earlier ones and the agent chats, with
+  Settings and the account at the foot. Long-press a chat there to archive it.
+- **The model is the title**: its picture and name at the top of the chat; tap it to choose
+  another in a sheet that shows each model's picture, what it can do (sees images, uses tools,
+  its context window) and how it thinks (a Thinking switch, or its effort levels).
+- **The conversation reads cleaner**: your messages in bubbles on the right, the model's answers
+  full width; its thinking and each round of tools fold into small chips you can open; code
+  comes in its own block with the language and a Copy button; attached pictures show as
+  thumbnails; three quiet dots while an answer is being written. Under an answer: Copy and
+  Regenerate. A long press on a message: Copy, Select text, Edit (yours) or Regenerate.
+- **The message box** is one rounded field: **+** to attach (camera, photos, files), **Options**
+  for what the model offers -- Thinking on or off or the effort level, the team's size, Plan
+  first (or an agent chat's mode, and a new agent chat's device and folder) -- the microphone,
+  and Send, which becomes Stop while an answer is being written.
+- **Settings** are grouped lists, and link to Android's notification settings for the app.
+
+### Added
+
+- **Scheduled**: in the drawer. Each scheduled task with its rule in words, how its last run
+  went and when it runs next, and a switch to pause it. A task's page has Run now, Pause, its
+  next runs and its history (each run's result, the model that ran it -- and when another one
+  stood in because the first was busy -- and Open for the result). A new task is said in words;
+  the instance shows what it understood and the next five runs before anything is saved. Needs
+  a LLeMbas server with scheduling (2.0.0-beta.6); an older one says so.
+- **Notifications for scheduled tasks**, on two channels of their own (results, and failures):
+  on the lock screen they say only that a task finished or failed; unlocked, they show the
+  result's first lines, with **Open** (the run's result) and **Pause**.
+- **Screenshots of every screen on each change**: the CI run renders the screens with made-up
+  data, light and dark, on a large and a small phone and with large type, and keeps the
+  pictures with the run.
+
 ## [1.0.0-beta.2] — 2026-11-09
 
 For LLeMbas server 2.0 (2.0.0-beta.5 or later for the activity panel, the Thinking switch and team
