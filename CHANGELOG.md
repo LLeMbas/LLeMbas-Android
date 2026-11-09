@@ -5,6 +5,11 @@ is in alpha and releases come off `main`.
 
 ## [Unreleased]
 
+## [1.0.0-beta.2] — 2026-11-09
+
+For LLeMbas server 2.0 (2.0.0-beta.5 or later for the activity panel, the Thinking switch and team
+sizes).
+
 ### Added
 
 - **New agent chat**, on the Agents tab: pick one of the devices linked right now (a computer
