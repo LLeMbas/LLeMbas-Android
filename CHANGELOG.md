@@ -5,6 +5,10 @@ is in alpha and releases come off `main`.
 
 ## [Unreleased]
 
+## [1.0.0-beta.4] — 2026-11-09
+
+For LLeMbas server 2.0 (2.0.0-beta.7 or later for the Subagents setting and the panel's compaction).
+
 For LLeMbas server 2.0.0-beta.7 (an older 2.0 server works; the app then guesses whether
 subagents are offered and works out auto-compact itself).
 
