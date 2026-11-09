@@ -16,6 +16,9 @@ coroutines = "1.10.2"
 markwon = "4.6.2"
 unifiedpush = "3.3.5"
 junit = "4.13.2"
+# Test-only: JVM screenshots of the screens (Robolectric renders, Roborazzi writes the PNGs).
+robolectric = "4.17"
+roborazzi = "1.78.0"
 
 [libraries]
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
@@ -42,6 +45,10 @@ markwon-tables = { module = "io.noties.markwon:ext-tables", version.ref = "markw
 markwon-strikethrough = { module = "io.noties.markwon:ext-strikethrough", version.ref = "markwon" }
 unifiedpush-connector = { module = "org.unifiedpush.android:connector", version.ref = "unifiedpush" }
 junit = { module = "junit:junit", version.ref = "junit" }
+robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
+roborazzi = { module = "io.github.takahirom.roborazzi:roborazzi", version.ref = "roborazzi" }
+roborazzi-compose = { module = "io.github.takahirom.roborazzi:roborazzi-compose", version.ref = "roborazzi" }
+compose-ui-test-junit4 = { module = "androidx.compose.ui:ui-test-junit4" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

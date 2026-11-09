@@ -65,6 +65,15 @@ jobs:
           path: test-builds/
           if-no-files-found: error
 
+      # The screens as the screenshot tests rendered them (app/src/test/.../shots), light and
+      # dark, at a large and a small phone's size: the design is reviewed from these.
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: llembas-android-screenshots-${{ github.run_number }}
+          path: app/build/screenshots/
+          if-no-files-found: warn
+
       - uses: actions/upload-artifact@v4
         if: always()
         with:

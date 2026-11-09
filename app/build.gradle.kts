@@ -106,6 +106,15 @@ android {
 
     testOptions {
         unitTests.isReturnDefaultValues = true
+        // The screenshot tests (`shots/`) render the screens on the JVM with Robolectric, and
+        // Roborazzi writes each to app/build/screenshots/ -- recorded every run, never compared:
+        // they are for looking at, and CI uploads them. Nothing of this reaches the APK.
+        unitTests.isIncludeAndroidResources = true
+        unitTests.all { test ->
+            test.systemProperty("roborazzi.test.record", "true")
+            test.systemProperty("robolectric.pixelCopyRenderMode", "hardware")
+            test.maxHeapSize = "3g"
+        }
     }
 
     sourceSets {
@@ -144,4 +153,9 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.okhttp.mockwebserver)
+    testImplementation(platform(libs.compose.bom))
+    testImplementation(libs.compose.ui.test.junit4)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.roborazzi)
+    testImplementation(libs.roborazzi.compose)
 }
