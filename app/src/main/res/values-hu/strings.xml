@@ -109,10 +109,11 @@
     <string name="room_empty">A szobában még senki nem mondott semmit.</string>
     <string name="room_report">jelentés</string>
     <string name="team_agents">Alügynökök</string>
-    <string name="team_fewest">Legalább</string>
-    <string name="team_most">Legfeljebb</string>
-    <string name="team_hint">A legkevesebb és a legtöbb ehhez a csevegéshez, a saját ügynökével együtt. Egy fölött munkát adhat alügynököknek, és vezeti őket.</string>
-    <string name="team_chip">Alügynökök %1$s–%2$s</string>
+    <string name="team_min">Min</string>
+    <string name="team_max">Max</string>
+    <string name="team_range">Min %1$s · Max %2$s</string>
+    <string name="team_hint">A számok a csevegés saját ügynökét is beleszámítják: 1 az ügynök egyedül, alügynökök nélkül, a Max 4 pedig az ügynök és legfeljebb 3 alügynök, akiket vezet.</string>
+    <string name="team_chip">Alügynökök: Min %1$s · Max %2$s</string>
     <string name="subagents_named_only">Ez a modell egyszerre csak egy kérést szolgál ki: az alügynököknek másik modell kell, másik szerveren, a csevegésben megnevezve.</string>
     <string name="thinking_switch">Gondolkodjon válasz előtt</string>
     <string name="level_off">ki</string>

@@ -109,10 +109,11 @@
     <string name="room_empty">V miestnosti zatiaľ nikto nič nepovedal.</string>
     <string name="room_report">hlásenie</string>
     <string name="team_agents">Podagenti</string>
-    <string name="team_fewest">Najmenej</string>
-    <string name="team_most">Najviac</string>
-    <string name="team_hint">Najmenej a najviac pre tento chat, vrátane jeho vlastného agenta. Nad jedného môže odovzdávať prácu podagentom a viesť ich.</string>
-    <string name="team_chip">Podagenti %1$s–%2$s</string>
+    <string name="team_min">Min</string>
+    <string name="team_max">Max</string>
+    <string name="team_range">Min %1$s · Max %2$s</string>
+    <string name="team_hint">Čísla rátajú aj vlastného agenta tohto chatu: 1 je agent sám, bez podagentov, a Max 4 je agent a až 3 podagenti, ktorých vedie.</string>
+    <string name="team_chip">Podagenti: Min %1$s · Max %2$s</string>
     <string name="subagents_named_only">Tento model obslúži len jednu požiadavku naraz: podagenti potrebujú iný model, na inom serveri, pomenovaný v chate.</string>
     <string name="thinking_switch">Premýšľať pred odpoveďou</string>
     <string name="level_off">vypnuté</string>

@@ -109,10 +109,11 @@
     <string name="room_empty">Todavía no se ha dicho nada en la sala.</string>
     <string name="room_report">informe</string>
     <string name="team_agents">Subagentes</string>
-    <string name="team_fewest">Mínimo</string>
-    <string name="team_most">Máximo</string>
-    <string name="team_hint">El mínimo y el máximo para este chat, incluido su propio agente. Por encima de uno, puede repartir trabajo entre subagentes y dirigirlos.</string>
-    <string name="team_chip">Subagentes %1$s–%2$s</string>
+    <string name="team_min">Mín</string>
+    <string name="team_max">Máx</string>
+    <string name="team_range">Mín %1$s · Máx %2$s</string>
+    <string name="team_hint">Los números cuentan el propio agente de este chat: 1 es el agente solo, sin subagentes, y Máx 4 es el agente y hasta 3 subagentes que dirige.</string>
+    <string name="team_chip">Subagentes: Mín %1$s · Máx %2$s</string>
     <string name="subagents_named_only">Este modelo atiende una sola petición a la vez: los subagentes necesitan otro modelo, en otro servidor, nombrado en el chat.</string>
     <string name="thinking_switch">Razonar antes de responder</string>
     <string name="level_off">desactivado</string>

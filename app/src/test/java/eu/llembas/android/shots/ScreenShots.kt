@@ -106,6 +106,11 @@ class ScreenShots {
     fun tune() {
         shoot("07-tune") { SheetOver { TuneContent(Fakes.tuned, NoChatActions, agent = false) } }
         shoot("07-tune-one-at-a-time") { SheetOver { TuneContent(Fakes.tunedOneAtATime, NoChatActions, agent = false) } }
+        // The Subagents range whole, at a cap of 32 and of 6, and the agent alone (Min 1 · Max 1)
+        // at the narrow phone and large type.
+        shoot("07-tune", Phone.Scroll) { SheetOver { TuneContent(Fakes.tuned, NoChatActions, agent = false) } }
+        shoot("07-tune-one-at-a-time", Phone.Scroll, fontScale = 1.5f) { SheetOver { TuneContent(Fakes.tunedOneAtATime, NoChatActions, agent = false) } }
+        shoot("07-tune-alone", Phone.SmallScroll, fontScale = 1.5f) { SheetOver { TuneContent(Fakes.tunedAlone, NoChatActions, agent = false) } }
     }
 
     @Test

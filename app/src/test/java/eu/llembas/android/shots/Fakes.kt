@@ -190,6 +190,11 @@ object Fakes {
         chat = tuned.chat!!.copy(agents = AgentsSetting(2, 3), subagents = SubagentsOffer(offered = true, namedOnly = true, cap = 6)),
     )
 
+    /** The agent alone: Min 1 · Max 1, no subagents, on an instance that caps a chat at 8. */
+    val tunedAlone = tuned.copy(
+        chat = tuned.chat!!.copy(agents = AgentsSetting(1, 1), subagents = SubagentsOffer(offered = true, cap = 8)),
+    )
+
     val chats = ChatsState(
         chats = listOf(
             chat,

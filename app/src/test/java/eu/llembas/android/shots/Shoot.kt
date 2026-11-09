@@ -16,12 +16,14 @@ import eu.llembas.android.ui.theme.LembasTheme
 
 /**
  * The phones the screens are looked at on: a large one, and a small one where things crowd.
- * [Scroll] is the large one's width, tall enough to see a sheet's whole scroll at once.
+ * [Scroll] is the large one's width, tall enough to see a sheet's whole scroll at once;
+ * [SmallScroll] the same for the small one.
  */
 enum class Phone(val tag: String, val widthDp: Int, val heightDp: Int) {
     Large("411x891", 411, 891),
     Small("360x640", 360, 640),
     Scroll("411x2000", 411, 2000),
+    SmallScroll("360x2000", 360, 2000),
 }
 
 /**

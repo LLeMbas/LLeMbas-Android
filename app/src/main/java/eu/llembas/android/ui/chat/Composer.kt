@@ -11,6 +11,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -40,6 +41,7 @@ import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.UploadFile
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -48,7 +50,8 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Slider
+import androidx.compose.material3.RangeSlider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -68,8 +71,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardCapitalization
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -442,14 +446,7 @@ fun TuneContent(state: ChatState, actions: ChatActions, agent: Boolean, modifier
             val now = state.agents.let { AgentsSetting(it.min.coerceIn(1, cap), it.max.coerceIn(1, cap)) }
             // An instance that allows only one has nothing to choose between.
             if (cap > 1) {
-                Column(Modifier.padding(horizontal = 24.dp)) {
-                    AgentsSlider(stringResource(R.string.team_fewest), now.min, cap) { v ->
-                        setTeam(actions, chat == null, AgentsSetting(v, maxOf(v, now.max)))
-                    }
-                    AgentsSlider(stringResource(R.string.team_most), now.max, cap) { v ->
-                        setTeam(actions, chat == null, AgentsSetting(minOf(now.min, v), v))
-                    }
-                }
+                AgentsRange(now, cap, Modifier.padding(horizontal = 24.dp)) { setTeam(actions, chat == null, it) }
             }
         }
 
@@ -573,25 +570,42 @@ private fun DeviceChoices(devices: List<LinkedDevice>, current: LinkedDevice?, o
 }
 
 /**
- * One end of the Subagents setting: its label and value on a row of their own, so the two
- * sliders line up whatever the words, and the slider under them, from 1 to the instance's [cap].
+ * The Subagents setting: one slider with two thumbs, Min and Max, from 1 to the instance's
+ * [cap], in whole agents. The numbers count the chat's own agent, as the server does
+ * (`agents {min, max}`, the lead included): 1 is the agent alone. The values sit on a row of
+ * their own above the slider, so nothing beside them moves when a number grows a digit.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AgentsSlider(label: String, value: Int, cap: Int, onChange: (Int) -> Unit) {
-    var shown by remember(value) { mutableStateOf(value.toFloat()) }
-    Column(Modifier.padding(top = 8.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-            Text(Math.round(shown).toString(), style = MaterialTheme.typography.titleMedium, modifier = Modifier.width(40.dp), textAlign = TextAlign.End)
-        }
-        Slider(
+fun AgentsRange(value: AgentsSetting, cap: Int, modifier: Modifier = Modifier, onChange: (AgentsSetting) -> Unit) {
+    var shown by remember(value.min, value.max) { mutableStateOf(value.min.toFloat()..value.max.toFloat()) }
+    val min = Math.round(shown.start).coerceIn(1, cap)
+    val max = Math.round(shown.endInclusive).coerceIn(min, cap)
+    val minLabel = stringResource(R.string.team_min)
+    val maxLabel = stringResource(R.string.team_max)
+    val startSource = remember { MutableInteractionSource() }
+    val endSource = remember { MutableInteractionSource() }
+    Column(modifier.padding(top = 8.dp)) {
+        Text(
+            stringResource(R.string.team_range, min.toString(), max.toString()),
+            style = MaterialTheme.typography.titleMedium,
+        )
+        RangeSlider(
             value = shown,
-            onValueChange = { shown = it },
-            onValueChangeFinished = { onChange(Math.round(shown).coerceIn(1, cap)) },
+            // Whole agents: each thumb lands on a number as it moves, with no tick per value,
+            // which at a cap of 32 would be a row of noise.
+            onValueChange = { r -> shown = Math.round(r.start).toFloat()..Math.round(r.endInclusive).toFloat() },
+            onValueChangeFinished = { onChange(AgentsSetting(min, max)) },
             valueRange = 1f..cap.toFloat(),
-            // Up to the instance's cap: a tick per value for a few, continuous past that, where
-            // tick marks would be noise (the value is rounded anyway).
-            steps = if (cap <= 8) cap - 2 else 0,
+            startInteractionSource = startSource,
+            endInteractionSource = endSource,
+            startThumb = {
+                SliderDefaults.Thumb(interactionSource = startSource, modifier = Modifier.semantics { contentDescription = minLabel })
+            },
+            endThumb = {
+                SliderDefaults.Thumb(interactionSource = endSource, modifier = Modifier.semantics { contentDescription = maxLabel })
+            },
+            modifier = Modifier.heightIn(min = 48.dp),
         )
     }
 }
