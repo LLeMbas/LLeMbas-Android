@@ -3,6 +3,7 @@ package eu.llembas.android
 import eu.llembas.android.api.APP_API
 import eu.llembas.android.api.AskFrame
 import eu.llembas.android.api.Chat
+import eu.llembas.android.api.ChatPage
 import eu.llembas.android.api.DoneFrame
 import eu.llembas.android.api.FileContent
 import eu.llembas.android.api.FileListing
@@ -17,6 +18,7 @@ import eu.llembas.android.api.SteeredFrame
 import eu.llembas.android.api.StepsFrame
 import eu.llembas.android.api.Tail
 import eu.llembas.android.api.ToolCall
+import eu.llembas.android.ui.chat.approvalTexts
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.jsonObject
@@ -129,6 +131,42 @@ class ContractTest {
         assertEquals(listOf("exit 0"), call.block.chips)
         assertEquals("and add honey", reply.steps[3].messages.single().text)
         assertEquals(40, reply.metrics!!.completionTokens)
+    }
+
+    @Test
+    fun aDeviceApprovalCorrectsItsDetail() {
+        // A device's approval: the heading in `title`, the command in `detail` -- the text an
+        // `editable` item corrects -- no "Something else", and the subagent asking in `job`.
+        val approval = read("event_ask", AskFrame.serializer()).cards.single { it.kind == "approval" }
+        val item = approval.items.single()
+        assertEquals("Run a command", item.title)
+        assertEquals("rm -rf build", item.detail)
+        assertTrue(item.editable)
+        assertFalse(item.freeText)
+        assertEquals("explore (job1)", item.job)
+        assertTrue(item.reason.isNotBlank())
+        // Untouched, the same, blank: nothing sent. Corrected: the item's key with the new command.
+        assertEquals(emptyMap<String, String>(), approvalTexts(approval.items, emptyMap()))
+        assertEquals(emptyMap<String, String>(), approvalTexts(approval.items, mapOf(item.key to " rm -rf build ")))
+        assertEquals(emptyMap<String, String>(), approvalTexts(approval.items, mapOf(item.key to "  ")))
+        assertEquals(mapOf(item.key to "rm -rf build/tmp"), approvalTexts(approval.items, mapOf(item.key to "rm -rf build/tmp\n")))
+        // An item that is not editable never sends a correction.
+        assertEquals(emptyMap<String, String>(), approvalTexts(listOf(item.copy(editable = false)), mapOf(item.key to "ls")))
+    }
+
+    @Test
+    fun aListedChatLeavesTheSubagentFactsToTheChat() {
+        // The list does not work the facts out: null means "read the chat", never "not offered".
+        val page = read("chats_listed", ChatPage.serializer())
+        val chat = page.chats.single()
+        assertEquals("Waybread", chat.title)
+        assertNull(chat.subagents)
+        assertEquals(4, chat.agents?.max)
+        assertFalse(page.more)
+        // The agent chat's own facts: not offered (its subagents run on its device), the cap said.
+        val agent = read("chat_agent", Chat.serializer())
+        assertEquals(false, agent.subagents?.offered)
+        assertEquals(32, agent.subagents?.cap)
     }
 
     @Test

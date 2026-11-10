@@ -222,6 +222,10 @@
     <string name="card_answer">La tua risposta</string>
     <string name="card_something_else">Altro</string>
     <string name="card_send">Invia</string>
+    <string name="card_asker">%1$s chiede:</string>
+    <string name="card_it_says">Dice: %1$s</string>
+    <string name="card_change_before">Modificalo prima che venga eseguito</string>
+    <string name="card_edit_runs">Consenti esegue ciò che c\'è nel campo. Non viene ricontrollato rispetto alle regole di questa chat — l\'hai scritto tu.</string>
     <string name="plan_approve">Approva il piano</string>
     <string name="plan_revise">Rivedi</string>
     <string name="plan_what_to_change">Cosa dovrebbe cambiare?</string>

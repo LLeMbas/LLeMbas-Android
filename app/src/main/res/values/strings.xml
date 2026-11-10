@@ -223,6 +223,10 @@
     <string name="card_answer">Your answer</string>
     <string name="card_something_else">Something else</string>
     <string name="card_send">Send</string>
+    <string name="card_asker">%1$s asks:</string>
+    <string name="card_it_says">It says: %1$s</string>
+    <string name="card_change_before">Change this before it runs</string>
+    <string name="card_edit_runs">Allow runs what is in the box. It is not checked against this chat\'s rules again — you typed it.</string>
     <string name="plan_approve">Approve the plan</string>
     <string name="plan_revise">Revise</string>
     <string name="plan_what_to_change">What should change?</string>

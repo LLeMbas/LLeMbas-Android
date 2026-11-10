@@ -222,6 +222,10 @@
     <string name="card_answer">Ihre Antwort</string>
     <string name="card_something_else">Etwas anderes</string>
     <string name="card_send">Senden</string>
+    <string name="card_asker">%1$s fragt:</string>
+    <string name="card_it_says">Es sagt: %1$s</string>
+    <string name="card_change_before">Vor dem Ausführen ändern</string>
+    <string name="card_edit_runs">Erlauben führt aus, was im Feld steht. Es wird nicht erneut gegen die Regeln dieses Chats geprüft — Sie haben es eingegeben.</string>
     <string name="plan_approve">Plan bestätigen</string>
     <string name="plan_revise">Überarbeiten</string>
     <string name="plan_what_to_change">Was soll sich ändern?</string>

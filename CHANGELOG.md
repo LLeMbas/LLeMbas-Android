@@ -41,6 +41,13 @@ is in alpha and releases come off `main`.
   and the recording goes wherever that recogniser sends it. No Google library is in the app: it
   uses whichever recogniser the phone has, and says so when it has none.
 
+### Fixed
+
+- **A corrected command on an approval runs as corrected.** A linked computer's approval card
+  now shows its heading (*Run a command*), the command itself in the box you can change, and
+  the server's reason; Allow sends your correction only when you changed it. The card names the
+  subagent asking, when one does. (Pinned to the server's current `dev` contract.)
+
 ## [1.0.0-beta.4] — 2026-11-09
 
 For LLeMbas server 2.0 (2.0.0-beta.7 or later for the Subagents setting and the panel's compaction).

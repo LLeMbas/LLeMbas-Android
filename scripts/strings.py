@@ -240,6 +240,10 @@ STRINGS: dict[str, str] = {
     "card_answer": "Your answer",
     "card_something_else": "Something else",
     "card_send": "Send",
+    "card_asker": "%1$s asks:",
+    "card_it_says": "It says: %1$s",
+    "card_change_before": "Change this before it runs",
+    "card_edit_runs": "Allow runs what is in the box. It is not checked against this chat's rules again — you typed it.",
     "plan_approve": "Approve the plan",
     "plan_revise": "Revise",
     "plan_what_to_change": "What should change?",
@@ -347,6 +351,8 @@ STRINGS: dict[str, str] = {
 # taken from the server's catalogue and its named placeholders numbered in the order the
 # English names them -- so "%(steps)s steps, %(tools)s tools" becomes `%1$s`, `%2$s`.
 SERVER_ENGLISH: dict[str, str] = {
+    "card_asker": "%(job)s asks:",
+    "card_it_says": "It says: %(purpose)s",
     "activity_used": "%(percent)s%% used",
     "activity_tools_offered": "%(n)s tools offered.",
     "agents_n_queued": "%(n)s queued",

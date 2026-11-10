@@ -72,21 +72,33 @@ private fun Approval(card: Card, onAnswer: (CardAnswer) -> Unit) {
     var refusing by remember { mutableStateOf(false) }
     Text(stringResource(R.string.card_approval), style = MaterialTheme.typography.titleMedium)
     card.items.forEach { item ->
+        // A subagent asks, not the chat's own turn: said first, as the page says it.
+        if (item.job.isNotBlank()) {
+            Text(stringResource(R.string.card_asker, item.job), style = MaterialTheme.typography.labelLarge, color = palette.accent)
+        }
+        // `title` is the heading ("Run a command"); `detail` is the thing itself, the command.
+        if (item.title.isNotBlank()) Text(item.title, style = MaterialTheme.typography.titleSmall)
+        if (item.purpose.isNotBlank()) {
+            Text(stringResource(R.string.card_it_says, item.purpose), style = MaterialTheme.typography.bodySmall, color = palette.inkMuted)
+        }
         if (item.editable) {
             OutlinedTextField(
-                value = edits[item.key] ?: item.title,
+                value = edits[item.key] ?: item.detail,
                 onValueChange = { edits[item.key] = it },
                 textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
+                label = { Text(stringResource(R.string.card_change_before)) },
                 modifier = Modifier.fillMaxWidth(),
             )
-        } else {
-            Text(item.title, fontFamily = FontFamily.Monospace)
+            if (approvalTexts(listOf(item), edits).isNotEmpty()) {
+                Text(stringResource(R.string.card_edit_runs), style = MaterialTheme.typography.bodySmall, color = palette.inkMuted)
+            }
+        } else if (item.detail.isNotBlank()) {
+            Text(item.detail, fontFamily = FontFamily.Monospace)
         }
-        if (item.detail.isNotBlank()) Text(item.detail, style = MaterialTheme.typography.bodySmall, color = palette.inkMuted)
-        if (item.purpose.isNotBlank()) Text(item.purpose, style = MaterialTheme.typography.bodySmall, color = palette.inkFaint)
+        if (item.reason.isNotBlank()) Text(item.reason, style = MaterialTheme.typography.bodySmall, color = palette.inkFaint)
     }
-    // A corrected command goes with an allow, never with a refusal.
-    val texts = edits.filter { (key, value) -> card.items.firstOrNull { it.key == key }?.title != value }
+    // A corrected command goes with an allow, never with a refusal, and only when it was corrected.
+    val texts = approvalTexts(card.items, edits)
     if (refusing) {
         OutlinedTextField(
             value = reason,
@@ -108,6 +120,19 @@ private fun Approval(card: Card, onAnswer: (CardAnswer) -> Unit) {
         }
     }
 }
+
+/**
+ * What an approval's allow sends in `texts`: the box of each `editable` item whose text differs
+ * from the item's `detail` (the command it was offered with). An untouched box sends nothing, so
+ * the server runs what the model asked for; a cleared box is no correction either.
+ */
+fun approvalTexts(items: List<CardItem>, edits: Map<String, String>): Map<String, String> = items
+    .filter { it.editable }
+    .mapNotNull { item ->
+        val edited = edits[item.key]?.trim() ?: return@mapNotNull null
+        if (edited.isEmpty() || edited == item.detail.trim()) null else item.key to edited
+    }
+    .toMap()
 
 @Composable
 private fun Questions(card: Card, onAnswer: (CardAnswer) -> Unit) {

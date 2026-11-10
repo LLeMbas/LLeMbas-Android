@@ -222,6 +222,10 @@
     <string name="card_answer">Az Ön válasza</string>
     <string name="card_something_else">Valami más</string>
     <string name="card_send">Küldés</string>
+    <string name="card_asker">%1$s kérdezi:</string>
+    <string name="card_it_says">Ezt mondja: %1$s</string>
+    <string name="card_change_before">Módosítás futtatás előtt</string>
+    <string name="card_edit_runs">Az Engedélyezés azt futtatja, ami a mezőben van. Nem ellenőrizzük újra a csevegés szabályai szerint – ezt Ön írta be.</string>
     <string name="plan_approve">Terv jóváhagyása</string>
     <string name="plan_revise">Átdolgozás</string>
     <string name="plan_what_to_change">Mi változzon?</string>

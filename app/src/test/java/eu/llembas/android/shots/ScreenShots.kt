@@ -22,6 +22,7 @@ import eu.llembas.android.assist.AssistSheetFrame
 import eu.llembas.android.assist.AssistUiState
 import eu.llembas.android.ui.chat.ActivityActions
 import eu.llembas.android.ui.chat.ActivityContent
+import eu.llembas.android.ui.chat.CardSheet
 import eu.llembas.android.ui.chat.ChatActions
 import eu.llembas.android.ui.chat.ChatContent
 import eu.llembas.android.ui.chat.ModelPickerContent
@@ -196,6 +197,22 @@ class ScreenShots {
         shoot("21-assistant-writing", content = over(Fakes.assistWriting, false))
         shoot("22-assistant-locked", content = over(Fakes.assistOpened, true))
         shoot("23-assistant-offline", Phone.Small, content = over(Fakes.assistOffline, false))
+    }
+
+    /**
+     * The cards a reply waits on, as the server's contract (`event_ask.json`) has them: a device's
+     * approval (the subagent asking, the heading, the command in its box, the server's reason),
+     * and a question.
+     */
+    @Test
+    fun cards() {
+        val frame = requireNotNull(javaClass.classLoader!!.getResource("event_ask.json")).readText()
+        val cards = eu.llembas.android.api.LembasJson.decodeFromString(eu.llembas.android.api.AskFrame.serializer(), frame).cards
+        val approval = cards.single { it.kind == "approval" }
+        val question = cards.first { it.kind == "question" }
+        shoot("24-approval") { SheetOver { CardSheet(approval, onAnswer = {}) } }
+        shoot("24-approval", Phone.Small, fontScale = 1.5f) { SheetOver { CardSheet(approval, onAnswer = {}) } }
+        shoot("25-question") { SheetOver { CardSheet(question, onAnswer = {}) } }
     }
 
     @Test
