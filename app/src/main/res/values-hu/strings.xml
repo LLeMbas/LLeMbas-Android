@@ -23,6 +23,9 @@
     <string name="empty_chat">Miről beszéljünk?</string>
     <string name="loading_line">Lembas sül…</string>
     <string name="archive">Archiválás</string>
+    <string name="archived">Archivált</string>
+    <string name="archived_restore">Csevegés visszaállítása</string>
+    <string name="archived_none">Nincs archivált csevegés.</string>
     <string name="delete">Törlés</string>
     <string name="edit">Szerkesztés</string>
     <string name="regenerate">Újragenerálás</string>

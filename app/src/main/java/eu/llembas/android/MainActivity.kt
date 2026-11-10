@@ -39,6 +39,7 @@ import eu.llembas.android.push.Notifications
 import eu.llembas.android.push.Push
 import eu.llembas.android.ui.chat.ChatScreen
 import eu.llembas.android.ui.files.FilesScreen
+import eu.llembas.android.ui.home.ArchivedScreen
 import eu.llembas.android.ui.home.ChatsViewModel
 import eu.llembas.android.ui.home.DrawerActions
 import eu.llembas.android.ui.home.DrawerContent
@@ -207,6 +208,8 @@ class MainActivity : ComponentActivity() {
 
                 override fun scheduled() = over("scheduled")
 
+                override fun archived() = over("archived")
+
                 override fun settings() = over("settings")
 
                 override fun more() = chats.more()
@@ -254,6 +257,9 @@ class MainActivity : ComponentActivity() {
                     )
                 }
                 composable("files") { FilesScreen(onBack = { nav.popBackStack() }) }
+                composable("archived") {
+                    ArchivedScreen(onBack = { nav.popBackStack() }, onOpen = { top("chat/$it") }, onRestored = { chats.load() })
+                }
                 composable("scheduled") {
                     ScheduledScreen(
                         onBack = { nav.popBackStack() },

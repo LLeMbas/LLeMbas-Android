@@ -14,6 +14,8 @@ is in alpha and releases come off `main`.
   default in a beta, off in a release. *Include betas* offers test versions too (on by default
   in a beta). **Check for an update** asks at once, in either build; the full build can then
   install a release itself.
+- **Archived chats**, in the drawer under Scheduled: every archived chat, newest first. A tap
+  opens one; **Restore chat** puts it back among your chats.
 
 ### Changed
 

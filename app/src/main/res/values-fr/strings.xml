@@ -23,6 +23,9 @@
     <string name="empty_chat">De quoi allons-nous parler ?</string>
     <string name="loading_line">Cuisson des lembas…</string>
     <string name="archive">Archiver</string>
+    <string name="archived">Archivées</string>
+    <string name="archived_restore">Restaurer la conversation</string>
+    <string name="archived_none">Aucune conversation archivée.</string>
     <string name="delete">Supprimer</string>
     <string name="edit">Modifier</string>
     <string name="regenerate">Régénérer</string>

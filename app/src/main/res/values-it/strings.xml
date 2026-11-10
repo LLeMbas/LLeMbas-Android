@@ -23,6 +23,9 @@
     <string name="empty_chat">Di cosa parliamo?</string>
     <string name="loading_line">I lembas stanno cuocendo…</string>
     <string name="archive">Archivia</string>
+    <string name="archived">Archiviate</string>
+    <string name="archived_restore">Ripristina chat</string>
+    <string name="archived_none">Nessuna chat archiviata.</string>
     <string name="delete">Elimina</string>
     <string name="edit">Modifica</string>
     <string name="regenerate">Rigenera</string>

@@ -28,6 +28,9 @@ import eu.llembas.android.ui.chat.ChatContent
 import eu.llembas.android.ui.chat.ModelPickerContent
 import eu.llembas.android.ui.chat.TuneContent
 import eu.llembas.android.ui.chat.modelId
+import eu.llembas.android.ui.home.ArchivedActions
+import eu.llembas.android.ui.home.ArchivedContent
+import eu.llembas.android.ui.home.ChatsState
 import eu.llembas.android.ui.home.DrawerActions
 import eu.llembas.android.ui.home.DrawerContent
 import eu.llembas.android.ui.scheduled.RunContent
@@ -49,6 +52,8 @@ import java.time.ZoneOffset
 private object NoChatActions : ChatActions
 
 private object NoDrawerActions : DrawerActions
+
+private object NoArchivedActions : ArchivedActions
 
 private object NoActivityActions : ActivityActions
 
@@ -232,6 +237,13 @@ class ScreenShots {
 
     @Test
     fun schedulingModels() = shoot("13-scheduling-models") { SchedulingModelsContent(Fakes.schedulingModels) }
+
+    @Test
+    fun archived() {
+        shoot("27-archived") { ArchivedContent(Fakes.chats, NoArchivedActions) }
+        shoot("27-archived", Phone.Small, fontScale = 1.5f) { ArchivedContent(Fakes.chats, NoArchivedActions) }
+        shoot("27-archived-none") { ArchivedContent(ChatsState(), NoArchivedActions) }
+    }
 }
 
 /**

@@ -24,6 +24,9 @@
     <string name="empty_chat">What shall we talk about?</string>
     <string name="loading_line">Baking lembas…</string>
     <string name="archive">Archive</string>
+    <string name="archived">Archived</string>
+    <string name="archived_restore">Restore chat</string>
+    <string name="archived_none">No archived chats.</string>
     <string name="delete">Delete</string>
     <string name="edit">Edit</string>
     <string name="regenerate">Regenerate</string>

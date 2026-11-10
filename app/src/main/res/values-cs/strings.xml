@@ -23,6 +23,9 @@
     <string name="empty_chat">O čem si promluvíme?</string>
     <string name="loading_line">Pečou se lembasy…</string>
     <string name="archive">Archivovat</string>
+    <string name="archived">Archivované</string>
+    <string name="archived_restore">Obnovit konverzaci</string>
+    <string name="archived_none">Žádné archivované konverzace.</string>
     <string name="delete">Smazat</string>
     <string name="edit">Upravit</string>
     <string name="regenerate">Vygenerovat znovu</string>

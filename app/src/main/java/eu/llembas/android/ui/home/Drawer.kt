@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
@@ -147,13 +148,14 @@ interface DrawerActions {
     fun archive(chat: Chat) {}
     fun files() {}
     fun scheduled() {}
+    fun archived() {}
     fun settings() {}
     fun more() {}
     fun retry() {}
 }
 
 /**
- * The navigation drawer: New chat at the top, search, Files and Scheduled, then the chats --
+ * The navigation drawer: New chat at the top, search, Files, Scheduled and Archived, then the chats --
  * today's, the earlier ones, and the agent chats -- and Settings with the account at the foot.
  * A long press on a chat offers Archive.
  */
@@ -201,6 +203,7 @@ fun DrawerContent(
                 item { DrawerItem(Icons.Filled.Terminal, stringResource(R.string.new_agent_chat), onClick = actions::newAgentChat) }
                 item { DrawerItem(Icons.Filled.Folder, stringResource(R.string.files), onClick = actions::files) }
                 item { DrawerItem(Icons.Filled.Schedule, stringResource(R.string.scheduled), onClick = actions::scheduled) }
+                item { DrawerItem(Icons.Filled.Inventory2, stringResource(R.string.archived), onClick = actions::archived) }
                 item { HorizontalDivider(color = palette.border, modifier = Modifier.padding(horizontal = 28.dp, vertical = 8.dp)) }
                 state.error?.let { error ->
                     item {
