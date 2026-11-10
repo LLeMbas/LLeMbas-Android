@@ -6,9 +6,9 @@ import eu.llembas.android.api.PushPayload
  * What a scheduled run's push asks the app to show, read from the server's payload alone
  * (services/schedule/notify.py `payload`): the schedule and the run it is about, whether it
  * failed, the actions the server offers, and -- from a server that sends its `notification` --
- * the words: [title] and [body] (the result's first lines) for an unlocked phone, [publicTitle]
- * and [publicBody] (the task's name, Finished / Failed) for the lock screen, and the actions'
- * [labels]. A payload without ids falls back to its `url` (`/scheduled/{schedule}?run={run}`),
+ * the words: [title] and [body] (the result's first lines) for an unlocked phone, and the
+ * actions' [labels]. [publicTitle] / [publicBody] are read but not shown: they name the task,
+ * and the lock screen gets nothing from the account. A payload without ids falls back to its `url` (`/scheduled/{schedule}?run={run}`),
  * as a browser would open it.
  */
 data class ScheduledNotice(

@@ -136,8 +136,8 @@ object Notifications {
      * A scheduled run's result or failure, on its own channel, built from the server's payload
      * alone ([ScheduledNotice]). Unlocked: the task's name and the result's first lines, as the
      * server cut them (BigTextStyle opens them). On the lock screen only the public version: the
-     * task's name and Finished / Failed (the owner's choice for beta.9; an older server sends no
-     * words, and the app's name and a fixed sentence stand in). A tap and Open go to the run;
+     * app's name and "A scheduled task has a result." (or failed) -- nothing from the account, so
+     * the server's `public` (which names the task) is not used. A tap and Open go to the run;
      * Run again starts it again, once the phone is unlocked; Pause is there when offered.
      */
     private fun scheduled(context: Context, instance: String, payload: PushPayload) {
@@ -145,10 +145,12 @@ object Notifications {
         val channel = if (notice.failed) LembasApp.CHANNEL_SCHEDULED_FAILURES else LembasApp.CHANNEL_SCHEDULED
         val fixed = context.getString(if (notice.failed) R.string.scheduled_failed_public else R.string.scheduled_result_public)
         val open = opener(context, instance, notice.id, chatId = null, scheduleId = notice.scheduleId, runId = notice.runId)
+        // The lock screen gets nothing from the account (Working-notes rule 5): the app's name
+        // and a fixed sentence, never the task's name the server offers in `public`.
         val public = NotificationCompat.Builder(context, channel)
             .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle(notice.publicTitle.ifBlank { context.getString(R.string.app_name) })
-            .setContentText(notice.publicBody.ifBlank { fixed })
+            .setContentTitle(context.getString(R.string.app_name))
+            .setContentText(fixed)
             .build()
         val title = notice.title.ifBlank { payload.title.ifBlank { context.getString(R.string.scheduled) } }
         val body = notice.body.ifBlank { payload.body.ifBlank { fixed } }
