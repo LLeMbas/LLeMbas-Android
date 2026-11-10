@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- The home-screen widget: Ask (the sheet), the microphone (the sheet, listening) and the last
-     assistant chat. It shows nothing from the account -- no chat title, no model -- so nothing
+     assistant chat. It shows nothing from the account (no chat title, no model), so nothing
      of it is private wherever the launcher shows it. Every part keeps a fixed size except the
      Ask label, which gives. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
