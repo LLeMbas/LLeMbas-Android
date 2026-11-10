@@ -207,7 +207,8 @@
     "voice_input_lembas_line": "Převod řeči na text vaší instance, přes server. Nahrávka jde na vaši instanci a nikam jinam.",
     "voice_input_phone": "Telefon (Google nebo systémový)",
     "voice_input_phone_line": "Vlastní rozpoznávání řeči v telefonu. Slova se objevují, jak mluvíte; nahrávka jde tam, kam ji to rozpoznávání pošle.",
-    "voice_input_phone_none": "Tento telefon nemá vlastní rozpoznávání řeči."
+    "voice_input_phone_none": "Tento telefon nemá vlastní rozpoznávání řeči.",
+    "tree_context": "kontext %1$s%%"
   },
   "de": {
     "about_version": "LLeMbas für Android %1$s",
@@ -418,7 +419,8 @@
     "voice_input_lembas_line": "Die Spracherkennung Ihrer Instanz, über den Server. Die Aufnahme geht an Ihre Instanz und nirgendwo sonst hin.",
     "voice_input_phone": "Telefon (Google oder das System)",
     "voice_input_phone_line": "Die eigene Spracherkennung des Telefons. Die Wörter erscheinen beim Sprechen; die Aufnahme geht dorthin, wohin diese Erkennung sie schickt.",
-    "voice_input_phone_none": "Dieses Telefon hat keine eigene Spracherkennung."
+    "voice_input_phone_none": "Dieses Telefon hat keine eigene Spracherkennung.",
+    "tree_context": "%1$s%% Kontext"
   },
   "es": {
     "about_version": "LLeMbas para Android %1$s",
@@ -628,7 +630,8 @@
     "voice_input_lembas_line": "La conversión de voz a texto de su instancia, a través del servidor. La grabación va a su instancia y a ningún otro sitio.",
     "voice_input_phone": "Teléfono (Google o el del sistema)",
     "voice_input_phone_line": "El reconocimiento de voz del propio teléfono. Las palabras aparecen mientras habla; la grabación va adonde ese reconocimiento la envíe.",
-    "voice_input_phone_none": "Este teléfono no tiene reconocimiento de voz propio."
+    "voice_input_phone_none": "Este teléfono no tiene reconocimiento de voz propio.",
+    "tree_context": "%1$s%% de contexto"
   },
   "fr": {
     "about_version": "LLeMbas pour Android %1$s",
@@ -839,7 +842,8 @@
     "voice_input_lembas_line": "La transcription de votre instance, via le serveur. L’enregistrement va à votre instance et nulle part ailleurs.",
     "voice_input_phone": "Téléphone (Google ou celui du système)",
     "voice_input_phone_line": "La reconnaissance vocale du téléphone. Les mots apparaissent pendant que vous parlez ; l’enregistrement va là où cette reconnaissance l’envoie.",
-    "voice_input_phone_none": "Ce téléphone n’a pas de reconnaissance vocale propre."
+    "voice_input_phone_none": "Ce téléphone n’a pas de reconnaissance vocale propre.",
+    "tree_context": "%1$s%% du contexte"
   },
   "hu": {
     "about_version": "LLeMbas Androidra %1$s",
@@ -1050,7 +1054,8 @@
     "voice_input_lembas_line": "A példánya beszédfelismerése, a szerveren át. A felvétel a példányához megy, máshová nem.",
     "voice_input_phone": "Telefon (Google vagy a rendszeré)",
     "voice_input_phone_line": "A telefon saját beszédfelismerője. A szavak beszéd közben jelennek meg; a felvétel oda megy, ahová az a felismerő küldi.",
-    "voice_input_phone_none": "Ennek a telefonnak nincs saját beszédfelismerője."
+    "voice_input_phone_none": "Ennek a telefonnak nincs saját beszédfelismerője.",
+    "tree_context": "%1$s%% kontextus"
   },
   "it": {
     "about_version": "LLeMbas per Android %1$s",
@@ -1260,7 +1265,8 @@
     "voice_input_lembas_line": "La trascrizione della sua istanza, tramite il server. La registrazione va alla sua istanza e da nessun’altra parte.",
     "voice_input_phone": "Telefono (Google o quello di sistema)",
     "voice_input_phone_line": "Il riconoscimento vocale del telefono. Le parole appaiono mentre parla; la registrazione va dove la manda quel riconoscimento.",
-    "voice_input_phone_none": "Questo telefono non ha un riconoscimento vocale proprio."
+    "voice_input_phone_none": "Questo telefono non ha un riconoscimento vocale proprio.",
+    "tree_context": "%1$s%% del contesto"
   },
   "pl": {
     "about_version": "LLeMbas na Androida %1$s",
@@ -1470,7 +1476,8 @@
     "voice_input_lembas_line": "Zamiana mowy na tekst Twojej instancji, przez serwer. Nagranie trafia do Twojej instancji i nigdzie indziej.",
     "voice_input_phone": "Telefon (Google lub systemowy)",
     "voice_input_phone_line": "Własne rozpoznawanie mowy telefonu. Słowa pojawiają się w trakcie mówienia; nagranie trafia tam, dokąd wyśle je to rozpoznawanie.",
-    "voice_input_phone_none": "Ten telefon nie ma własnego rozpoznawania mowy."
+    "voice_input_phone_none": "Ten telefon nie ma własnego rozpoznawania mowy.",
+    "tree_context": "%1$s%% kontekstu"
   },
   "sk": {
     "about_version": "LLeMbas pre Android %1$s",
@@ -1680,6 +1687,7 @@
     "voice_input_lembas_line": "Prevod reči na text vašej inštancie, cez server. Nahrávka ide na vašu inštanciu a nikam inam.",
     "voice_input_phone": "Telefón (Google alebo systémový)",
     "voice_input_phone_line": "Vlastné rozpoznávanie reči v telefóne. Slová sa objavujú, ako hovoríte; nahrávka ide tam, kam ju to rozpoznávanie pošle.",
-    "voice_input_phone_none": "Tento telefón nemá vlastné rozpoznávanie reči."
+    "voice_input_phone_none": "Tento telefón nemá vlastné rozpoznávanie reči.",
+    "tree_context": "kontext %1$s %%"
   }
 }

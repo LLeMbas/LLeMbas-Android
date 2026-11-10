@@ -258,6 +258,9 @@
     <string name="tree_state_done">kész</string>
     <string name="tree_state_out_of_context">elfogyott a kontextus</string>
     <string name="tree_state_stopped">leállítva</string>
+    <string name="tree_context">%1$s%% kontextus</string>
+    <string name="tree_open_slots">Szabad helyek: %1$s</string>
+    <string name="subagents_device_cannot">A számítógép, amelyen ez a beszélgetés fut, nem futtat alügynököket: frissítsd rajta a LLeMbas CLI-t.</string>
     <string name="card_asker">%1$s kérdezi:</string>
     <string name="card_subagent_asks">A(z) %1$s alügynök (%2$s), %3$s, kérdezi:</string>
     <string name="card_it_says">Ezt mondja: %1$s</string>

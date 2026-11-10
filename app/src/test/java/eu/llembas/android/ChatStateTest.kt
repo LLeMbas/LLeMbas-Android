@@ -1,5 +1,6 @@
 package eu.llembas.android
 
+import eu.llembas.android.api.AgentSubagents
 import eu.llembas.android.api.AgentsSetting
 import eu.llembas.android.api.Chat
 import eu.llembas.android.api.LembasJson
@@ -61,6 +62,10 @@ class ChatStateTest {
         val agentChat = Chat(id = "a", kind = "agent", model = "qwen")
         assertTrue(ChatState(models = models, chat = agentChat.copy(subagents = SubagentsOffer(offered = true, cap = 8))).offersTeam(agent = true))
         assertFalse(ChatState(models = models, chat = agentChat.copy(subagents = SubagentsOffer(offered = false, cap = 32))).offersTeam(agent = true))
+        // A new agent chat: the server's fact for agent chats, never the model's guess.
+        assertTrue(ChatState(models = models, agentSubagents = AgentSubagents(offered = true)).offersTeam(agent = true))
+        assertFalse(ChatState(models = models, agentSubagents = AgentSubagents(offered = false)).offersTeam(agent = true))
+        assertFalse(ChatState(models = models).offersTeam(agent = true))
         // A listed chat (`subagents: null`) asks the chat's activity.
         assertTrue(ChatState(models = models, chat = agentChat, teamOffered = true).offersTeam(agent = true))
     }

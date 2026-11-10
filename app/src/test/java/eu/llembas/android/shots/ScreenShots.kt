@@ -128,6 +128,9 @@ class ScreenShots {
         // at the narrow phone and large type.
         shoot("07-tune", Phone.Scroll) { SheetOver { TuneContent(Fakes.tuned, NoChatActions, agent = false) } }
         shoot("07-tune-one-at-a-time", Phone.Scroll, fontScale = 1.5f) { SheetOver { TuneContent(Fakes.tunedOneAtATime, NoChatActions, agent = false) } }
+        // A new agent chat whose computer's CLI cannot run subagents yet: the setting says so.
+        val agentTune = Fakes.newAgentChat.copy(agentSubagents = eu.llembas.android.api.AgentSubagents(offered = true, deviceRuns = false))
+        shoot("07-tune-new-agent", Phone.Scroll) { SheetOver { TuneContent(agentTune, NoChatActions, agent = true) } }
         shoot("07-tune-alone", Phone.SmallScroll, fontScale = 1.5f) { SheetOver { TuneContent(Fakes.tunedAlone, NoChatActions, agent = false) } }
     }
 

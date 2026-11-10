@@ -258,6 +258,9 @@
     <string name="tree_state_done">hotovo</string>
     <string name="tree_state_out_of_context">bez kontextu</string>
     <string name="tree_state_stopped">zastaveno</string>
+    <string name="tree_context">kontext %1$s%%</string>
+    <string name="tree_open_slots">Volná místa: %1$s</string>
+    <string name="subagents_device_cannot">Počítač, na kterém tato konverzace běží, nespouští podagenty: aktualizujte na něm LLeMbas CLI.</string>
     <string name="card_asker">%1$s se ptá:</string>
     <string name="card_subagent_asks">Podagent %1$s (%2$s), %3$s, se ptá:</string>
     <string name="card_it_says">Model uvádí: %1$s</string>

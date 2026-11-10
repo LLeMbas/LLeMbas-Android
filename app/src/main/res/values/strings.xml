@@ -251,7 +251,7 @@
     <string name="progress_stopped_person">by you</string>
     <string name="progress_stopped_steps">step limit</string>
     <string name="progress_stopped_budget">budget</string>
-    <string name="progress_line">%1$s · %2$s</string>
+    <string name="progress_line" translatable="false">%1$s · %2$s</string>
     <string name="tree_state_working">working</string>
     <string name="tree_state_waiting">waiting for a slot</string>
     <string name="tree_state_finished">finished</string>
@@ -262,6 +262,7 @@
     <string name="tree_state_stopped">stopped</string>
     <string name="tree_context">%1$s%% context</string>
     <string name="tree_open_slots">Open slots: %1$s</string>
+    <string name="subagents_device_cannot">The computer this chat runs on does not run subagents: update its LLeMbas CLI.</string>
     <string name="card_asker">%1$s asks:</string>
     <string name="card_subagent_asks">Subagent %1$s (%2$s), %3$s, asks:</string>
     <string name="card_it_says">It says: %1$s</string>

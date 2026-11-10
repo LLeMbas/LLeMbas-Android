@@ -54,8 +54,9 @@ is in alpha and releases come off `main`.
   shows the main agent and each subagent -- its name, its position, what it is doing now and
   how full its context is -- with the ones that ended after them, dimmed, saying how each ended
   (*done*, *out of context*, *stopped*), and the open slots. A subagent's row opens its
-  conversation, read-only. In an agent chat the Subagents setting is there too, and goes to the
-  computer the chat runs on, which runs them.
+  conversation, read-only. In an agent chat the Subagents setting is there too -- a new one's
+  included -- and goes to the computer the chat runs on, which runs them; a computer whose CLI
+  is too old to is said beside it.
 - **An approval says which subagent asks** -- *Subagent parser (s1), reviews the parser,
   asks:* -- when a subagent needs something nobody in its tree may allow.
 

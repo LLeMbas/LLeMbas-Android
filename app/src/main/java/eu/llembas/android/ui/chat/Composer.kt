@@ -433,6 +433,15 @@ fun TuneContent(state: ChatState, actions: ChatActions, agent: Boolean, modifier
                 color = palette.inkMuted,
                 modifier = Modifier.padding(horizontal = 24.dp),
             )
+            if (chat == null && agent && state.agentSubagents?.deviceRuns == false) {
+                // The chosen computer's CLI is older than subagents: the setting would go nowhere.
+                Text(
+                    stringResource(R.string.subagents_device_cannot),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = palette.warning,
+                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp),
+                )
+            }
             if (state.subagentsNamedOnly) {
                 // The chat's model serves one request at a time: no default to fall back on.
                 Text(

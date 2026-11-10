@@ -258,6 +258,9 @@
     <string name="tree_state_done">finito</string>
     <string name="tree_state_out_of_context">senza contesto</string>
     <string name="tree_state_stopped">interrotto</string>
+    <string name="tree_context">%1$s%% del contesto</string>
+    <string name="tree_open_slots">Posti liberi: %1$s</string>
+    <string name="subagents_device_cannot">Il computer su cui gira questa chat non esegue subagenti: aggiorna lì LLeMbas CLI.</string>
     <string name="card_asker">%1$s chiede:</string>
     <string name="card_subagent_asks">Il subagente %1$s (%2$s), %3$s, chiede:</string>
     <string name="card_it_says">Dice: %1$s</string>

@@ -149,6 +149,10 @@ class ApiClient(val base: String, private val token: String, val http: OkHttpCli
     /** The models with the instance's subagent cap; with [chatId], whether each is offered subagents on that chat. */
     suspend fun modelList(chatId: String? = null): ModelList = get(if (chatId != null) "/models?chat=$chatId" else "/models")
 
+    /** The models for a new agent chat on [deviceId], with whether it may have subagents (`agent_subagents`). */
+    suspend fun agentModelList(deviceId: String?): ModelList =
+        get("/models?kind=agent" + deviceId?.let { "&device=" + java.net.URLEncoder.encode(it, "UTF-8") }.orEmpty())
+
     suspend fun folders(): List<Folder> = get<FolderList>("/folders").folders
 
     suspend fun devices(): List<LinkedDevice> = get<DeviceList>("/devices").devices

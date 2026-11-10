@@ -11,6 +11,7 @@ import eu.llembas.android.api.Activity
 import eu.llembas.android.api.ActivityAgent
 import eu.llembas.android.api.ActivityFrame
 import eu.llembas.android.api.ActivitySummary
+import eu.llembas.android.api.AgentSubagents
 import eu.llembas.android.api.AgentTarget
 import eu.llembas.android.api.AgentsSetting
 import eu.llembas.android.api.ApiClient
@@ -76,6 +77,8 @@ data class ChatState(
     val draft: Draft = Draft(),
     /** The subagent tree (spec 3.4.0) from this chat's last `tree` frame; null until one came. */
     val tree: SubagentTree? = null,
+    /** For a new agent chat: whether it may have subagents, and whether its device runs them. */
+    val agentSubagents: AgentSubagents? = null,
 )
 
 /**
@@ -106,7 +109,14 @@ val ChatState.level: String?
  * Whether the Subagents setting is shown (plan rule 4): the chat's own word for a chat that
  * exists (`subagents.offered`, else the activity's), the model's for a new one.
  */
-fun ChatState.offersTeam(agent: Boolean): Boolean = if (chat != null) chat.subagents?.offered ?: teamOffered else !agent && modelInfo?.mayHaveTeam == true
+fun ChatState.offersTeam(agent: Boolean): Boolean = when {
+    chat != null -> chat.subagents?.offered ?: teamOffered
+
+    // A new agent chat: the server's word for agent chats (spec 3.4.0 §14), never a guess.
+    agent -> agentSubagents?.offered == true
+
+    else -> modelInfo?.mayHaveTeam == true
+}
 
 /**
  * Whether subagents need a model the person names in the chat: the chat's own serves one
@@ -183,7 +193,20 @@ class ChatViewModel(app: Application) :
 
     override fun clearUnsent() = _state.update { it.copy(unsent = null) }
 
-    override fun updateDraft(change: (Draft) -> Draft) = _state.update { it.copy(draft = change(it.draft)) }
+    override fun updateDraft(change: (Draft) -> Draft) {
+        val before = _state.value.device?.id
+        _state.update { it.copy(draft = change(it.draft)) }
+        if (agentChat && _state.value.chat == null && _state.value.device?.id != before) readAgentFacts()
+    }
+
+    /** A new agent chat's Subagents fact, for the device chosen now; an older server says nothing. */
+    private fun readAgentFacts() {
+        val device = _state.value.device?.id
+        viewModelScope.launch {
+            val facts = runCatching { api().agentModelList(device) }.getOrNull()?.agentSubagents
+            _state.update { if (it.device?.id == device) it.copy(agentSubagents = facts) else it }
+        }
+    }
 
     override fun rename(title: String) = change("title", title.trim())
 
@@ -201,6 +224,7 @@ class ChatViewModel(app: Application) :
                     val devices = if (agent) client.devices() else emptyList()
                     val base = if (agent) getApplication<Application>().lembas.instances.current()?.base.orEmpty() else ""
                     _state.update { it.copy(models = models, devices = devices, instanceBase = base, loading = false) }
+                    if (agent) readAgentFacts()
                     return@launch
                 }
                 val detail = client.chat(chatId)

@@ -154,7 +154,17 @@ data class ModelList(
     val models: List<ModelInfo> = emptyList(),
     /** The instance's cap on a chat's subagents (server 2.0.0-beta.7); null from an older one. */
     @SerialName("subagents_cap") val subagentsCap: Int? = null,
+    /** With `kind=agent` (spec 3.4.0 §14): whether a new agent chat may have subagents. */
+    @SerialName("agent_subagents") val agentSubagents: AgentSubagents? = null,
 )
+
+/**
+ * A new agent chat's Subagents fact (`/models?kind=agent&device=`): [offered] where the instance
+ * and the person allow them; [deviceRuns] whether the chosen device runs them (it lists `agents`
+ * and `tree`), null while it is not linked or none was named.
+ */
+@Serializable
+data class AgentSubagents(val offered: Boolean = false, @SerialName("device_runs") val deviceRuns: Boolean? = null)
 
 /**
  * Whether subagents are offered (harness spec 3.3.0, `subagents.md` §4): [offered] when

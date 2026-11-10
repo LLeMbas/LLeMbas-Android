@@ -258,6 +258,9 @@
     <string name="tree_state_done">gotowe</string>
     <string name="tree_state_out_of_context">bez kontekstu</string>
     <string name="tree_state_stopped">zatrzymane</string>
+    <string name="tree_context">%1$s%% kontekstu</string>
+    <string name="tree_open_slots">Wolne miejsca: %1$s</string>
+    <string name="subagents_device_cannot">Komputer, na którym działa ta rozmowa, nie uruchamia podagentów: zaktualizuj na nim LLeMbas CLI.</string>
     <string name="card_asker">%1$s pyta:</string>
     <string name="card_subagent_asks">Podagent %1$s (%2$s), %3$s, pyta:</string>
     <string name="card_it_says">Mówi: %1$s</string>

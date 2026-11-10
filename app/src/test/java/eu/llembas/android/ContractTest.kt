@@ -1,6 +1,7 @@
 package eu.llembas.android
 
 import eu.llembas.android.api.APP_API
+import eu.llembas.android.api.AgentSubagents
 import eu.llembas.android.api.AskFrame
 import eu.llembas.android.api.CardSubagent
 import eu.llembas.android.api.Chat
@@ -14,6 +15,7 @@ import eu.llembas.android.api.LiveReply
 import eu.llembas.android.api.Me
 import eu.llembas.android.api.Message
 import eu.llembas.android.api.Metrics
+import eu.llembas.android.api.ModelList
 import eu.llembas.android.api.Plan
 import eu.llembas.android.api.StatusFrame
 import eu.llembas.android.api.SteeredFrame
@@ -23,7 +25,9 @@ import eu.llembas.android.api.Tail
 import eu.llembas.android.api.ToolCall
 import eu.llembas.android.api.TreeFrame
 import eu.llembas.android.api.TreeView
+import eu.llembas.android.ui.chat.ChatState
 import eu.llembas.android.ui.chat.approvalTexts
+import eu.llembas.android.ui.chat.offersTeam
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.jsonObject
@@ -228,6 +232,17 @@ class ContractTest {
         assertNull(silent.accountLanguage)
         assertNull(silent.speechToText)
         assertFalse(silent.hasSpeechToText)
+    }
+
+    @Test
+    fun aNewAgentChatsSubagentsFact() {
+        // `/models?kind=agent&device=` (models_agent.json): offered, and the device runs them.
+        val list = read("models_agent", ModelList.serializer())
+        assertEquals(AgentSubagents(offered = true, deviceRuns = true), list.agentSubagents)
+        assertTrue(list.models.all { it.subagents?.offered == true })
+        assertTrue(ChatState(models = list.models, agentSubagents = list.agentSubagents).offersTeam(agent = true))
+        // Without kind=agent the field is not there.
+        assertNull(read("models", ModelList.serializer()).agentSubagents)
     }
 
     @Test
