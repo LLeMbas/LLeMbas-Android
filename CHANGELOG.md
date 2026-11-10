@@ -16,6 +16,9 @@ is in alpha and releases come off `main`.
   install a release itself.
 - **Archived chats**, in the drawer under Scheduled: every archived chat, newest first. A tap
   opens one; **Restore chat** puts it back among your chats.
+- **Read aloud on a reply** in a chat, beside Copy, when your instance has text-to-speech: the
+  same voice the assistant answers in. Tap again (or another reply's) to stop; leaving the chat
+  stops it too.
 
 ### Changed
 

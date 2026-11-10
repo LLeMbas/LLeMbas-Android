@@ -34,6 +34,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Edit
@@ -43,6 +44,7 @@ import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.SelectAll
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
@@ -180,6 +182,7 @@ fun AssistantMessage(
 ) {
     val palette = LocalPalette.current
     val copy = LocalCopy.current
+    val readAloud = LocalReadAloud.current
     var menu by remember { mutableStateOf(false) }
     var selecting by remember { mutableStateOf(false) }
     val words = replyText(message.copy(steps = steps))
@@ -230,6 +233,17 @@ fun AssistantMessage(
                             contentDescription = stringResource(R.string.copy_message),
                             tint = palette.inkFaint,
                             modifier = Modifier.size(18.dp),
+                        )
+                    }
+                }
+                if (readAloud != null && words.isNotBlank()) {
+                    val reading = readAloud.reading == message.id
+                    IconButton(onClick = { readAloud.toggle(message.id, words) }) {
+                        Icon(
+                            if (reading) Icons.Filled.Stop else Icons.AutoMirrored.Filled.VolumeUp,
+                            contentDescription = stringResource(if (reading) R.string.assist_stop_reading else R.string.assist_read_aloud),
+                            tint = if (reading) palette.accent else palette.inkFaint,
+                            modifier = Modifier.size(20.dp),
                         )
                     }
                 }

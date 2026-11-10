@@ -68,6 +68,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -135,18 +136,27 @@ fun ChatScreen(
         }
     }
 
-    ChatContent(
-        state = state,
-        actions = model,
-        agent = isAgent,
-        snackbar = snackbar,
-        onMenu = onMenu,
-        onNewChat = onNewChat,
-        onLeave = onLeave,
-        onActivity = { activityOpen = true },
-        onShow = { showing = it },
-        onKind = onKind,
-    )
+    // Read aloud on a reply, when the instance has a voice; it stops when the chat is left.
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val readAloud = remember { ReadAloud(context, scope) { said -> scope.launch { snackbar.showSnackbar(said) } } }
+    LaunchedEffect(Unit) { readAloud.load() }
+    DisposableEffect(Unit) { onDispose { readAloud.stop() } }
+
+    CompositionLocalProvider(LocalReadAloud provides readAloud.takeIf { it.available }) {
+        ChatContent(
+            state = state,
+            actions = model,
+            agent = isAgent,
+            snackbar = snackbar,
+            onMenu = onMenu,
+            onNewChat = onNewChat,
+            onLeave = onLeave,
+            onActivity = { activityOpen = true },
+            onShow = { showing = it },
+            onKind = onKind,
+        )
+    }
 
     if (activityOpen) {
         // A device's files are on the device: the sheet lists them, the tree cannot open them.
