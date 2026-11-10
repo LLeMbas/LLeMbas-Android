@@ -31,7 +31,7 @@ android {
         // The one source of the version. versionCode is derived from it, so the two cannot
         // drift, and a beta sorts below its release: 1.0.0-beta.1 -> 1000001,
         // 1.0.0-beta.2 -> 1000002, 1.0.0 -> 1000099, 1.2.3 -> 1020399.
-        versionName = "1.0.0-beta.5"
+        versionName = "1.0.0-beta.6"
         versionCode = versionName!!.split("-beta.").let { parts ->
             val (a, b, c) = parts[0].split(".").map { it.toInt() }
             val pre = if (parts.size == 2) parts[1].toInt() else 99
