@@ -89,6 +89,13 @@ data class Prefs(
     val lastAssistChat: String = "",
     val lastAssistTitle: String = "",
     val lastAssistAt: Long = 0,
+    /** Settings › About: look for new versions (null: on in a beta, off in a release). */
+    val updateCheck: Boolean? = null,
+    /** ... and include betas (null: on in a beta, off in a release). */
+    val updateBetas: Boolean? = null,
+    val updateCheckedAt: Long = 0,
+    /** The last version a notification announced, so it is announced once. */
+    val updateNotified: String = "",
 ) {
     companion object {
         const val VOICE_LEMBAS = "lembas"

@@ -319,6 +319,16 @@
     <string name="update_allow_installs">Engedélyezze, hogy az LLeMbas frissítéseket telepítsen, majd ellenőrizze újra.</string>
     <string name="update_bad_file">A letöltés nem egyezett a verzióval, és el lett dobva.</string>
     <string name="update_installing">%1$s telepítése…</string>
+    <string name="update_checking">Ellenőrzés…</string>
+    <string name="update_available">Elérhető a(z) %1$s. Koppintson a kiadás oldalának megnyitásához.</string>
+    <string name="update_install">%1$s telepítése</string>
+    <string name="update_auto">Új verziók keresése</string>
+    <string name="update_auto_line">Naponta legfeljebb egyszer, induláskor az alkalmazás beolvassa a GitHubról a LLeMbas Androidra kiadásainak listáját, és értesítésben jelzi, ha van újabb. Önről és a példányáról semmit sem küld. Béta verzióban alapból bekapcsolva, egyébként kikapcsolva.</string>
+    <string name="update_betas">Béták is</string>
+    <string name="update_betas_line">Tesztverziók felajánlása is, nem csak kiadásoké. Alapból bekapcsolva, ha ez az alkalmazás maga is béta.</string>
+    <string name="channel_updates">Alkalmazásfrissítések</string>
+    <string name="update_notice_title">LLeMbas Androidra %1$s</string>
+    <string name="update_notice_text">Újabb verzió érhető el. Koppintson a kiadás oldalának megnyitásához.</string>
     <string name="assist_hint">Kérdezzen bármit</string>
     <string name="assist_signed_out">Először jelentkezzen be egy LLeMbas példányba az alkalmazásban.</string>
     <string name="assist_open_app">Alkalmazás megnyitása</string>

@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Assistant
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Dns
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Notifications
@@ -35,9 +36,11 @@ import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.RecordVoiceOver
+import androidx.compose.material.icons.filled.Science
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.Translate
+import androidx.compose.material.icons.filled.Update
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -77,7 +80,13 @@ import eu.llembas.android.auth.Prefs
 import eu.llembas.android.lembas
 import eu.llembas.android.push.Push
 import eu.llembas.android.ui.theme.LocalPalette
+import eu.llembas.android.update.AppVersion
+import eu.llembas.android.update.ReleaseCheck
+import eu.llembas.android.update.UpdateOffer
+import eu.llembas.android.update.UpdateResult
 import eu.llembas.android.update.Updater
+import eu.llembas.android.update.checksUpdates
+import eu.llembas.android.update.offersBetas
 import kotlinx.coroutines.launch
 
 /** What the settings page does; every action has a do-nothing default for the screenshots. */
@@ -95,6 +104,10 @@ interface SettingsActions {
     fun assistantListens(on: Boolean) {}
     fun readAloud(on: Boolean) {}
     fun checkUpdate() {}
+    fun openRelease() {}
+    fun installUpdate() {}
+    fun updateCheck(on: Boolean) {}
+    fun updateBetas(on: Boolean) {}
 }
 
 /** What the settings page shows. */
@@ -105,8 +118,12 @@ data class SettingsState(
     val hasDistributor: Boolean = false,
     val pushNote: String? = null,
     val updateNote: String? = null,
+    /** A newer release the last check found: the row opens its page, the full build can install it. */
+    val updateFound: String? = null,
     val version: String = "",
     val selfUpdate: Boolean = false,
+    /** Whether the app itself is a beta: the update settings' defaults follow it. */
+    val beta: Boolean = false,
     /** Whether the phone has a speech recogniser of its own (Settings › Voice input › Phone). */
     val phoneRecognizer: Boolean = false,
 )
@@ -121,6 +138,8 @@ fun SettingsScreen(onBack: () -> Unit, onAddInstance: () -> Unit) {
     val prefs by store.prefs.collectAsState(initial = Prefs())
     var pushNote by remember { mutableStateOf<String?>(null) }
     var updateNote by remember { mutableStateOf<String?>(null) }
+    var updateFound by remember { mutableStateOf<UpdateOffer?>(null) }
+    val beta = remember { AppVersion.parse(BuildConfig.VERSION_NAME)?.isBeta ?: false }
     val distributors = remember { Push.distributors(context) }
     val actions = remember {
         object : SettingsActions {
@@ -182,7 +201,39 @@ fun SettingsScreen(onBack: () -> Unit, onAddInstance: () -> Unit) {
             }
 
             override fun checkUpdate() {
+                updateNote = context.getString(R.string.update_checking)
+                scope.launch {
+                    when (val found = ReleaseCheck(context).check()) {
+                        is UpdateResult.Newer -> {
+                            updateFound = found.offer
+                            updateNote = context.getString(R.string.update_available, found.offer.version.toString())
+                        }
+
+                        UpdateResult.Current -> {
+                            updateFound = null
+                            updateNote = context.getString(R.string.update_none)
+                        }
+
+                        UpdateResult.Unreachable -> updateNote = context.getString(R.string.update_unreachable)
+                    }
+                }
+            }
+
+            override fun openRelease() {
+                updateFound?.let { offer -> runCatching { context.startActivity(ReleaseCheck.open(offer.page)) } }
+            }
+
+            // The full build's own installer, for a release (llembas.eu names its APK and hash).
+            override fun installUpdate() {
                 scope.launch { updateNote = Updater(context).checkAndOffer() }
+            }
+
+            override fun updateCheck(on: Boolean) {
+                scope.launch { store.savePrefs { it.copy(updateCheck = on) } }
+            }
+
+            override fun updateBetas(on: Boolean) {
+                scope.launch { store.savePrefs { it.copy(updateBetas = on) } }
             }
         }
     }
@@ -194,8 +245,10 @@ fun SettingsScreen(onBack: () -> Unit, onAddInstance: () -> Unit) {
             hasDistributor = distributors.isNotEmpty(),
             pushNote = pushNote,
             updateNote = updateNote,
+            updateFound = updateFound?.version?.toString(),
             version = BuildConfig.VERSION_NAME,
             selfUpdate = BuildConfig.SELF_UPDATE,
+            beta = beta,
             phoneRecognizer = remember { PhoneRecognizer.available(context) },
         ),
         actions,
@@ -402,15 +455,42 @@ fun SettingsContent(state: SettingsState, actions: SettingsActions, onBack: () -
             item {
                 Group(stringResource(R.string.settings_about)) {
                     SettingRow(Icons.Filled.Info, stringResource(R.string.about_version, state.version), onClick = {})
-                    if (state.selfUpdate) {
+                    Rule()
+                    // A found release: the row opens its page; until then it checks.
+                    SettingRow(
+                        Icons.Filled.SystemUpdate,
+                        stringResource(R.string.update_check),
+                        subtitle = state.updateNote,
+                        onClick = if (state.updateFound != null) actions::openRelease else actions::checkUpdate,
+                    )
+                    // The full build installs a release itself; a beta is installed from its page.
+                    val found = state.updateFound
+                    if (state.selfUpdate && found != null && !found.contains("-")) {
                         Rule()
                         SettingRow(
-                            Icons.Filled.SystemUpdate,
-                            stringResource(R.string.update_check),
-                            subtitle = state.updateNote,
-                            onClick = actions::checkUpdate,
+                            Icons.Filled.Download,
+                            stringResource(R.string.update_install, found),
+                            onClick = actions::installUpdate,
                         )
                     }
+                    Rule()
+                    val checks = state.prefs.checksUpdates(state.beta)
+                    SettingRow(
+                        Icons.Filled.Update,
+                        stringResource(R.string.update_auto),
+                        subtitle = stringResource(R.string.update_auto_line),
+                        onClick = { actions.updateCheck(!checks) },
+                        trailing = { Switch(checked = checks, onCheckedChange = actions::updateCheck) },
+                    )
+                    Rule()
+                    val betas = state.prefs.offersBetas(state.beta)
+                    SettingRow(
+                        Icons.Filled.Science,
+                        stringResource(R.string.update_betas),
+                        subtitle = stringResource(R.string.update_betas_line),
+                        onClick = { actions.updateBetas(!betas) },
+                        trailing = { Switch(checked = betas, onCheckedChange = actions::updateBetas) },
+                    )
                 }
             }
         }

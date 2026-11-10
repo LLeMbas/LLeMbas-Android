@@ -50,6 +50,7 @@ import eu.llembas.android.ui.scheduled.SchedulingModelsScreen
 import eu.llembas.android.ui.settings.SettingsScreen
 import eu.llembas.android.ui.signin.SignInScreen
 import eu.llembas.android.ui.theme.LembasTheme
+import eu.llembas.android.update.ReleaseCheck
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -71,6 +72,8 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         take(intent)
         followLanguage()
+        // At most once a day, and only while Settings › About says so (update/ReleaseCheck.kt).
+        lifecycleScope.launch { runCatching { ReleaseCheck(this@MainActivity).daily() } }
         if (Build.VERSION.SDK_INT >= 33 &&
             ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
         ) {

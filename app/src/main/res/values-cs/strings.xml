@@ -319,6 +319,16 @@
     <string name="update_allow_installs">Povolte aplikaci LLeMbas instalovat aktualizace a pak to zkontrolujte znovu.</string>
     <string name="update_bad_file">Stažený soubor neodpovídal verzi a byl zahozen.</string>
     <string name="update_installing">Instaluje se %1$s…</string>
+    <string name="update_checking">Kontroluje se…</string>
+    <string name="update_available">Je k dispozici %1$s. Klepnutím otevřete stránku vydání.</string>
+    <string name="update_install">Nainstalovat %1$s</string>
+    <string name="update_auto">Hledat nové verze</string>
+    <string name="update_auto_line">Nejvýš jednou denně, při spuštění, si aplikace přečte z GitHubu seznam vydání LLeMbas pro Android a upozorněním vám dá vědět, když je k dispozici novější. Nic o vás ani o vaší instanci se neposílá. Ve verzi beta zapnuto, jinak vypnuto.</string>
+    <string name="update_betas">Včetně beta verzí</string>
+    <string name="update_betas_line">Nabízet i testovací verze, nejen vydání. Zapnuto, když je tato aplikace sama beta.</string>
+    <string name="channel_updates">Aktualizace aplikace</string>
+    <string name="update_notice_title">LLeMbas pro Android %1$s</string>
+    <string name="update_notice_text">Je k dispozici novější verze. Klepnutím otevřete stránku vydání.</string>
     <string name="assist_hint">Zeptejte se na cokoli</string>
     <string name="assist_signed_out">Nejprve se v aplikaci přihlaste k instanci LLeMbas.</string>
     <string name="assist_open_app">Otevřít aplikaci</string>

@@ -319,6 +319,16 @@
     <string name="update_allow_installs">Zezwól LLeMbas na instalowanie aktualizacji, a potem sprawdź ponownie.</string>
     <string name="update_bad_file">Pobrany plik nie zgadzał się z wersją i został odrzucony.</string>
     <string name="update_installing">Instalowanie %1$s…</string>
+    <string name="update_checking">Sprawdzanie…</string>
+    <string name="update_available">Dostępna jest wersja %1$s. Dotknij, aby otworzyć jej stronę wydania.</string>
+    <string name="update_install">Zainstaluj %1$s</string>
+    <string name="update_auto">Szukaj nowych wersji</string>
+    <string name="update_auto_line">Najwyżej raz dziennie, przy uruchomieniu, aplikacja odczytuje z GitHuba listę wydań LLeMbas na Androida i daje znać powiadomieniem, gdy jest nowsza. Nic o tobie ani o twojej instancji nie jest wysyłane. W wersji beta domyślnie włączone, w przeciwnym razie wyłączone.</string>
+    <string name="update_betas">Uwzględniaj bety</string>
+    <string name="update_betas_line">Proponuj też wersje testowe, nie tylko wydania. Domyślnie włączone, gdy ta aplikacja sama jest betą.</string>
+    <string name="channel_updates">Aktualizacje aplikacji</string>
+    <string name="update_notice_title">LLeMbas na Androida %1$s</string>
+    <string name="update_notice_text">Dostępna jest nowsza wersja. Dotknij, aby otworzyć jej stronę wydania.</string>
     <string name="assist_hint">Zapytaj o cokolwiek</string>
     <string name="assist_signed_out">Najpierw zaloguj się do instancji LLeMbas w aplikacji.</string>
     <string name="assist_open_app">Otwórz aplikację</string>
