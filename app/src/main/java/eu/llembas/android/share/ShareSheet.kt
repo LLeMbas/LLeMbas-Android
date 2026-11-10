@@ -85,6 +85,7 @@ fun ColumnScope.ShareSheetContent(state: ShareState, actions: ShareActions, hand
     val palette = LocalPalette.current
     var ask by remember { mutableStateOf("") }
     var toLast by remember { mutableStateOf(false) }
+    val last = state.last
 
     Column(handle.fillMaxWidth()) {
         Box(Modifier.fillMaxWidth().padding(top = 10.dp, bottom = 6.dp), contentAlignment = Alignment.Center) {
@@ -161,7 +162,6 @@ fun ColumnScope.ShareSheetContent(state: ShareState, actions: ShareActions, hand
         )
 
         // Where it goes.
-        val last = state.last
         if (last != null) {
             Surface(
                 shape = RoundedCornerShape(20.dp),
