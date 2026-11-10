@@ -412,6 +412,8 @@ data class Message(
     val steps: List<Step> = emptyList(),
     val plan: JsonObject? = null,
     val metrics: Metrics? = null,
+    /** A prompt queued behind a running reply: `{phase: queued, since, ahead}`; null otherwise. */
+    val progress: Progress? = null,
 ) {
     val isUser: Boolean get() = role == "user"
 }

@@ -196,6 +196,8 @@
     <string name="notify_never">Nigdy nie powiadamia</string>
     <string name="run_ok">Gotowe</string>
     <string name="run_silent">Nic nowego</string>
+    <string name="run_unchanged">Bez zmian</string>
+    <string name="schedule_watching">Tylko gdy ta strona się zmieni</string>
     <string name="run_failed">Nieudane</string>
     <string name="run_missed">Pominięto ×%1$s</string>
     <string name="run_skipped">Pominięto</string>

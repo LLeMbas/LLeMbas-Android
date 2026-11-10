@@ -213,6 +213,8 @@ STRINGS: dict[str, str] = {
     "notify_never": "Never tells you",
     "run_ok": "Done",
     "run_silent": "Nothing new",
+    "run_unchanged": "Unchanged",
+    "schedule_watching": "Only when this page changes",
     "run_failed": "Failed",
     "run_missed": "Missed ×%1$s",
     "run_skipped": "Skipped",

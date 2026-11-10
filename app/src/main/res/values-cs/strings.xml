@@ -196,6 +196,8 @@
     <string name="notify_never">Nedá vědět nikdy</string>
     <string name="run_ok">Hotovo</string>
     <string name="run_silent">Nic nového</string>
+    <string name="run_unchanged">Beze změny</string>
+    <string name="schedule_watching">Jen když se tato stránka změní</string>
     <string name="run_failed">Selhalo</string>
     <string name="run_missed">Zmeškáno ×%1$s</string>
     <string name="run_skipped">Vynecháno</string>

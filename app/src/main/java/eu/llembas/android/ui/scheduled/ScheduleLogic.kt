@@ -11,7 +11,7 @@ enum class Tone { Good, Quiet, Bad, Waiting, Neutral }
 object ScheduleLogic {
     fun tone(status: String): Tone = when (status) {
         "ok" -> Tone.Good
-        "silent" -> Tone.Quiet
+        "silent", "unchanged" -> Tone.Quiet
         "failed", "missed" -> Tone.Bad
         "waiting", "running" -> Tone.Waiting
         else -> Tone.Neutral

@@ -63,6 +63,10 @@ data class ScheduleRun(
     val preview: String = "",
     val error: RunError? = null,
     val notified: Boolean = false,
+    /** The notification the server made for this run, when it made one (see [RunNotification]). */
+    val notification: RunNotification? = null,
+    /** A watching schedule's look at its address on this run (`unchanged` when nothing moved). */
+    val watch: RunWatch? = null,
 )
 
 /**
@@ -96,6 +100,8 @@ data class Schedule(
     @SerialName("chat_id") val chatId: String? = null,
     @SerialName("fired_count") val firedCount: Int = 0,
     @SerialName("failure_streak") val failureStreak: Int = 0,
+    /** Monitor mode: what the schedule watches; the model runs only when it changed. */
+    val watch: ScheduleWatch? = null,
     @SerialName("last_error") val lastError: String? = null,
     @SerialName("last_run") val lastRun: ScheduleRun? = null,
     val running: Boolean = false,
@@ -171,3 +177,31 @@ data class SchedulingModel(
 /** `GET`/`PUT /schedules/models`: the models, the instance's order, and the person's narrowing. */
 @Serializable
 data class SchedulingModels(val models: List<SchedulingModel> = emptyList(), val instance: List<String> = emptyList(), val mine: List<String> = emptyList())
+
+/** What a watching schedule looks at before each run: [kind] `url` and the address. */
+@Serializable
+data class ScheduleWatch(val kind: String = "", val target: String = "", @SerialName("changed_at") val changedAt: String? = null)
+
+/** One run's look: whether the address [changed] since the last one, or why the look failed. */
+@Serializable
+data class RunWatch(val kind: String = "", val changed: Boolean = false, val first: Boolean = false, val bytes: Long = 0, val error: String? = null)
+
+/** The lock-screen half of a [RunNotification]: the task's name and Finished / Failed only. */
+@Serializable
+data class PublicNotice(val title: String = "", val body: String = "")
+
+/**
+ * A scheduled run's notification as the server wrote it, in the owner's language: [title] (the
+ * task's name) and [body] (the result's first lines) for an unlocked phone, [public] for the
+ * lock screen, and [actions] (`open`, `run_again`, `pause`) with their [labels]. [ask] names the
+ * action the body asks about (`pause` after failures).
+ */
+@Serializable
+data class RunNotification(
+    val title: String = "",
+    val body: String = "",
+    val public: PublicNotice = PublicNotice(),
+    val actions: List<String> = emptyList(),
+    val labels: Map<String, String> = emptyMap(),
+    val ask: String = "",
+)

@@ -196,6 +196,8 @@
     <string name="notify_never">Meldet sich nie</string>
     <string name="run_ok">Fertig</string>
     <string name="run_silent">Nichts Neues</string>
+    <string name="run_unchanged">Unverändert</string>
+    <string name="schedule_watching">Nur wenn sich diese Seite ändert</string>
     <string name="run_failed">Fehlgeschlagen</string>
     <string name="run_missed">Verpasst ×%1$s</string>
     <string name="run_skipped">Übersprungen</string>

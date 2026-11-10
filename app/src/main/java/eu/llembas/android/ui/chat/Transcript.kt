@@ -88,6 +88,7 @@ import eu.llembas.android.api.ToolCall
 import eu.llembas.android.lembas
 import eu.llembas.android.ui.MarkdownText
 import eu.llembas.android.ui.Segment
+import eu.llembas.android.ui.progressLineOf
 import eu.llembas.android.ui.splitFences
 import eu.llembas.android.ui.theme.LocalPalette
 import kotlinx.coroutines.Dispatchers
@@ -154,8 +155,9 @@ fun UserMessage(message: Message, canEdit: Boolean, onEdit: () -> Unit, modifier
             }
         }
         if (message.queued) {
+            // The server's queued progress ("Queued, 2 ahead · 12s") where it sends one.
             Text(
-                stringResource(R.string.queued),
+                progressLineOf(message.progress) ?: stringResource(R.string.queued),
                 style = MaterialTheme.typography.labelSmall,
                 color = palette.inkFaint,
                 modifier = Modifier.padding(top = 4.dp, end = 4.dp),

@@ -301,6 +301,7 @@ fun StatusChip(status: String, missed: Int = 0) {
     val words = when (status) {
         "ok" -> stringResource(R.string.run_ok)
         "silent" -> stringResource(R.string.run_silent)
+        "unchanged" -> stringResource(R.string.run_unchanged)
         "failed" -> stringResource(R.string.run_failed)
         "missed" -> stringResource(R.string.run_missed, maxOf(missed, 1).toString())
         "skipped" -> stringResource(R.string.run_skipped)
@@ -534,6 +535,15 @@ private fun ScheduleBody(
                     )
                     if (facts.isNotEmpty()) {
                         Text(facts.joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = palette.inkFaint)
+                    }
+                    schedule.watch?.target?.takeIf { it.isNotBlank() }?.let { url ->
+                        Text(
+                            stringResource(R.string.schedule_watching) + ": " + url,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = palette.inkFaint,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
                     }
                 }
             }

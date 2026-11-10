@@ -130,6 +130,13 @@ class ContractTest {
         val user = read("message_user", Message.serializer())
         assertTrue(user.isUser)
         assertEquals("How is lembas made?", user.text)
+        assertNull(user.progress)
+
+        // A prompt waiting behind a running reply says so, and how many are ahead of it.
+        val queued = read("message_queued", Message.serializer())
+        assertTrue(queued.queued)
+        assertEquals("queued", queued.progress!!.phase)
+        assertEquals(2, queued.progress!!.ahead)
 
         val reply = read("message_assistant", Message.serializer())
         assertEquals(listOf("thinking", "text", "tools", "steer", "text"), reply.steps.map { it.kind })

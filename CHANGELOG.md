@@ -19,6 +19,10 @@ is in alpha and releases come off `main`.
 - **Read aloud on a reply** in a chat, beside Copy, when your instance has text-to-speech: the
   same voice the assistant answers in. Tap again (or another reply's) to stop; leaving the chat
   stops it too.
+- **A scheduled task that watches a web page** says so on its page (*Only when this page
+  changes*, and the address), and a run that found the page unchanged is shown as *Unchanged*.
+- **A message waiting behind a reply says how many are ahead of it** and for how long it has
+  waited, where the instance tells.
 
 ### Changed
 

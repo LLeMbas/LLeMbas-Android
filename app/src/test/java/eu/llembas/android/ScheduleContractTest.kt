@@ -13,7 +13,9 @@ import eu.llembas.android.api.ScheduleRuns
 import eu.llembas.android.api.SchedulesFrame
 import eu.llembas.android.api.SchedulingModels
 import eu.llembas.android.push.ScheduledNotice
+import eu.llembas.android.ui.scheduled.ScheduleLogic
 import eu.llembas.android.ui.scheduled.SchedulingLogic
+import eu.llembas.android.ui.scheduled.Tone
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonArray
@@ -84,8 +86,24 @@ class ScheduleContractTest {
         assertWaybread(read("schedules", ScheduleList.serializer()).schedules.single())
         assertWaybread(read("schedule", ScheduleEnvelope.serializer()).schedule)
         val frame = read("event_schedules", SchedulesFrame.serializer())
-        assertEquals("6852d52c0c9575b0", frame.version)
+        assertEquals("d2f307bf1c7b8d6b", frame.version)
         assertWaybread(frame.schedules.single())
+    }
+
+    @Test
+    fun aWatchingScheduleAndItsUnchangedRun() {
+        // Monitor mode (`schedule_watching.json`): the address it looks at, and a run that found
+        // nothing changed -- no model, no notification.
+        val watching = read("schedule_watching", ScheduleEnvelope.serializer()).schedule
+        assertEquals("url", watching.watch!!.kind)
+        assertEquals("https://shop.example/mallorn", watching.watch!!.target)
+        val run = watching.lastRun!!
+        assertEquals("unchanged", run.status)
+        assertFalse(run.watch!!.changed)
+        assertNull(run.notification)
+        assertEquals(Tone.Quiet, ScheduleLogic.tone(run.status))
+        // A schedule that watches nothing says null.
+        assertNull(read("schedule", ScheduleEnvelope.serializer()).schedule.watch)
     }
 
     @Test
