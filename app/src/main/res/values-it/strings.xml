@@ -390,6 +390,12 @@
     <string name="assist_say_it">Lo dica, poi faccia una pausa</string>
     <string name="assist_type">Scrivi invece</string>
     <string name="assist_writing_down">Trascrivo ciò che ha detto…</string>
+    <string name="assist_conversation">In conversazione</string>
+    <string name="assist_conversation_line">Ascolto di nuovo dopo ogni risposta. Di’ «basta» per finire.</string>
+    <string name="assist_conversation_end">Termina</string>
+    <string name="assist_stop_words">basta|stop|è tutto|fine|ciao|arrivederci|grazie è tutto|annulla|smetti</string>
+    <string name="assistant_conversation">Continuare una conversazione a voce</string>
+    <string name="assistant_conversation_line">Dopo aver letto ad alta voce una risposta a voce, l’assistente ascolta di nuovo, finché non dici «basta», tocchi Termina o non dici nulla per qualche secondo. Funziona con le cuffie.</string>
     <string name="assist_recogniser_failed">Il riconoscimento vocale del telefono si è fermato. Riprovi, oppure scelga LLeMbas in Impostazioni › Input vocale.</string>
     <string name="assistant_listens">Inizia ad ascoltare all’apertura dell’assistente</string>
     <string name="voice_input">Input vocale</string>

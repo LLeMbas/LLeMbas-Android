@@ -392,6 +392,16 @@ object Fakes {
         speaking = true,
     )
 
+    /** A spoken conversation: the answer read, listening again. */
+    val assistConversation = assistBase.copy(
+        chatId = "c9",
+        turns = listOf(AssistTurn(question.text.orEmpty(), earlier = answer.steps)),
+        conversation = true,
+        listening = true,
+        heard = "And how long for the honey cakes",
+        level = 0.3f,
+    )
+
     /** An answer being written. */
     val assistWriting = assistBase.copy(
         chatId = "c9",

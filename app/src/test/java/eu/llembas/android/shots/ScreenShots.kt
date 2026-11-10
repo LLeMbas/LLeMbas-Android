@@ -260,6 +260,8 @@ class ScreenShots {
         shoot("21-assistant-writing", content = over(Fakes.assistWriting, false))
         shoot("22-assistant-locked", content = over(Fakes.assistOpened, true))
         shoot("23-assistant-offline", Phone.Small, content = over(Fakes.assistOffline, false))
+        shoot("24-assistant-conversation", content = over(Fakes.assistConversation, false))
+        shoot("24-assistant-conversation", Phone.Small, fontScale = 1.5f, content = over(Fakes.assistConversation, false))
     }
 
     /**

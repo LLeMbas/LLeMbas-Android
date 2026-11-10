@@ -85,6 +85,8 @@ data class Prefs(
     val accountLanguage: String = "",
     val voiceInput: String = VOICE_LEMBAS,
     val assistantListens: Boolean = true,
+    /** After a spoken answer is read aloud, listen again: a spoken conversation. */
+    val assistantConversation: Boolean = true,
     val assistantModel: String = "",
     val lastAssistChat: String = "",
     val lastAssistTitle: String = "",

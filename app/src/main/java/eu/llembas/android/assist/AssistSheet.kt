@@ -42,6 +42,7 @@ import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.EditNote
+import androidx.compose.material.icons.filled.Forum
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Keyboard
 import androidx.compose.material.icons.filled.Lightbulb
@@ -276,6 +277,7 @@ fun ColumnScope.AssistSheetContent(
 
     // The foot.
     Column(Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 12.dp)) {
+        if (state.conversation && !locked) Conversation(actions)
         if (state.screenAvailable && !locked) ScreenToggle(state, actions)
         if (state.listening) {
             Listening(state, onDone = actions::heard, onType = actions::type)
@@ -493,6 +495,28 @@ private fun Turn(turn: AssistTurn, last: Boolean, state: AssistUiState, actions:
                 AssistChip(onClick = actions::newChat, label = { Text(stringResource(R.string.new_chat)) }, leadingIcon = {
                     Icon(Icons.Filled.EditNote, contentDescription = null, modifier = Modifier.size(18.dp))
                 })
+            }
+        }
+    }
+}
+
+/**
+ * A spoken conversation is on: the sheet will listen again after the answer is read. Says so,
+ * and how it ends -- End here, "stop" said, or silence. The words give; End keeps its size.
+ */
+@Composable
+private fun Conversation(actions: AssistActions) {
+    val palette = LocalPalette.current
+    Surface(shape = RoundedCornerShape(16.dp), color = palette.accentSoft, modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
+        Row(Modifier.padding(start = 14.dp, end = 4.dp, top = 6.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Filled.Forum, contentDescription = null, tint = palette.accent, modifier = Modifier.size(20.dp))
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(stringResource(R.string.assist_conversation), style = MaterialTheme.typography.labelLarge, color = palette.accent)
+                Text(stringResource(R.string.assist_conversation_line), style = MaterialTheme.typography.bodySmall, color = palette.inkMuted)
+            }
+            TextButton(onClick = actions::endConversation, modifier = Modifier.heightIn(min = 48.dp)) {
+                Text(stringResource(R.string.assist_conversation_end))
             }
         }
     }

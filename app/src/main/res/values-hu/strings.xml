@@ -390,6 +390,12 @@
     <string name="assist_say_it">Mondja, aztán tartson szünetet</string>
     <string name="assist_type">Inkább gépelés</string>
     <string name="assist_writing_down">Lejegyzem, amit mondott…</string>
+    <string name="assist_conversation">Beszélgetés</string>
+    <string name="assist_conversation_line">Minden válasz után újra figyelek. A befejezéshez mondd: „állj”.</string>
+    <string name="assist_conversation_end">Befejezés</string>
+    <string name="assist_stop_words">állj|stop|ennyi|ennyi volt|elég|vége|viszlát|köszönöm ennyi|mégse</string>
+    <string name="assistant_conversation">Szóbeli beszélgetés folytatása</string>
+    <string name="assistant_conversation_line">Egy szóbeli válasz felolvasása után az asszisztens újra figyel — amíg nem mondod, hogy „állj”, nem koppintasz a Befejezésre, vagy néhány másodpercig nem szólsz. Headsettel is működik.</string>
     <string name="assist_recogniser_failed">A telefon beszédfelismerője leállt. Próbálja újra, vagy válassza a LLeMbast a Beállítások › Hangbevitel alatt.</string>
     <string name="assistant_listens">Hallgatás indítása az asszisztens megnyitásakor</string>
     <string name="voice_input">Hangbevitel</string>

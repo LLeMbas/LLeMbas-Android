@@ -5,7 +5,9 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.media.AudioAttributes
+import android.media.AudioDeviceInfo
 import android.media.AudioFormat
+import android.media.AudioManager
 import android.media.AudioRecord
 import android.media.MediaPlayer
 import android.media.MediaRecorder
@@ -17,6 +19,7 @@ import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import androidx.annotation.RequiresPermission
 import eu.llembas.android.auth.Prefs
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -56,6 +59,9 @@ class Recorder(private val scope: CoroutineScope) {
     /** How many seconds have been recorded. */
     val seconds: Float get() = pcm.size() / (RATE * 2f)
 
+    /** The microphone to prefer -- a headset's, while one is the route ([HeadsetRoute]). */
+    var preferred: AudioDeviceInfo? = null
+
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     fun start() {
         if (record != null) return
@@ -69,6 +75,7 @@ class Recorder(private val scope: CoroutineScope) {
             maxOf(min, RATE),
         )
         record = audio
+        preferred?.let { audio.setPreferredDevice(it) }
         audio.startRecording()
         job = scope.launch(Dispatchers.IO) {
             val buffer = ByteArray(maxOf(min, 4096))
@@ -143,11 +150,15 @@ class Speaker(private val context: Context) {
     private val _playing = MutableStateFlow(false)
     val playing: StateFlow<Boolean> = _playing.asStateFlow()
 
+    private var ended: CompletableDeferred<Boolean>? = null
+
     suspend fun play(mp3: ByteArray) {
         stop()
         val file = withContext(Dispatchers.IO) {
             File.createTempFile("reply", ".mp3", context.cacheDir).apply { writeBytes(mp3) }
         }
+        val done = CompletableDeferred<Boolean>()
+        ended = done
         player = MediaPlayer().apply {
             setAudioAttributes(
                 AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ASSISTANT)
@@ -159,11 +170,18 @@ class Speaker(private val context: Context) {
                 file.delete()
                 player = null
                 _playing.value = false
+                done.complete(true)
             }
             prepare()
             start()
         }
         _playing.value = true
+    }
+
+    /** Play [mp3] and wait: true when it was heard to the end, false when it was stopped. */
+    suspend fun playToEnd(mp3: ByteArray): Boolean {
+        play(mp3)
+        return ended?.await() ?: false
     }
 
     fun stop() {
@@ -173,8 +191,57 @@ class Speaker(private val context: Context) {
         }
         player = null
         _playing.value = false
+        ended?.complete(false)
+        ended = null
     }
 }
+
+/**
+ * A headset's microphone for the assistant, while one is connected: a Bluetooth headset is
+ * made the communication device (Android 12+), so the sheet hears the headset and answers into
+ * it, as a call would; a wired headset's microphone is the default anyway. [release] gives the
+ * route back. Nothing happens without a headset.
+ */
+class HeadsetRoute(context: Context) {
+    private val audio = context.getSystemService(AudioManager::class.java)
+    private var engaged = false
+
+    /** The headset's microphone, if there is one -- made the route first where that is needed. */
+    fun microphone(): AudioDeviceInfo? {
+        val inputs = audio?.getDevices(AudioManager.GET_DEVICES_INPUTS).orEmpty()
+        val wired = inputs.firstOrNull { it.type == AudioDeviceInfo.TYPE_WIRED_HEADSET || it.type == AudioDeviceInfo.TYPE_USB_HEADSET }
+        if (wired != null) return wired
+        if (Build.VERSION.SDK_INT < 31 || audio == null) return null
+        val headset = audio.availableCommunicationDevices.firstOrNull {
+            it.type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO || it.type == AudioDeviceInfo.TYPE_BLE_HEADSET
+        } ?: return null
+        if (!engaged) engaged = runCatching { audio.setCommunicationDevice(headset) }.getOrDefault(false)
+        return inputs.firstOrNull { it.type == headset.type } ?: headset
+    }
+
+    fun release() {
+        if (engaged && Build.VERSION.SDK_INT >= 31) runCatching { audio?.clearCommunicationDevice() }
+        engaged = false
+    }
+}
+
+/**
+ * Whether [heard] is the person ending a spoken conversation: one of [phrases] ("stop", "that's
+ * all", in the app's language), alone or with a word or two around it ("stop please", "ok
+ * that's all"). A longer sentence that happens to hold "stop" is a question, not an ending.
+ */
+fun isStopPhrase(heard: String, phrases: List<String>): Boolean {
+    val said = words(heard)
+    if (said.isEmpty()) return false
+    return phrases.map(::words).filter { it.isNotEmpty() }.any { phrase ->
+        said.size <= phrase.size + 2 && said.windowed(phrase.size).any { it == phrase }
+    }
+}
+
+private fun words(text: String): List<String> = text.lowercase()
+    .replace(Regex("[\\u2019']"), "")
+    .split(Regex("[^\\p{L}\\p{N}]+"))
+    .filter { it.isNotBlank() }
 
 /**
  * Speech in through the phone's own recogniser, for Settings › Voice input › Phone: words as

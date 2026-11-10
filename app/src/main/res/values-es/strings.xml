@@ -390,6 +390,12 @@
     <string name="assist_say_it">Dígalo y haga una pausa</string>
     <string name="assist_type">Escribir en su lugar</string>
     <string name="assist_writing_down">Escribiendo lo que ha dicho…</string>
+    <string name="assist_conversation">En conversación</string>
+    <string name="assist_conversation_line">Vuelvo a escuchar después de cada respuesta. Di «para» para terminar.</string>
+    <string name="assist_conversation_end">Terminar</string>
+    <string name="assist_stop_words">para|stop|basta|eso es todo|ya está|adiós|terminar|fin|gracias eso es todo|cancelar</string>
+    <string name="assistant_conversation">Mantener una conversación hablada</string>
+    <string name="assistant_conversation_line">Después de leer en voz alta una respuesta hablada, el asistente vuelve a escuchar, hasta que digas «para», toques Terminar o no digas nada durante unos segundos. Funciona con auriculares.</string>
     <string name="assist_recogniser_failed">El reconocimiento de voz del teléfono se detuvo. Inténtelo de nuevo o elija LLeMbas en Ajustes › Entrada de voz.</string>
     <string name="assistant_listens">Empezar a escuchar al abrir el asistente</string>
     <string name="voice_input">Entrada de voz</string>

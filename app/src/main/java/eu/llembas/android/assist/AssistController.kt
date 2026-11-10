@@ -71,6 +71,11 @@ data class AssistUiState(
     val speaking: Boolean = false,
     /** Whether anything can turn speech into words: the instance's speech-to-text, or the phone's. */
     val canListen: Boolean = true,
+    /**
+     * A spoken conversation: after each spoken answer is read aloud, the sheet listens again --
+     * until the person says stop, taps End, types, or says nothing.
+     */
+    val conversation: Boolean = false,
 ) {
     val screenAvailable: Boolean get() = screenText || screenshot != null
     val modelInfo: ModelInfo? get() = models.firstOrNull { it.id == modelId }
@@ -94,6 +99,7 @@ interface AssistActions {
     fun voiceReply(on: Boolean) {}
     fun readAloud() {}
     fun stopReading() {}
+    fun endConversation() {}
 }
 
 /**
@@ -116,6 +122,7 @@ class AssistController(private val context: Context, private val scope: Coroutin
     private val recorder = Recorder(scope)
     private val phone = PhoneRecognizer(context)
     private val speaker = Speaker(context)
+    private val route = HeadsetRoute(context)
     private var following: Job? = null
     private var hearing: Job? = null
     private var usingPhone = false
@@ -215,13 +222,15 @@ class AssistController(private val context: Context, private val scope: Coroutin
         _state.update { it.copy(listening = true, heard = "", level = 0f, error = null) }
         hearing = scope.launch {
             usingPhone = phoneEngine()
+            // A headset's microphone when one is there: the conversation can go on in the ear.
+            val headset = route.microphone()
             if (usingPhone) {
                 phone.start(
                     onPartial = { words -> _state.update { it.copy(heard = words) } },
                     onLevel = { l -> _state.update { it.copy(level = l) } },
                     onResult = { words ->
                         _state.update { it.copy(listening = false, level = 0f, heard = "") }
-                        if (words.isNotBlank()) ask(words, spoken = true)
+                        if (words.isNotBlank()) askOrStop(words) else endConversation()
                     },
                     onFail = { code ->
                         val quiet = code == SpeechRecognizer.ERROR_NO_MATCH || code == SpeechRecognizer.ERROR_SPEECH_TIMEOUT
@@ -229,12 +238,14 @@ class AssistController(private val context: Context, private val scope: Coroutin
                             it.copy(
                                 listening = false,
                                 level = 0f,
+                                conversation = false,
                                 error = if (quiet) null else context.getString(R.string.assist_recogniser_failed),
                             )
                         }
                     },
                 )
             } else {
+                recorder.preferred = headset
                 recorder.start()
                 launch { recorder.level.collect { l -> _state.update { it.copy(level = l) } } }
                 launch { writeDownAsSaid() }
@@ -317,20 +328,33 @@ class AssistController(private val context: Context, private val scope: Coroutin
                 _state.update { it.copy(busy = true) }
                 val text = context.lembas.instances.client()?.transcribe(wav).orEmpty()
                 _state.update { it.copy(busy = false, heard = "") }
-                if (text.isNotBlank()) ask(text, spoken = true)
+                if (text.isNotBlank()) askOrStop(text) else endConversation()
             } catch (e: Exception) {
                 _state.update { it.copy(busy = false, heard = "", error = context.explain(e)) }
             }
         }
     }
 
-    /** Stop listening and keep nothing: the person would rather type. */
+    /**
+     * Stop listening and keep nothing: the person would rather type -- or said nothing at all.
+     * Either ends a spoken conversation.
+     */
     override fun type() {
         hearing?.cancel()
         hearing = null
         phone.stop()
         scope.launch { recorder.stop() }
-        _state.update { it.copy(listening = false, heard = "", level = 0f) }
+        _state.update { it.copy(listening = false, heard = "", level = 0f, conversation = false) }
+    }
+
+    /** What was said: in a conversation, "stop" (or the like) ends it; anything else is asked. */
+    private fun askOrStop(words: String) {
+        val phrases = context.getString(R.string.assist_stop_words).split("|")
+        if (_state.value.conversation && isStopPhrase(words, phrases)) endConversation() else ask(words, spoken = true)
+    }
+
+    override fun endConversation() {
+        _state.update { it.copy(conversation = false) }
     }
 
     // --- Asking ------------------------------------------------------------------------------
@@ -349,6 +373,10 @@ class AssistController(private val context: Context, private val scope: Coroutin
         following = scope.launch {
             val turn = AssistTurn(question)
             _state.update { it.copy(busy = true, turns = it.turns + turn, error = null) }
+            // A spoken question, answered aloud, opens a conversation (Settings › Assistant).
+            val talking = spoken && context.lembas.instances.prefs.first().assistantConversation &&
+                _state.value.voiceReply && _state.value.canSpeak
+            _state.update { it.copy(conversation = talking) }
             try {
                 val store = context.lembas.instances
                 val api = store.client() ?: throw ApiException(401, "Not signed in.")
@@ -384,9 +412,16 @@ class AssistController(private val context: Context, private val scope: Coroutin
                     live = live.apply(frame.event, frame.data)
                     _state.update { s -> s.copy(turns = s.turns.dropLast(1) + turn.copy(reply = live), busy = live.finished == null) }
                 }
-                if (spoken && _state.value.voiceReply && _state.value.canSpeak && live.finished != null) speak(spokenWords(live.finished?.steps.orEmpty()))
+                val heardAll = if (spoken && _state.value.voiceReply && _state.value.canSpeak && live.finished != null && live.cards.isEmpty()) {
+                    speak(spokenWords(live.finished?.steps.orEmpty()))
+                } else {
+                    false
+                }
+                // The answer was heard to the end: listen for the next thing said. Stopped, a
+                // card waiting, or nothing to read: the conversation ends there.
+                if (_state.value.conversation && heardAll && micAllowed()) listen() else endConversation()
             } catch (e: Exception) {
-                _state.update { it.copy(error = context.explain(e)) }
+                _state.update { it.copy(error = context.explain(e), conversation = false) }
             } finally {
                 _state.update { it.copy(busy = false) }
             }
@@ -422,7 +457,7 @@ class AssistController(private val context: Context, private val scope: Coroutin
     override fun newChat() {
         following?.cancel()
         speaker.stop()
-        _state.update { it.copy(chatId = null, turns = emptyList(), error = null, busy = false) }
+        _state.update { it.copy(chatId = null, turns = emptyList(), error = null, busy = false, conversation = false) }
     }
 
     /** The model: for the chat this sheet is in, changed at once; for a new one, kept for next time. */
@@ -449,15 +484,18 @@ class AssistController(private val context: Context, private val scope: Coroutin
         scope.launch { speak(spokenWords(steps)) }
     }
 
+    /** Stop the voice -- and, in a conversation, the listening that would follow it. */
     override fun stopReading() = speaker.stop()
 
-    private suspend fun speak(words: String) {
-        if (words.isBlank()) return
-        try {
-            val api = context.lembas.instances.client() ?: return
-            speaker.play(api.speech(words))
+    /** Read [words] aloud; true when they were heard to the end. */
+    private suspend fun speak(words: String): Boolean {
+        if (words.isBlank()) return false
+        return try {
+            val api = context.lembas.instances.client() ?: return false
+            speaker.playToEnd(api.speech(words))
         } catch (e: Exception) {
             _state.update { it.copy(error = context.explain(e)) }
+            false
         }
     }
 
@@ -472,6 +510,7 @@ class AssistController(private val context: Context, private val scope: Coroutin
         hearing?.cancel()
         speaker.stop()
         phone.stop()
+        route.release()
         scope.launch { recorder.stop() }
     }
 

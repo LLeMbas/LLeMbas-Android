@@ -5,6 +5,8 @@
     <!-- Dictation and the assistant's voice. Asked for the first time either is used. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- A spoken conversation through a Bluetooth headset: its microphone made the route. -->
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
 
     <queries>
         <!-- UnifiedPush distributors (ntfy and others) are found by this action. -->

@@ -13,6 +13,11 @@ is in alpha and releases come off `main`.
   are uploaded and go with the message; the chat then opens in the app.
 - **A home-screen widget**: *Ask anything* opens the assistant, the microphone opens it
   listening, and the clock opens the last assistant chat. It shows nothing from your account.
+- **Spoken conversations with the assistant.** Ask by voice and, once the answer has been read
+  aloud, the assistant listens again -- until you say "stop" (or "that's all"), tap **End**, or
+  say nothing for a few seconds. The sheet says *In conversation* while it lasts. With a
+  Bluetooth headset connected, its microphone is used, so the conversation can stay in your ear.
+  Settings › Assistant › *Keep a spoken conversation going* (on; it needs voice replies).
 - **Launcher shortcuts** (long-press the icon): Ask LLeMbas, Speak, Last chat.
 - **A headset's voice button** opens the assistant listening, when LLeMbas answers it; over the
   lock screen it asks to unlock first.

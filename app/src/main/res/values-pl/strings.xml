@@ -390,6 +390,12 @@
     <string name="assist_say_it">Powiedz to i zrób pauzę</string>
     <string name="assist_type">Zamiast tego pisz</string>
     <string name="assist_writing_down">Zapisuję, co powiedziałeś…</string>
+    <string name="assist_conversation">Rozmowa</string>
+    <string name="assist_conversation_line">Po każdej odpowiedzi słucham znowu. Powiedz „stop”, aby zakończyć.</string>
+    <string name="assist_conversation_end">Zakończ</string>
+    <string name="assist_stop_words">stop|wystarczy|to wszystko|koniec|do widzenia|dzięki to wszystko|anuluj|przestań</string>
+    <string name="assistant_conversation">Prowadź rozmowę głosową</string>
+    <string name="assistant_conversation_line">Po odczytaniu odpowiedzi na głos asystent znów słucha — dopóki nie powiesz „stop”, nie dotkniesz Zakończ albo nie będziesz milczeć przez kilka sekund. Działa ze słuchawkami.</string>
     <string name="assist_recogniser_failed">Rozpoznawanie mowy w telefonie przestało działać. Spróbuj ponownie albo wybierz LLeMbas w Ustawienia › Wprowadzanie głosowe.</string>
     <string name="assistant_listens">Zacznij słuchać po otwarciu asystenta</string>
     <string name="voice_input">Wprowadzanie głosowe</string>

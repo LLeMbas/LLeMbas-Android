@@ -392,6 +392,12 @@
     <string name="assist_say_it">Say it, then pause</string>
     <string name="assist_type">Type instead</string>
     <string name="assist_writing_down">Writing down what you said…</string>
+    <string name="assist_conversation">In conversation</string>
+    <string name="assist_conversation_line">I listen again after each answer. Say “stop” to end.</string>
+    <string name="assist_conversation_end">End</string>
+    <string name="assist_stop_words">stop|that\'s all|that is all|that\'s it|goodbye|bye|enough|end|thank you that\'s all|cancel</string>
+    <string name="assistant_conversation">Keep a spoken conversation going</string>
+    <string name="assistant_conversation_line">After a spoken answer is read aloud, the assistant listens again — until you say “stop”, tap End, or say nothing for a few seconds. Works with a headset.</string>
     <string name="assist_recogniser_failed">The phone\'s speech recogniser stopped. Try again, or choose LLeMbas under Settings › Voice input.</string>
     <string name="assistant_listens">Start listening when the assistant opens</string>
     <string name="voice_input">Voice input</string>

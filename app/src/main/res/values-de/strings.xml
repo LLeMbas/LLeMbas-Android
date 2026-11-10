@@ -390,6 +390,12 @@
     <string name="assist_say_it">Sprechen Sie, dann kurz Pause</string>
     <string name="assist_type">Lieber tippen</string>
     <string name="assist_writing_down">Ihr Gesagtes wird aufgeschrieben…</string>
+    <string name="assist_conversation">Im Gespräch</string>
+    <string name="assist_conversation_line">Nach jeder Antwort höre ich wieder zu. Sag „Stopp“, um zu beenden.</string>
+    <string name="assist_conversation_end">Beenden</string>
+    <string name="assist_stop_words">stopp|stop|das wars|das war\'s|das ist alles|genug|ende|tschüss|auf wiedersehen|danke das wars|abbrechen</string>
+    <string name="assistant_conversation">Ein gesprochenes Gespräch fortführen</string>
+    <string name="assistant_conversation_line">Nachdem eine gesprochene Antwort vorgelesen wurde, hört der Assistent wieder zu — bis du „Stopp“ sagst, auf Beenden tippst oder ein paar Sekunden nichts sagst. Funktioniert mit einem Headset.</string>
     <string name="assist_recogniser_failed">Die Spracherkennung des Telefons hat angehalten. Versuchen Sie es erneut oder wählen Sie LLeMbas unter Einstellungen › Spracheingabe.</string>
     <string name="assistant_listens">Beim Öffnen des Assistenten zuhören</string>
     <string name="voice_input">Spracheingabe</string>

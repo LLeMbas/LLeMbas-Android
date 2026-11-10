@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.Assistant
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Forum
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Notifications
@@ -102,6 +103,7 @@ interface SettingsActions {
     fun assistantTemporary(on: Boolean) {}
     fun voiceInput(value: String) {}
     fun assistantListens(on: Boolean) {}
+    fun assistantConversation(on: Boolean) {}
     fun readAloud(on: Boolean) {}
     fun checkUpdate() {}
     fun openRelease() {}
@@ -194,6 +196,10 @@ fun SettingsScreen(onBack: () -> Unit, onAddInstance: () -> Unit) {
 
             override fun assistantListens(on: Boolean) {
                 scope.launch { store.savePrefs { it.copy(assistantListens = on) } }
+            }
+
+            override fun assistantConversation(on: Boolean) {
+                scope.launch { store.savePrefs { it.copy(assistantConversation = on) } }
             }
 
             override fun readAloud(on: Boolean) {
@@ -407,6 +413,21 @@ fun SettingsContent(state: SettingsState, actions: SettingsActions, onBack: () -
                         stringResource(R.string.assistant_read_aloud),
                         onClick = { actions.readAloud(!state.prefs.readAloudSpoken) },
                         trailing = { Switch(checked = state.prefs.readAloudSpoken, onCheckedChange = actions::readAloud) },
+                    )
+                    Rule()
+                    SettingRow(
+                        Icons.Filled.Forum,
+                        stringResource(R.string.assistant_conversation),
+                        subtitle = stringResource(R.string.assistant_conversation_line),
+                        enabled = state.prefs.readAloudSpoken,
+                        onClick = { actions.assistantConversation(!state.prefs.assistantConversation) },
+                        trailing = {
+                            Switch(
+                                checked = state.prefs.assistantConversation && state.prefs.readAloudSpoken,
+                                enabled = state.prefs.readAloudSpoken,
+                                onCheckedChange = actions::assistantConversation,
+                            )
+                        },
                     )
                 }
                 Text(

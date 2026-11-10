@@ -390,6 +390,12 @@
     <string name="assist_say_it">Řekněte to a odmlčte se</string>
     <string name="assist_type">Raději psát</string>
     <string name="assist_writing_down">Zapisuji, co jste řekli…</string>
+    <string name="assist_conversation">Rozhovor</string>
+    <string name="assist_conversation_line">Po každé odpovědi znovu poslouchám. Řekněte „stop“ a skončíme.</string>
+    <string name="assist_conversation_end">Ukončit</string>
+    <string name="assist_stop_words">stop|dost|to je vše|to je všechno|konec|nashledanou|díky to je vše|zrušit|stop stop</string>
+    <string name="assistant_conversation">Pokračovat v mluveném rozhovoru</string>
+    <string name="assistant_conversation_line">Po přečtení mluvené odpovědi asistent znovu poslouchá — dokud neřeknete „stop“, neklepnete na Ukončit nebo pár sekund nic neřeknete. Funguje i se sluchátky.</string>
     <string name="assist_recogniser_failed">Rozpoznávání řeči v telefonu se zastavilo. Zkuste to znovu nebo zvolte LLeMbas v Nastavení › Hlasový vstup.</string>
     <string name="assistant_listens">Začít poslouchat, když se asistent otevře</string>
     <string name="voice_input">Hlasový vstup</string>

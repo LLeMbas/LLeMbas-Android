@@ -7,6 +7,7 @@ import eu.llembas.android.assist.AssistController
 import eu.llembas.android.assist.AssistTurn
 import eu.llembas.android.assist.Recorder
 import eu.llembas.android.assist.SheetStop
+import eu.llembas.android.assist.isStopPhrase
 import eu.llembas.android.assist.settle
 import eu.llembas.android.assist.usePhoneRecognizer
 import eu.llembas.android.auth.Prefs
@@ -95,5 +96,16 @@ class AssistTest {
         assertEquals("Have a look.\n\n---\n\nSome text", shareMessage("", "Some text", "Have a look."))
         // Files only: the request alone, the files go as attachments.
         assertEquals("Have a look.", shareMessage("  ", "", "Have a look."))
+    }
+
+    @Test
+    fun stopEndsAConversationButAQuestionAboutStoppingDoesNot() {
+        val phrases = "stop|that's all|goodbye".split("|")
+        assertTrue(isStopPhrase("Stop.", phrases))
+        assertTrue(isStopPhrase("OK, that’s all, thanks", phrases))
+        assertTrue(isStopPhrase("stop please", phrases))
+        assertFalse(isStopPhrase("How do I stop the kettle from whistling in the morning?", phrases))
+        assertFalse(isStopPhrase("", phrases))
+        assertTrue(isStopPhrase("Ďakujem, to je všetko", listOf("ďakujem to je všetko")))
     }
 }

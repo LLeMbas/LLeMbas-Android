@@ -390,6 +390,12 @@
     <string name="assist_say_it">Dites-le, puis marquez une pause</string>
     <string name="assist_type">Taper plutôt</string>
     <string name="assist_writing_down">Transcription de ce que vous avez dit…</string>
+    <string name="assist_conversation">En conversation</string>
+    <string name="assist_conversation_line">J’écoute à nouveau après chaque réponse. Dites « stop » pour arrêter.</string>
+    <string name="assist_conversation_end">Terminer</string>
+    <string name="assist_stop_words">stop|arrête|c\'est tout|ça suffit|au revoir|fin|terminé|merci c\'est tout|annuler</string>
+    <string name="assistant_conversation">Poursuivre une conversation orale</string>
+    <string name="assistant_conversation_line">Après la lecture d’une réponse orale, l’assistant écoute à nouveau — jusqu’à ce que vous disiez « stop », touchiez Terminer ou ne disiez rien pendant quelques secondes. Fonctionne avec un casque.</string>
     <string name="assist_recogniser_failed">La reconnaissance vocale du téléphone s’est arrêtée. Réessayez, ou choisissez LLeMbas dans Réglages › Saisie vocale.</string>
     <string name="assistant_listens">Écouter dès l’ouverture de l’assistant</string>
     <string name="voice_input">Saisie vocale</string>
