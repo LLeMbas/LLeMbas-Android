@@ -17,6 +17,9 @@ is in alpha and releases come off `main`.
 
 ### Changed
 
+- **Allow once and Deny on an approval's notification ask for the phone to be unlocked first**
+  (Android 12 and newer), so a locked phone cannot answer for you. This holds for the
+  approvals a scheduled run on a computer will send too.
 - **The microphone in a chat follows Settings › Voice input**, as the assistant does: with
   *LLeMbas* it records and your instance writes the words down when you stop; with *Phone* the
   phone's own recogniser writes them into the box as you speak and stops at the end of what you

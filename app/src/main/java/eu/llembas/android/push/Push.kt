@@ -122,10 +122,12 @@ object Notifications {
             // The body can name a command or a file; on a locked screen only the title shows.
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
         // An approval can be answered from here: once, or no. "Always" and a corrected command
-        // need the card itself, so they stay in the app.
+        // need the card itself, so they stay in the app. Either answer asks for the phone to be
+        // unlocked first (Android 12+): a locked phone in somebody else's hand must not say yes
+        // to a command -- nor no to a run that waits on it, a scheduled one included.
         if (payload.kind == "ask" && payload.ask == "approval" && chatId != null && payload.interactionId != null) {
-            builder.addAction(0, context.getString(R.string.card_allow_once), answer(context, instance, chatId, payload.interactionId, "allow", id))
-            builder.addAction(0, context.getString(R.string.card_deny), answer(context, instance, chatId, payload.interactionId, "deny", id))
+            builder.addAction(unlocked(context.getString(R.string.card_allow_once), answer(context, instance, chatId, payload.interactionId, "allow", id)))
+            builder.addAction(unlocked(context.getString(R.string.card_deny), answer(context, instance, chatId, payload.interactionId, "deny", id)))
         }
         NotificationManagerCompat.from(context).notify(id, builder.build())
     }
@@ -162,6 +164,10 @@ object Notifications {
         if (notice.pause) builder.addAction(0, context.getString(R.string.schedule_pause), pause(context, instance, notice.scheduleId, notice.id))
         NotificationManagerCompat.from(context).notify(notice.id, builder.build())
     }
+
+    /** A notification action Android runs only once the phone is unlocked. */
+    private fun unlocked(title: String, intent: PendingIntent): NotificationCompat.Action =
+        NotificationCompat.Action.Builder(0, title, intent).setAuthenticationRequired(true).build()
 
     private fun opener(context: Context, instance: String, id: Int, chatId: String?, scheduleId: String? = null, runId: String? = null): PendingIntent =
         PendingIntent.getActivity(
