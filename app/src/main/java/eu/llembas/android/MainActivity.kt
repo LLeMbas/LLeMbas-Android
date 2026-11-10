@@ -169,7 +169,7 @@ class MainActivity : ComponentActivity() {
         // otherwise. Read once per instance in use; kept, so the next start has it at once.
         LaunchedEffect(instance.id) {
             runCatching { lembas.instances.clientFor(instance).me() }.onSuccess { me ->
-                if (me.language.isNotBlank()) lembas.instances.savePrefs { it.copy(accountLanguage = me.language) }
+                me.accountLanguage?.let { language -> lembas.instances.savePrefs { it.copy(accountLanguage = language) } }
             }
         }
         // The list is read again each time the drawer opens, so a new title or a finished

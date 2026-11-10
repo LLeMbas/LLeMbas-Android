@@ -251,7 +251,12 @@
     <string name="progress_stopped_steps">límite de pasos</string>
     <string name="progress_stopped_budget">presupuesto</string>
     <string name="tree_state_working">trabajando</string>
+    <string name="tree_state_waiting">esperando una plaza</string>
+    <string name="tree_state_finished">terminado</string>
+    <string name="tree_state_idle">inactivo</string>
+    <string name="tree_state_paused">en pausa: contexto lleno</string>
     <string name="tree_state_done">terminado</string>
+    <string name="tree_state_out_of_context">sin contexto</string>
     <string name="tree_state_stopped">detenido</string>
     <string name="card_asker">%1$s pregunta:</string>
     <string name="card_subagent_asks">El subagente %1$s (%2$s), %3$s, pregunta:</string>

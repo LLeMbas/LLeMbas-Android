@@ -72,7 +72,24 @@ data class Me(
     @SerialName("default_model") val defaultModel: String? = null,
     val permissions: Map<String, Boolean> = emptyMap(),
     val services: Map<String, Boolean> = emptyMap(),
-)
+) {
+    /**
+     * The language the app follows by default (`i18n.for_user`: the account's choice, else the
+     * instance's); null when the server said none, so a kept earlier answer stands.
+     */
+    val accountLanguage: String? get() = language.ifBlank { null }
+
+    /**
+     * The instance's speech-to-text, through the server (the assistant's LLeMbas voice input):
+     * true or false as the server said it, null when it did not say.
+     */
+    val speechToText: Boolean? get() = services["stt"]
+
+    val hasSpeechToText: Boolean get() = speechToText == true
+
+    /** The instance's text-to-speech (the assistant's voice reply, Read aloud). */
+    val hasTextToSpeech: Boolean get() = services["tts"] == true
+}
 
 @Serializable
 data class ModelInfo(

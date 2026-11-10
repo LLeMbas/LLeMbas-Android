@@ -251,7 +251,12 @@
     <string name="progress_stopped_steps">lépéskorlát</string>
     <string name="progress_stopped_budget">keret</string>
     <string name="tree_state_working">dolgozik</string>
+    <string name="tree_state_waiting">szabad helyre vár</string>
+    <string name="tree_state_finished">kész</string>
+    <string name="tree_state_idle">tétlen</string>
+    <string name="tree_state_paused">szüneteltetve: tele a kontextus</string>
     <string name="tree_state_done">kész</string>
+    <string name="tree_state_out_of_context">elfogyott a kontextus</string>
     <string name="tree_state_stopped">leállítva</string>
     <string name="card_asker">%1$s kérdezi:</string>
     <string name="card_subagent_asks">A(z) %1$s alügynök (%2$s), %3$s, kérdezi:</string>

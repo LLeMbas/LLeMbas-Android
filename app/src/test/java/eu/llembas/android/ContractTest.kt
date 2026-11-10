@@ -11,6 +11,7 @@ import eu.llembas.android.api.FileListing
 import eu.llembas.android.api.JobsFrame
 import eu.llembas.android.api.LembasJson
 import eu.llembas.android.api.LiveReply
+import eu.llembas.android.api.Me
 import eu.llembas.android.api.Message
 import eu.llembas.android.api.Metrics
 import eu.llembas.android.api.Plan
@@ -209,6 +210,24 @@ class ContractTest {
         assertTrue(read.turns.first().machine)
         assertEquals("src/api.py", read.turns[1].tools.single().title)
         assertTrue(read.turns[1].running)
+    }
+
+    @Test
+    fun meSaysTheLanguageAndTheServices() {
+        // `/api/v2/me` (me.json): the account's language the app follows by default, and the
+        // instance's speech services the assistant uses.
+        val me = read("me", Me.serializer())
+        assertEquals("sk", me.accountLanguage)
+        assertEquals("qwen", me.defaultModel)
+        assertTrue(me.hasSpeechToText)
+        assertEquals(true, me.speechToText)
+        assertFalse(me.hasTextToSpeech)
+        assertEquals("Frodo", me.account.name)
+        // Not said: no language (a kept answer stands), and speech-to-text unknown, not "no".
+        val silent = me.copy(language = "", services = emptyMap())
+        assertNull(silent.accountLanguage)
+        assertNull(silent.speechToText)
+        assertFalse(silent.hasSpeechToText)
     }
 
     @Test

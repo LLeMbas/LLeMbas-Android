@@ -251,7 +251,12 @@
     <string name="progress_stopped_steps">limit kroků</string>
     <string name="progress_stopped_budget">rozpočet</string>
     <string name="tree_state_working">pracuje</string>
+    <string name="tree_state_waiting">čeká na volný slot</string>
+    <string name="tree_state_finished">dokončený</string>
+    <string name="tree_state_idle">nečinný</string>
+    <string name="tree_state_paused">pozastavený: plný kontext</string>
     <string name="tree_state_done">hotovo</string>
+    <string name="tree_state_out_of_context">bez kontextu</string>
     <string name="tree_state_stopped">zastaveno</string>
     <string name="card_asker">%1$s se ptá:</string>
     <string name="card_subagent_asks">Podagent %1$s (%2$s), %3$s, se ptá:</string>

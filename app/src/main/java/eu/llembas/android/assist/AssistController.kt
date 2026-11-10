@@ -147,7 +147,7 @@ class AssistController(private val context: Context, private val scope: Coroutin
         try {
             val me = api.me()
             val models = api.models()
-            stt = me.services["stt"]
+            stt = me.speechToText
             val chosen = prefs.assistantModel.takeIf { id -> models.any { it.id == id } }
                 ?: me.defaultModel?.takeIf { id -> models.any { it.id == id } }
                 ?: models.firstOrNull { it.default }?.id
@@ -157,8 +157,8 @@ class AssistController(private val context: Context, private val scope: Coroutin
                     connection = Connection.Online,
                     models = models,
                     modelId = it.modelId ?: chosen,
-                    canSpeak = me.services["tts"] == true,
-                    canListen = me.services["stt"] == true || PhoneRecognizer.available(context),
+                    canSpeak = me.hasTextToSpeech,
+                    canListen = me.hasSpeechToText || PhoneRecognizer.available(context),
                 )
             }
         } catch (e: Exception) {
