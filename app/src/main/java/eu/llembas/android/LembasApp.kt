@@ -27,6 +27,8 @@ class LembasApp : Application() {
         // LLeMbas 2.0 has no reports, so 0.1's channel for them goes rather than sit empty in
         // the system's settings.
         manager.deleteNotificationChannel("reports")
+        // The launcher's long-press shortcuts, in the app's language as it is now.
+        eu.llembas.android.widget.Shortcuts.publish(this)
     }
 
     companion object {

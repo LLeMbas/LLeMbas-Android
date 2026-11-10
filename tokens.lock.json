@@ -1,5 +1,9 @@
 {
   "tag": "v2.0.0-beta.9",
   "commit": "3b7da5fc7ac72d5de9229919793dd299c03da6a8",
-  "sha256": "9057a56beb78ef9f3042555841014b9372ac415e70e054f41afcd488a9f14777"
+  "sha256": "9057a56beb78ef9f3042555841014b9372ac415e70e054f41afcd488a9f14777",
+  "res": {
+    "values": "ffa9a947b34431144ba452c64efd3d948547ebe6ec52da8735f9463bfad6ce2d",
+    "values-night": "b8cd01974f9c7fd4a00f681b1c99c839ff5d86b538c1d777e9628e2bcc36b584"
+  }
 }

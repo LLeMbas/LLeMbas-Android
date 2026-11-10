@@ -10,6 +10,7 @@ import eu.llembas.android.assist.SheetStop
 import eu.llembas.android.assist.settle
 import eu.llembas.android.assist.usePhoneRecognizer
 import eu.llembas.android.auth.Prefs
+import eu.llembas.android.share.shareMessage
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -86,5 +87,13 @@ class AssistTest {
         assertFalse(usePhoneRecognizer(Prefs.VOICE_LEMBAS, phoneHas = true, instanceStt = null))
         assertFalse(usePhoneRecognizer(Prefs.VOICE_LEMBAS, phoneHas = true, instanceStt = true))
         assertTrue(usePhoneRecognizer(Prefs.VOICE_LEMBAS, phoneHas = true, instanceStt = false))
+    }
+
+    @Test
+    fun aShareSendsTheRequestBeforeWhatWasShared() {
+        assertEquals("Summarise it.\n\n---\n\nhttps://example.org", shareMessage(" Summarise it. ", "https://example.org\n", "Have a look."))
+        assertEquals("Have a look.\n\n---\n\nSome text", shareMessage("", "Some text", "Have a look."))
+        // Files only: the request alone, the files go as attachments.
+        assertEquals("Have a look.", shareMessage("  ", "", "Have a look."))
     }
 }

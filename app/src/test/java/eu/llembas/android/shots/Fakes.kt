@@ -44,6 +44,8 @@ import eu.llembas.android.assist.Connection
 import eu.llembas.android.assist.LastAssist
 import eu.llembas.android.auth.Instance
 import eu.llembas.android.auth.Prefs
+import eu.llembas.android.share.ShareState
+import eu.llembas.android.share.SharedFile
 import eu.llembas.android.ui.chat.ChatState
 import eu.llembas.android.ui.chat.Draft
 import eu.llembas.android.ui.home.ChatsState
@@ -408,6 +410,18 @@ object Fakes {
         models = emptyList(),
         modelId = null,
         canSpeak = false,
+        error = "Home cannot be reached.",
+    )
+
+    // A share from another app.
+    val shareLink = ShareState(
+        text = "The Long Road: a walker's guide to waybread\nhttps://example.org/waybread",
+        last = LastAssist("c1", "Packing for the road", 0),
+    )
+
+    val shareFiles = ShareState(
+        files = listOf(SharedFile("map-of-the-road.jpg", image = true), SharedFile("provisions.pdf", image = false)),
+        last = LastAssist("c1", "Packing for the road", 0),
         error = "Home cannot be reached.",
     )
 

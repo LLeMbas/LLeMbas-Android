@@ -401,4 +401,9 @@
     <string name="voice_input_hint">Používa ho asistent aj mikrofón v konverzácii. S LLeMbas asistent ukazuje slová s malým oneskorením a pauza ich odošle, konverzácia ich zapíše, keď prestanete; s rozpoznávaním v telefóne sa objavujú, ako hovoríte.</string>
     <string name="share_sending">Odosiela sa do LLeMbas…</string>
     <string name="share_default_prompt">Pozrite sa na toto.</string>
+    <string name="share_ask_hint">Čo s tým má LLeMbas urobiť? (nepovinné)</string>
+    <string name="widget_hint">Opýtajte sa na čokoľvek</string>
+    <string name="widget_speak">Hovoriť</string>
+    <string name="widget_description">Pýtajte sa hlasom alebo textom, alebo pokračujte v poslednej konverzácii s asistentom. Neukazuje nič z vášho účtu.</string>
+    <string name="shortcut_last">Posledný chat</string>
 </resources>

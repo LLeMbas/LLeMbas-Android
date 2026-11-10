@@ -168,14 +168,25 @@ class AssistController(private val context: Context, private val scope: Coroutin
     /**
      * The sheet came up. It starts listening at once -- the microphone first, as an assistant
      * opens -- unless Settings says not to, the phone is locked (nothing is sent from the lock
-     * screen), or the microphone is not allowed yet (that needs an activity to ask).
+     * screen), or the microphone is not allowed yet (that needs an activity to ask). [listen]
+     * is a way in that means to speak -- a headset's voice button -- and listens regardless.
      */
-    fun opened(locked: Boolean) {
+    fun opened(locked: Boolean, listen: Boolean = false) {
         scope.launch {
             ready.join()
             val prefs = context.lembas.instances.prefs.first()
             val s = _state.value
-            if (s.signedIn && !locked && prefs.assistantListens && s.canListen && s.empty && !s.listening && micAllowed()) listen()
+            if (s.signedIn && !locked && (listen || prefs.assistantListens) && s.canListen && !s.listening && micAllowed()) {
+                if (listen || s.empty) listen()
+            }
+        }
+    }
+
+    /** Open at the last assistant chat, once it is known which that is. */
+    fun continueWhenReady() {
+        scope.launch {
+            ready.join()
+            if (_state.value.last != null) continueLast() else opened(locked = false)
         }
     }
 

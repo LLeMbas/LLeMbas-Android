@@ -401,4 +401,9 @@
     <string name="voice_input_hint">La usano l’assistente e il microfono di una chat. Con LLeMbas l’assistente mostra le parole con un attimo di ritardo e una pausa le invia, e una chat le scrive quando si ferma; con il riconoscimento del telefono appaiono mentre parla.</string>
     <string name="share_sending">Invio a LLeMbas…</string>
     <string name="share_default_prompt">Dai un\'occhiata a questo.</string>
+    <string name="share_ask_hint">Cosa deve farne LLeMbas? (facoltativo)</string>
+    <string name="widget_hint">Chiedi qualsiasi cosa</string>
+    <string name="widget_speak">Parla</string>
+    <string name="widget_description">Chiedi a voce o per iscritto, o continua l’ultima chat dell’assistente. Non mostra nulla del tuo account.</string>
+    <string name="shortcut_last">Ultima chat</string>
 </resources>

@@ -401,4 +401,9 @@
     <string name="voice_input_hint">Wird vom Assistenten und vom Mikrofon im Chat genutzt. Mit LLeMbas zeigt der Assistent die Wörter einen Moment später, und eine Pause sendet sie, ein Chat schreibt sie auf, wenn Sie aufhören; mit der Erkennung des Telefons erscheinen sie beim Sprechen.</string>
     <string name="share_sending">Wird an LLeMbas gesendet…</string>
     <string name="share_default_prompt">Schauen Sie sich das an.</string>
+    <string name="share_ask_hint">Was soll LLeMbas damit tun? (optional)</string>
+    <string name="widget_hint">Frag mich alles</string>
+    <string name="widget_speak">Sprechen</string>
+    <string name="widget_description">Per Sprache oder Text fragen oder den letzten Assistenten-Chat fortsetzen. Zeigt nichts aus Ihrem Konto.</string>
+    <string name="shortcut_last">Letzter Chat</string>
 </resources>

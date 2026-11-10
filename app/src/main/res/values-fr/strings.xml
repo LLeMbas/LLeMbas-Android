@@ -401,4 +401,9 @@
     <string name="voice_input_hint">Utilisée par l’assistant et par le micro d’une conversation. Avec LLeMbas, l’assistant affiche les mots avec un léger décalage et une pause les envoie, et une conversation les écrit quand vous vous arrêtez ; avec la reconnaissance du téléphone, ils apparaissent pendant que vous parlez.</string>
     <string name="share_sending">Envoi à LLeMbas…</string>
     <string name="share_default_prompt">Jetez un œil à ceci.</string>
+    <string name="share_ask_hint">Que doit en faire LLeMbas ? (facultatif)</string>
+    <string name="widget_hint">Posez une question</string>
+    <string name="widget_speak">Parler</string>
+    <string name="widget_description">Demandez à la voix ou par écrit, ou reprenez la dernière discussion de l’assistant. N’affiche rien de votre compte.</string>
+    <string name="shortcut_last">Dernière discussion</string>
 </resources>

@@ -401,4 +401,9 @@
     <string name="voice_input_hint">Az asszisztens és a csevegés mikrofonja használja. LLeMbasszal az asszisztens kis késéssel mutatja a szavakat, és egy szünet elküldi őket, a csevegés pedig akkor írja le őket, amikor abbahagyja; a telefon felismerőjével beszéd közben jelennek meg.</string>
     <string name="share_sending">Küldés az LLeMbas-nak…</string>
     <string name="share_default_prompt">Nézze meg ezt.</string>
+    <string name="share_ask_hint">Mit kezdjen vele a LLeMbas? (nem kötelező)</string>
+    <string name="widget_hint">Kérdezz bármit</string>
+    <string name="widget_speak">Beszéd</string>
+    <string name="widget_description">Kérdezz hanggal vagy szöveggel, vagy folytasd az asszisztens legutóbbi csevegését. A fiókodból semmit sem mutat.</string>
+    <string name="shortcut_last">Utolsó csevegés</string>
 </resources>

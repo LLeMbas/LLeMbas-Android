@@ -3,6 +3,24 @@
 What changed in each release of LLeMbas for Android. Versions follow SemVer; until 1.0.0 the app
 is in alpha and releases come off `main`.
 
+## [Unreleased]
+
+### Added
+
+- **Share to LLeMbas, with a say in it.** *Ask LLeMbas* in any app's share menu now opens a
+  sheet over that app: what came in (the text or link, the files by name), a line for what to do
+  with it (optional), and where it goes -- a **new chat** or the **last assistant chat**. Files
+  are uploaded and go with the message; the chat then opens in the app.
+- **A home-screen widget**: *Ask anything* opens the assistant, the microphone opens it
+  listening, and the clock opens the last assistant chat. It shows nothing from your account.
+- **Launcher shortcuts** (long-press the icon): Ask LLeMbas, Speak, Last chat.
+- **A headset's voice button** opens the assistant listening, when LLeMbas answers it; over the
+  lock screen it asks to unlock first.
+
+### Changed
+
+- The Quick Settings tile always shows as ready, never greyed out.
+
 ## [1.0.0-beta.6] — 2026-11-10
 
 For LLeMbas server 2.0 (2.0.0-beta.9 or later for schedules on a computer, the update check through the instance, pinning, folders, memory and search).

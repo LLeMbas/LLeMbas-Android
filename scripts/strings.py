@@ -429,6 +429,11 @@ STRINGS: dict[str, str] = {
     # Share
     "share_sending": "Sending to LLeMbas…",
     "share_default_prompt": "Have a look at this.",
+    "share_ask_hint": "What should LLeMbas do with it? (optional)",
+    "widget_hint": "Ask anything",
+    "widget_speak": "Speak",
+    "widget_description": "Ask by voice or text, or carry on the last assistant chat. Shows nothing from your account.",
+    "shortcut_last": "Last chat",
 }
 
 

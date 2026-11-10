@@ -401,4 +401,9 @@
     <string name="voice_input_hint">Używa go asystent i mikrofon w czacie. Z LLeMbas asystent pokazuje słowa z lekkim opóźnieniem, a pauza je wysyła, czat zapisuje je, gdy przestaniesz; z rozpoznawaniem telefonu pojawiają się w trakcie mówienia.</string>
     <string name="share_sending">Wysyłanie do LLeMbas…</string>
     <string name="share_default_prompt">Zobacz to.</string>
+    <string name="share_ask_hint">Co LLeMbas ma z tym zrobić? (opcjonalnie)</string>
+    <string name="widget_hint">Zapytaj o cokolwiek</string>
+    <string name="widget_speak">Mów</string>
+    <string name="widget_description">Pytaj głosem lub tekstem albo kontynuuj ostatni czat asystenta. Nie pokazuje niczego z Twojego konta.</string>
+    <string name="shortcut_last">Ostatni czat</string>
 </resources>

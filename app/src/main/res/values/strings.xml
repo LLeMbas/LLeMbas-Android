@@ -403,4 +403,9 @@
     <string name="voice_input_hint">Used by the assistant and by the microphone in a chat. With LLeMbas the assistant shows the words a moment behind you and a pause sends them, and a chat writes them down when you stop; with the phone\'s recogniser they appear as you speak.</string>
     <string name="share_sending">Sending to LLeMbas…</string>
     <string name="share_default_prompt">Have a look at this.</string>
+    <string name="share_ask_hint">What should LLeMbas do with it? (optional)</string>
+    <string name="widget_hint">Ask anything</string>
+    <string name="widget_speak">Speak</string>
+    <string name="widget_description">Ask by voice or text, or carry on the last assistant chat. Shows nothing from your account.</string>
+    <string name="shortcut_last">Last chat</string>
 </resources>

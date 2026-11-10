@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The home-screen widget: Ask (the sheet), the microphone (the sheet, listening) and the last
+     assistant chat. It shows nothing from the account -- no chat title, no model -- so nothing
+     of it is private wherever the launcher shows it. Every part keeps a fixed size except the
+     Ask label, which gives. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_background"
+    android:gravity="center_vertical"
+    android:minHeight="56dp"
+    android:orientation="horizontal"
+    android:paddingStart="16dp"
+    android:paddingEnd="4dp">
+
+    <LinearLayout
+        android:id="@+id/widget_ask"
+        android:layout_width="0dp"
+        android:layout_height="48dp"
+        android:layout_weight="1"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:importantForAccessibility="no"
+            android:src="@drawable/ic_widget_ask" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="@string/widget_hint"
+            android:textColor="@color/token_ink_muted"
+            android:textSize="16sp" />
+    </LinearLayout>
+
+    <ImageView
+        android:id="@+id/widget_last"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:contentDescription="@string/assist_continue"
+        android:padding="12dp"
+        android:src="@drawable/ic_widget_history" />
+
+    <ImageView
+        android:id="@+id/widget_mic"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_marginStart="2dp"
+        android:background="@drawable/widget_mic_background"
+        android:contentDescription="@string/widget_speak"
+        android:padding="12dp"
+        android:src="@drawable/ic_widget_mic" />
+</LinearLayout>

@@ -1,10 +1,14 @@
+@file:OptIn(ExperimentalRoborazziApi::class)
+
 package eu.llembas.android.shots
 
+import android.view.LayoutInflater
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -16,10 +20,20 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
+import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
+import com.github.takahirom.roborazzi.RoborazziComposeOptions
+import com.github.takahirom.roborazzi.captureRoboImage
+import com.github.takahirom.roborazzi.inspectionMode
+import com.github.takahirom.roborazzi.size
+import eu.llembas.android.R
 import eu.llembas.android.assist.AssistActions
 import eu.llembas.android.assist.AssistSheetContent
 import eu.llembas.android.assist.AssistSheetFrame
 import eu.llembas.android.assist.AssistUiState
+import eu.llembas.android.share.ShareActions
+import eu.llembas.android.share.ShareSheetContent
+import eu.llembas.android.share.ShareState
 import eu.llembas.android.ui.chat.ActivityActions
 import eu.llembas.android.ui.chat.ActivityContent
 import eu.llembas.android.ui.chat.CardSheet
@@ -65,6 +79,8 @@ private object NoActivityActions : ActivityActions
 private object NoSettingsActions : SettingsActions
 
 private object NoAssistActions : AssistActions
+
+private object NoShareActions : ShareActions
 
 /**
  * The app's screens with made-up data ([Fakes]), as a phone shows them: each in Shire and
@@ -286,6 +302,49 @@ class ScreenShots {
         shoot("28-memory") { MemoryContent(Fakes.memory, NoMemoryActions) }
         shoot("28-memory", Phone.Small, fontScale = 1.5f) { MemoryContent(Fakes.memory, NoMemoryActions) }
         shoot("28-memory-none") { MemoryContent(MemoryState(), NoMemoryActions) }
+    }
+
+    /** "Ask LLeMbas" from another app's share menu: a link, and a picture with a file. */
+    @Test
+    fun share() {
+        val over: (ShareState) -> @Composable () -> Unit = { state ->
+            {
+                Box(Modifier.fillMaxSize()) {
+                    ChatContent(Fakes.transcript, NoChatActions, agent = false)
+                    AssistSheetFrame(onDismiss = {}) { handle, _ -> ShareSheetContent(state, NoShareActions, handle) }
+                }
+            }
+        }
+        shoot("30-share-link", content = over(Fakes.shareLink))
+        shoot("30-share-link", Phone.Small, fontScale = 1.5f, content = over(Fakes.shareLink))
+        shoot("31-share-files", content = over(Fakes.shareFiles))
+    }
+
+    /** The home-screen widget, as the launcher inflates it (light; [widgetNight] is dark). */
+    @Test
+    fun widget() = shootWidget("light")
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun widgetNight() = shootWidget("dark")
+
+    private fun shootWidget(theme: String) {
+        for (phone in listOf(Phone.Large, Phone.Small)) {
+            captureRoboImage(
+                filePath = "build/screenshots/${phone.tag}-32-widget-$theme.png",
+                roborazziComposeOptions = RoborazziComposeOptions {
+                    size(phone.widthDp, 120)
+                    inspectionMode(true)
+                },
+            ) {
+                Box(Modifier.fillMaxSize().padding(16.dp), contentAlignment = Alignment.Center) {
+                    AndroidView(
+                        factory = { context -> LayoutInflater.from(context).inflate(R.layout.widget_ask, null) },
+                        modifier = Modifier.fillMaxWidth().height(64.dp),
+                    )
+                }
+            }
+        }
     }
 }
 
