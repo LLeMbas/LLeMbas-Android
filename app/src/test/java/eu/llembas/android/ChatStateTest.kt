@@ -5,6 +5,7 @@ import eu.llembas.android.api.Chat
 import eu.llembas.android.api.LembasJson
 import eu.llembas.android.api.LinkedDevice
 import eu.llembas.android.api.ModelList
+import eu.llembas.android.api.SubagentsOffer
 import eu.llembas.android.ui.chat.ChatState
 import eu.llembas.android.ui.chat.Draft
 import eu.llembas.android.ui.chat.agents
@@ -52,6 +53,16 @@ class ChatStateTest {
         assertFalse(ChatState(models = models, draft = Draft(model = "vision-small")).offersTeam(agent = false))
         assertTrue(ChatState(models = models, chat = Chat(id = "c", model = "gpt-oss"), teamOffered = true).offersTeam(agent = false))
         assertEquals(AgentsSetting(2, 6), ChatState(draft = Draft(agents = AgentsSetting(2, 6))).agents)
+    }
+
+    @Test
+    fun anAgentChatHasTheSliderWhenTheServerOffersIt() {
+        // Its subagents run on its device (spec 3.4.0 §14): the chat's own word decides, never a guess.
+        val agentChat = Chat(id = "a", kind = "agent", model = "qwen")
+        assertTrue(ChatState(models = models, chat = agentChat.copy(subagents = SubagentsOffer(offered = true, cap = 8))).offersTeam(agent = true))
+        assertFalse(ChatState(models = models, chat = agentChat.copy(subagents = SubagentsOffer(offered = false, cap = 32))).offersTeam(agent = true))
+        // A listed chat (`subagents: null`) asks the chat's activity.
+        assertTrue(ChatState(models = models, chat = agentChat, teamOffered = true).offersTeam(agent = true))
     }
 
     @Test

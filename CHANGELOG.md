@@ -47,7 +47,8 @@ is in alpha and releases come off `main`.
   *Running bash: bun test*, *Waiting for you*, *Waiting for subagents*, *Compacting*,
   *Retrying in 7 s*, *Stopped*, *Failed* -- with how long it has been at it, ticking each
   second (`· 1m 05s`). The same in the assistant's sheet. A server that does not send it yet
-  is shown as before.
+  is shown as before. A scheduled run under way says it too (*Waiting for coder: all its
+  slots are in use*). The words are your instance's, in your language.
 
 - **Subagents, as a list** (the server's subagent tree, once it sends one): the activity sheet
   shows the main agent and each subagent -- its name, its position, what it is doing now and

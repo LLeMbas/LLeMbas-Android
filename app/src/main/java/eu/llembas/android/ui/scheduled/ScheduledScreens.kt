@@ -82,6 +82,7 @@ import eu.llembas.android.api.SchedulesFrame
 import eu.llembas.android.api.StreamClient
 import eu.llembas.android.lembas
 import eu.llembas.android.ui.explain
+import eu.llembas.android.ui.progressLineOf
 import eu.llembas.android.ui.theme.LocalPalette
 import eu.llembas.android.ui.theme.Palette
 import kotlinx.coroutines.CancellationException
@@ -646,6 +647,12 @@ internal fun RunFacts(run: ScheduleRun, maxLines: Int = Int.MAX_VALUE, withPrevi
         else -> name
     }
     model?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = palette.inkMuted, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+    // A run under way says what it is doing, in the words every client uses (spec 3.4.0).
+    if (run.status == "waiting" || run.status == "running") {
+        progressLineOf(run.progress)?.let {
+            Text(it, style = MaterialTheme.typography.bodySmall, color = palette.inkMuted, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        }
+    }
     if (run.status == "waiting") {
         ScheduleLogic.moment(run.retryAt)?.let {
             Text(stringResource(R.string.run_retry_at, it), style = MaterialTheme.typography.bodySmall, color = palette.warning, maxLines = 1)

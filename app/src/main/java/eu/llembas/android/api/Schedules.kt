@@ -51,6 +51,8 @@ data class ScheduleRun(
     @SerialName("finished_at") val finishedAt: String? = null,
     @SerialName("waiting_for") val waitingFor: String? = null,
     @SerialName("retry_at") val retryAt: String? = null,
+    /** What the run is doing now (harness spec 3.4.0, `progress.md`): waiting for which model and why, its reply's phase. */
+    val progress: Progress? = null,
     val attempts: Int = 0,
     val model: RunModel = RunModel(),
     val tokens: RunTokens = RunTokens(),

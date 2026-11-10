@@ -4,6 +4,8 @@ import eu.llembas.android.api.LembasJson
 import eu.llembas.android.api.LiveReply
 import eu.llembas.android.api.Progress
 import eu.llembas.android.api.ProgressWords
+import eu.llembas.android.api.RunResult
+import eu.llembas.android.api.StatusFrame
 import eu.llembas.android.api.elapsed
 import eu.llembas.android.api.progressLine
 import eu.llembas.android.api.progressText
@@ -14,6 +16,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.long
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
 import java.util.Locale
@@ -93,5 +96,35 @@ class ProgressTest {
         // The reply ends: neither is kept.
         val done = LembasJson.parseToJsonElement(File("../contract/event_done.json").readText()).toString()
         assertNull(live.apply("done", done).progress)
+    }
+
+    @Test
+    fun theContractsStatusFrames() {
+        fun frame(name: String) = LembasJson.decodeFromString(
+            StatusFrame.serializer(),
+            requireNotNull(javaClass.classLoader!!.getResource("$name.json")).readText(),
+        )
+        val running = frame("event_status")
+        assertEquals("Running bake --slow", running.text)
+        val since = running.progress!!.since
+        assertEquals("Running bash: bake --slow · 5s", progressLine(running.progress!!, english, since + 5_000, Locale.ROOT))
+        assertEquals("Waiting for you: a question · 0s", progressLine(frame("event_status_person").progress!!, english, since, Locale.ROOT))
+        // Stopped is its text alone, though the free text is empty: the progress is what is drawn.
+        val stopped = frame("event_status_stopped")
+        assertEquals("", stopped.text)
+        assertEquals("Stopped: by you", progressLine(stopped.progress!!, english, since + 60_000, Locale.ROOT))
+        assertNull(frame("event_status_idle").progress)
+    }
+
+    @Test
+    fun aScheduledRunSaysItsProgress() {
+        val text = requireNotNull(javaClass.classLoader!!.getResource("schedule_run.json")).readText()
+        // The contract's run has finished: `progress` is there, and null.
+        assertTrue(text.contains("\"progress\": null"))
+        assertNull(LembasJson.decodeFromString(RunResult.serializer(), text).run.progress)
+        val waiting =
+            """{"run": {"id": "r", "status": "waiting", "progress": {"phase": "waiting_for_model", "since": 0, "model": "coder", "reason": "slots"}}}"""
+        val run = LembasJson.decodeFromString(RunResult.serializer(), waiting).run
+        assertEquals("Waiting for coder: all its slots are in use", progressText(run.progress!!, english, 0, Locale.ROOT))
     }
 }

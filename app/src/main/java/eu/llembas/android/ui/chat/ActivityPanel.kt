@@ -340,7 +340,7 @@ fun ActivityContent(
                     }
                 }
             }
-            val tasks = if (tree != null) activity.copy(agents = activity.agents.filter { it.kind != "member" }) else activity
+            val tasks = if (tree != null) activity.copy(agents = activity.agents.filter { it.kind != "member" }, team = null) else activity
             item { Section(stringResource(R.string.activity_tasks)) { TasksSection(tasks, readAt, now, actions, unfolded) } }
             activity.team?.let { team ->
                 item { Section(stringResource(R.string.team_room), count = team.room.size.takeIf { it > 0 }) { RoomSection(team) } }
