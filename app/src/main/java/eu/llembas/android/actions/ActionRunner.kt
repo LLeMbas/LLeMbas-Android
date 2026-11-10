@@ -32,12 +32,12 @@ object ActionRunner {
     suspend fun run(context: Context, action: String, args: Args, nav: NavApp?, askOsmAnd: Boolean = false): ActionOutcome {
         when (action) {
             "torch" -> return PhoneActions.torch(context, args.bool("on"))
-            "media" -> return PhoneActions.media(context, args.str("key").ifBlank { "play_pause" })
+            "media" -> return PhoneActions.media(context, args.str("command").ifBlank { "toggle" })
             "navigate", "add_stop", "search_nearby", "stop_navigation" -> return navigate(context, action, args, nav, askOsmAnd)
         }
         val intent = PhoneActions.intentFor(context, action, args)
             ?: return ActionOutcome(ActionStatus.Failed, NOT_POSSIBLE)
-        return PhoneActions.launch(context, intent, broadcast = action == "automation")
+        return PhoneActions.launch(context, intent, broadcast = action == "automation_intent")
     }
 
     private suspend fun navigate(context: Context, action: String, args: Args, nav: NavApp?, askOsmAnd: Boolean): ActionOutcome {
@@ -47,13 +47,24 @@ object ActionRunner {
         // OsmAnd's own position and destination, if the person allowed LLeMbas to ask it.
         val info = if (app == NavApp.OsmAnd && askOsmAnd && action != "stop_navigation") osmandInfo(context, pkg) else null
         val step = when (action) {
-            "navigate" -> args.place("destination")?.let { NavIntents.navigate(app, pkg, it, args.places("stops"), travel, info) }
+            "navigate" -> args.place("destination")?.let {
+                NavIntents.navigate(app, pkg, it, args.places("stops"), travel, info, replace = args.bool("replace_route") == true)
+            }
 
             "add_stop" -> args.place("stop")?.let {
                 NavIntents.addStop(app, pkg, it, args.place("destination"), travel, info, NO_DESTINATION)
             }
 
-            "search_nearby" -> args.str("query").takeIf { it.isNotBlank() }?.let { NavIntents.searchNearby(app, pkg, it, info) }
+            "search_nearby" -> args.str("query").takeIf { it.isNotBlank() }?.let {
+                NavIntents.searchNearby(
+                    app,
+                    pkg,
+                    it,
+                    info,
+                    alongRoute =
+                    args.str("near") == "route",
+                )
+            }
 
             else -> NavIntents.stop(app, pkg, GOOGLE_CANNOT_STOP)
         } ?: return ActionOutcome(ActionStatus.Failed, NOT_POSSIBLE)

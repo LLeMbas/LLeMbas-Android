@@ -27,6 +27,7 @@ import com.github.takahirom.roborazzi.captureRoboImage
 import com.github.takahirom.roborazzi.inspectionMode
 import com.github.takahirom.roborazzi.size
 import eu.llembas.android.R
+import eu.llembas.android.actions.NavApp
 import eu.llembas.android.assist.AssistActions
 import eu.llembas.android.assist.AssistSheetContent
 import eu.llembas.android.assist.AssistSheetFrame
@@ -41,6 +42,8 @@ import eu.llembas.android.ui.chat.ChatActions
 import eu.llembas.android.ui.chat.ChatContent
 import eu.llembas.android.ui.chat.CodeBlock
 import eu.llembas.android.ui.chat.ModelPickerContent
+import eu.llembas.android.ui.chat.PhoneCardContent
+import eu.llembas.android.ui.chat.PhoneCardState
 import eu.llembas.android.ui.chat.TuneContent
 import eu.llembas.android.ui.chat.modelId
 import eu.llembas.android.ui.home.ArchivedActions
@@ -318,6 +321,27 @@ class ScreenShots {
         shoot("34-code-block") {
             Column(Modifier.fillMaxSize().padding(16.dp)) { CodeBlock("ts", Fakes.codeFiles.getValue("typescript").second) }
         }
+    }
+
+    /**
+     * The phone_action cards as the server's contract has them (`event_ask_phone.json`): an
+     * alarm, a route through a stop with both map apps to choose from, a stop added in Google
+     * Maps (its limit said), and the phone still locked.
+     */
+    @Test
+    fun phoneActions() {
+        val frame = requireNotNull(javaClass.classLoader!!.getResource("event_ask_phone.json")).readText()
+        val phones = eu.llembas.android.api.LembasJson.decodeFromString(eu.llembas.android.api.AskFrame.serializer(), frame).cards
+            .map { requireNotNull(it.items.single().phone) }
+        val both = listOf(NavApp.GoogleMaps, NavApp.OsmAnd)
+        val card: (Int, NavApp?, PhoneCardState) -> @Composable () -> Unit = { i, chosen, state ->
+            { Column(Modifier.fillMaxSize().padding(16.dp)) { PhoneCardContent(phones[i], both, chosen, state) } }
+        }
+        shoot("35-phone-alarm", content = card(0, null, PhoneCardState()))
+        shoot("35-phone-alarm", Phone.Small, fontScale = 1.5f, content = card(0, null, PhoneCardState()))
+        shoot("36-phone-navigate-pick", content = card(1, null, PhoneCardState()))
+        shoot("37-phone-add-stop-google", content = card(2, NavApp.GoogleMaps, PhoneCardState()))
+        shoot("38-phone-stop-locked", content = card(3, NavApp.OsmAnd, PhoneCardState(locked = true)))
     }
 
     /** "Ask LLeMbas" from another app's share menu: a link, and a picture with a file. */

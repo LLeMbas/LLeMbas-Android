@@ -544,6 +544,11 @@ data class CardItem(
     val job: String = "",
     /** The tree subagent asking (spec 3.4.0), for a call nobody in the tree may allow; null otherwise. */
     val subagent: CardSubagent? = null,
+    /**
+     * A `phone_action` card's action (spec 3.6.0, `phone.md` §2): `action`, `summary` and the
+     * action's own fields, as the server checked them. Carried out by `actions/ActionRunner`.
+     */
+    val phone: JsonObject? = null,
 )
 
 @Serializable
@@ -582,12 +587,17 @@ data class Job(
 /** The answer to a card, as the page's form says it (see `api/v2/chats.py:answer`). */
 @Serializable
 data class CardAnswer(
+    /** A phone card's answer: what the phone did once the person confirmed or declined. */
+    val result: PhoneResult? = null,
     val verdict: String = "",
     val reason: String = "",
     val choices: Map<String, List<String>> = emptyMap(),
     val texts: Map<String, String> = emptyMap(),
     val asks: Map<String, String> = emptyMap(),
 )
+
+@Serializable
+data class PhoneResult(val status: String, val message: String = "")
 
 @Serializable
 data class PushKey(val key: String = "", val registered: Boolean = false)

@@ -91,6 +91,7 @@ import androidx.compose.ui.unit.dp
 import eu.llembas.android.R
 import eu.llembas.android.ui.ModelAvatar
 import eu.llembas.android.ui.ProgressStatus
+import eu.llembas.android.ui.chat.PhoneCard
 import eu.llembas.android.ui.chat.Steps
 import eu.llembas.android.ui.progressLineOf
 import eu.llembas.android.ui.theme.LocalPalette
@@ -481,6 +482,11 @@ private fun Turn(turn: AssistTurn, last: Boolean, state: AssistUiState, actions:
         val reply = turn.reply
         val drawsProgress = reply != null && (progressLineOf(reply.progress) != null || reply.status.isNotBlank())
         when {
+            // A phone action is confirmed here, where the phone is; any other card in the app.
+            reply != null && reply.cards.any { it.kind == "phone_action" } -> reply.cards.first { it.kind == "phone_action" }.let { card ->
+                PhoneCard(card) { answer -> actions.answerCard(card, answer) }
+            }
+
             reply != null && reply.cards.isNotEmpty() -> TextButton(onClick = onOpenApp) { Text(stringResource(R.string.assist_answer_in_app)) }
 
             turn.writing && drawsProgress -> ProgressStatus(reply?.progress, reply?.status.orEmpty(), MaterialTheme.typography.labelSmall, palette.inkFaint)

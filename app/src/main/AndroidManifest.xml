@@ -14,6 +14,8 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <!-- Phone actions: an alarm or a timer, set through the clock app once the person confirms. -->
     <uses-permission android:name="com.android.alarm.permission.SET_ALARM" />
+    <!-- Phone actions: run a Tasker task by its name (Tasker asks the person to allow it). -->
+    <uses-permission android:name="net.dinglisch.android.tasker.PERMISSION_RUN_TASKS" />
 
     <queries>
         <!-- UnifiedPush distributors (ntfy and others) are found by this action. -->
@@ -33,6 +35,7 @@
         <package android:name="net.osmand.plus" />
         <package android:name="net.osmand" />
         <package android:name="net.osmand.dev" />
+        <package android:name="net.dinglisch.android.taskerm" />
     </queries>
 
     <application

@@ -58,6 +58,7 @@ fun CardSheet(card: Card, onAnswer: (CardAnswer) -> Unit) {
         }
         when (card.kind) {
             "approval" -> Approval(card, onAnswer)
+            "phone_action" -> PhoneCard(card, onAnswer)
             "plan" -> PlanCard(card, onAnswer)
             else -> Questions(card, onAnswer)
         }

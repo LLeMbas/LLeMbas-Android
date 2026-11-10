@@ -10,6 +10,8 @@ import androidx.core.content.ContextCompat
 import eu.llembas.android.MainActivity
 import eu.llembas.android.R
 import eu.llembas.android.api.ApiException
+import eu.llembas.android.api.Card
+import eu.llembas.android.api.CardAnswer
 import eu.llembas.android.api.LiveReply
 import eu.llembas.android.api.ModelInfo
 import eu.llembas.android.api.Step
@@ -104,6 +106,7 @@ interface AssistActions {
     fun stopReading() {}
     fun endConversation() {}
     fun summariseNotifications() {}
+    fun answerCard(card: Card, answer: CardAnswer) {}
 }
 
 /**
@@ -470,6 +473,21 @@ class AssistController(private val context: Context, private val scope: Coroutin
                 }
             } finally {
                 _state.update { it.copy(busy = false) }
+            }
+        }
+    }
+
+    /** A phone action's card, answered in the sheet: what the phone did (spec 3.6.0). */
+    override fun answerCard(card: Card, answer: CardAnswer) {
+        val chat = _state.value.chatId ?: return
+        scope.launch {
+            try {
+                context.lembas.instances.client()?.answer(chat, card.id, answer)
+            } catch (e: ApiException) {
+                // First answer wins: a 409 is somebody answering elsewhere already.
+                if (e.status != 409) _state.update { it.copy(error = context.explain(e)) }
+            } catch (e: Exception) {
+                _state.update { it.copy(error = context.explain(e)) }
             }
         }
     }

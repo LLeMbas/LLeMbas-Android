@@ -100,18 +100,25 @@ data class OsmAndInfo(val lat: Double?, val lon: Double?, val destination: Place
 object NavIntents {
     private const val GOOGLE_STOPS = 9
 
-    fun navigate(app: NavApp, pkg: String, destination: Place, stops: List<Place>, travel: Travel, info: OsmAndInfo?): NavStep = when (app) {
-        NavApp.GoogleMaps -> google(pkg, destination, stops, travel)
-        NavApp.OsmAnd -> osmand(pkg, destination, stops, travel, info)
-    }
+    /** [replace]: a route already running is replaced without the map app asking first (OsmAnd asks otherwise). */
+    fun navigate(app: NavApp, pkg: String, destination: Place, stops: List<Place>, travel: Travel, info: OsmAndInfo?, replace: Boolean = false): NavStep =
+        when (app) {
+            NavApp.GoogleMaps -> google(pkg, destination, stops, travel)
+            NavApp.OsmAnd -> osmand(pkg, destination, stops, travel, info, if (replace) "true" else "false")
+        }
 
     /** A stop on the way to the route's destination ([destination] from the model, else OsmAnd's own). */
     fun addStop(app: NavApp, pkg: String, stop: Place, destination: Place?, travel: Travel, info: OsmAndInfo?, noDestination: String): NavStep {
         val to = destination?.takeIf { it.hasCoordinates || it.searchText.isNotBlank() } ?: info?.destination ?: return NavStep.Unsupported(noDestination)
-        return navigate(app, pkg, to, listOf(stop), travel, info)
+        // Planned again from here: the route being replaced is the one the person asked to change.
+        return navigate(app, pkg, to, listOf(stop), travel, info, replace = true)
     }
 
-    fun searchNearby(app: NavApp, pkg: String, query: String, info: OsmAndInfo?): NavStep = when {
+    /**
+     * [alongRoute] searches near the running route; OsmAnd is given the phone's position for both
+     * (its search ranks along the route itself while one runs), Google Maps searches near here.
+     */
+    fun searchNearby(app: NavApp, pkg: String, query: String, info: OsmAndInfo?, alongRoute: Boolean = false): NavStep = when {
         app == NavApp.OsmAnd && info?.lat != null && info.lon != null -> NavStep.Launch(
             osmandUri(
                 pkg,
@@ -152,12 +159,12 @@ object NavIntents {
 
     private fun googlePlace(p: Place) = if (p.hasCoordinates) "${p.lat},${p.lon}" else p.searchText
 
-    private fun osmand(pkg: String, destination: Place, stops: List<Place>, travel: Travel, info: OsmAndInfo?): NavStep {
+    private fun osmand(pkg: String, destination: Place, stops: List<Place>, travel: Travel, info: OsmAndInfo?, force: String): NavStep {
         val route = stops + destination
         return when {
             // Through stops: OsmAnd follows a route given as GPX, which needs every point's coordinates.
             stops.isNotEmpty() && route.all { it.hasCoordinates } -> NavStep.Launch(
-                osmandUri(pkg, "navigate_gpx", "force" to "true").putExtra("data", gpx(route)),
+                osmandUri(pkg, "navigate_gpx", "force" to force).putExtra("data", gpx(route)),
             )
 
             stops.isNotEmpty() -> NavStep.Unsupported("")
@@ -170,7 +177,7 @@ object NavIntents {
                     "dest_lon" to destination.lon.toString(),
                     "dest_name" to destination.label,
                     "profile" to travel.osmand,
-                    "force" to "true",
+                    "force" to force,
                 ),
             )
 
@@ -184,7 +191,7 @@ object NavIntents {
                     "search_lat" to info.lat.toString(),
                     "search_lon" to info.lon.toString(),
                     "profile" to travel.osmand,
-                    "force" to "true",
+                    "force" to force,
                 ),
             )
 

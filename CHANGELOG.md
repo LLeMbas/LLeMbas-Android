@@ -31,6 +31,16 @@ is in alpha and releases come off `main`.
   for you. Then ask the assistant about "my notifications", or tap its chip, and the
   notifications on the phone right now go with that one question -- never before you ask, never
   while the phone is locked, and the app keeps none of them.
+- **Phone actions** (with LLeMbas server 2.0 and harness spec 3.6.0): a model may offer to do
+  something on this phone -- set an alarm or a timer, add a calendar event, draft a text or an
+  email, open the dialler with a number, start a route (with stops), add a stop, search nearby,
+  end the route, open an app or a web page, play/pause/skip, switch the torch, open a settings
+  panel, or run a Tasker task. A card says what will happen; nothing happens until you tap
+  **Do it**, never while the phone is locked, and drafts and calls are left for you to send and
+  place. The chat (and the assistant's sheet) tells the model whether it was done, declined or
+  failed. Navigation goes to Google Maps or **OsmAnd** (Settings › Navigation app: whichever is
+  installed, or ask); OsmAnd can also be asked where you are and where the running route goes,
+  once you allow LLeMbas inside OsmAnd.
 - **Code in colour.** The file viewer highlights a source file by its language (as the server
   names it), and a reply's code blocks by their fence's language: comments, strings, numbers,
   keywords, type names, and markup's tags and attributes, in the theme's own colours in Shire

@@ -239,6 +239,7 @@ class ApiClient(val base: String, private val token: String, val http: OkHttpCli
             agents?.let { put("agents", agentsJson(it)) }
             put("temporary", temporary)
             forceTool?.let { put("force_tool", it) }
+            put("client", CAPABILITIES)
             // An agent chat runs on a linked device; an empty directory is the device's first
             // allowed one. A device that is no longer linked makes it an ordinary chat on the
             // server, rather than losing the message.
@@ -258,6 +259,7 @@ class ApiClient(val base: String, private val token: String, val http: OkHttpCli
             put("text", text)
             put("attachments", JsonArray(attachments.map { JsonPrimitive(it) }))
             forceTool?.let { put("force_tool", it) }
+            put("client", CAPABILITIES)
         },
     )
 
@@ -513,6 +515,12 @@ class ApiClient(val base: String, private val token: String, val http: OkHttpCli
         authed("$v2/chats/$chatId/messages/$messageId/stream").header("Accept", "text/event-stream").build()
 
     companion object {
+        /**
+         * What this app can do, sent with every message (spec 3.6.0): the phone carries out
+         * `phone_action` calls the person confirms here, so the chat is offered the tool.
+         */
+        private val CAPABILITIES = JsonArray(listOf(JsonPrimitive("phone_actions")))
+
         /** 1 MB, the server's own limit on a shown file, with room for a little more. */
         const val SHOWN_MAX_BYTES = 1_100_000L
 

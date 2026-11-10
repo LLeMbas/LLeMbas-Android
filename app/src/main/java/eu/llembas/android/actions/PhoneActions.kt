@@ -20,6 +20,7 @@ import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.longOrNull
+import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.OffsetDateTime
 import java.time.ZoneId
@@ -45,6 +46,13 @@ class Args(val json: JsonObject) {
 
     fun list(key: String): List<JsonElement> = (o[key] as? JsonArray).orEmpty()
 
+    /** A list of strings (or one string, which a model sometimes writes for a list of one). */
+    fun strings(key: String): List<String> = when (val v = o[key]) {
+        is JsonArray -> v.mapNotNull { (it as? JsonPrimitive)?.content?.trim()?.takeIf(String::isNotEmpty) }
+        is JsonPrimitive -> listOfNotNull(v.content.trim().takeIf { it.isNotEmpty() })
+        else -> emptyList()
+    }
+
     fun place(key: String): Place? = when (val v = o[key]) {
         is JsonObject -> placeOf(v)
         is JsonPrimitive -> v.content.takeIf { it.isNotBlank() }?.let { Place(query = it) }
@@ -69,11 +77,13 @@ class Args(val json: JsonObject) {
         )
     }
 
-    /** A time the model wrote: ISO 8601 with an offset, or local (the phone's zone). */
+    /** A time the model wrote: `YYYY-MM-DDTHH:MM` in the phone's zone, `YYYY-MM-DD`, or with an offset. */
     fun time(key: String): Long? {
         val raw = str(key).ifBlank { return null }
-        return runCatching { OffsetDateTime.parse(raw).toInstant().toEpochMilli() }.getOrNull()
-            ?: runCatching { LocalDateTime.parse(raw).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli() }.getOrNull()
+        val zone = ZoneId.systemDefault()
+        return runCatching { LocalDateTime.parse(raw).atZone(zone).toInstant().toEpochMilli() }.getOrNull()
+            ?: runCatching { LocalDate.parse(raw).atStartOfDay(zone).toInstant().toEpochMilli() }.getOrNull()
+            ?: runCatching { OffsetDateTime.parse(raw).toInstant().toEpochMilli() }.getOrNull()
     }
 }
 
@@ -88,17 +98,16 @@ class Args(val json: JsonObject) {
  * a phone number goes to the dialler and is never called.
  */
 object PhoneActions {
-    /** Media keys the `media` action sends. */
+    /** Media keys, by the action's `command`. */
     private val MEDIA = mapOf(
-        "play_pause" to KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE,
+        "toggle" to KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE,
         "play" to KeyEvent.KEYCODE_MEDIA_PLAY,
         "pause" to KeyEvent.KEYCODE_MEDIA_PAUSE,
         "next" to KeyEvent.KEYCODE_MEDIA_NEXT,
         "previous" to KeyEvent.KEYCODE_MEDIA_PREVIOUS,
-        "stop" to KeyEvent.KEYCODE_MEDIA_STOP,
     )
 
-    /** Settings panels, by the action's name. Panels (Android 10+) float over the app; the rest are pages. */
+    /** Settings panels, by the action's `panel`. Panels (Android 10+) float over the app; the rest are pages. */
     private val PANELS = mapOf(
         "wifi" to Settings.Panel.ACTION_WIFI,
         "internet" to Settings.Panel.ACTION_INTERNET_CONNECTIVITY,
@@ -106,39 +115,56 @@ object PhoneActions {
         "volume" to Settings.Panel.ACTION_VOLUME,
         "bluetooth" to Settings.ACTION_BLUETOOTH_SETTINGS,
         "location" to Settings.ACTION_LOCATION_SOURCE_SETTINGS,
-        "display" to Settings.ACTION_DISPLAY_SETTINGS,
-        "battery" to Intent.ACTION_POWER_USAGE_SUMMARY,
-        "airplane" to Settings.ACTION_AIRPLANE_MODE_SETTINGS,
         "do_not_disturb" to Settings.ACTION_ZEN_MODE_PRIORITY_SETTINGS,
     )
 
-    /** A broadcast an automation app (Tasker, Automate, MacroDroid) listens for: never a system one. */
-    fun broadcastAllowed(action: String): Boolean =
-        action.isNotBlank() && action.length <= 200 && !action.startsWith("android.") && !action.startsWith("com.android.") &&
-            Regex("^[A-Za-z0-9_.]+$").matches(action)
+    /** Tasker's public intent for running a task by its name (its TaskerIntent protocol). */
+    const val TASKER_PACKAGE = "net.dinglisch.android.taskerm"
+    private const val TASKER_ACTION = "net.dinglisch.android.tasker.ACTION_TASK"
+
+    /** The broadcast any other automation app (Automate, MacroDroid, …) can listen for. */
+    const val AUTOMATION_ACTION = "eu.llembas.android.action.AUTOMATION"
 
     /** A URL the phone may open for a model: web pages only. */
-    fun urlAllowed(url: String): Boolean = Uri.parse(url.trim()).scheme?.lowercase() in setOf("http", "https")
+    fun urlAllowed(url: String): Boolean = url.trim().lowercase().let {
+        (it.startsWith("http://") || it.startsWith("https://")) &&
+            it.substringAfter("://").isNotBlank()
+    }
+
+    /** `HH:MM` as hour and minute, or null. */
+    fun clock(time: String): Pair<Int, Int>? {
+        val m = Regex("^(\\d{1,2}):(\\d{2})$").matchEntire(time.trim()) ?: return null
+        val (h, min) = m.destructured
+        return (h.toInt() to min.toInt()).takeIf { it.first in 0..23 && it.second in 0..59 }
+    }
+
+    /** SMS recipients: the numbers among [to]; a name the messaging app has to find is left to the person. */
+    fun smsNumbers(to: List<String>): List<String> = to.map { it.trim() }.filter { Regex("^[+0-9 ()./#*-]{3,}$").matches(it) && it.count(Char::isDigit) >= 3 }
 
     /**
      * The intent for an action that is one intent (everything but navigation, the torch and media
-     * keys), or null when [action] is not one of these.
+     * keys), or null when [action] is not one of these or its arguments do not make one.
      */
     fun intentFor(context: Context, action: String, a: Args): Intent? = when (action) {
-        "alarm" -> Intent(AlarmClock.ACTION_SET_ALARM)
-            .putExtra(AlarmClock.EXTRA_HOUR, a.int("hour") ?: 7)
-            .putExtra(AlarmClock.EXTRA_MINUTES, a.int("minute") ?: 0)
-            .apply { a.str("label").takeIf { it.isNotBlank() }?.let { putExtra(AlarmClock.EXTRA_MESSAGE, it) } }
-            .apply {
-                val days = a.list("days").mapNotNull { (it as? JsonPrimitive)?.content?.let(::calendarDay) }
-                if (days.isNotEmpty()) putIntegerArrayListExtra(AlarmClock.EXTRA_DAYS, ArrayList(days))
-            }
+        "alarm" -> clock(a.str("time"))?.let { (hour, minute) ->
+            Intent(AlarmClock.ACTION_SET_ALARM)
+                .putExtra(AlarmClock.EXTRA_HOUR, hour)
+                .putExtra(AlarmClock.EXTRA_MINUTES, minute)
+                .apply { a.str("label").takeIf { it.isNotBlank() }?.let { putExtra(AlarmClock.EXTRA_MESSAGE, it) } }
+                .apply {
+                    val days = a.strings("days").mapNotNull(::calendarDay)
+                    if (days.isNotEmpty()) putIntegerArrayListExtra(AlarmClock.EXTRA_DAYS, ArrayList(days))
+                }
+        }
 
-        "timer" -> Intent(AlarmClock.ACTION_SET_TIMER)
-            .putExtra(AlarmClock.EXTRA_LENGTH, (a.int("seconds") ?: 60).coerceIn(1, 86_400))
-            .putExtra(AlarmClock.EXTRA_SKIP_UI, false)
-            .apply { a.str("label").takeIf { it.isNotBlank() }?.let { putExtra(AlarmClock.EXTRA_MESSAGE, it) } }
+        "timer" -> a.int("seconds")?.let { seconds ->
+            Intent(AlarmClock.ACTION_SET_TIMER)
+                .putExtra(AlarmClock.EXTRA_LENGTH, seconds.coerceIn(1, 86_400))
+                .putExtra(AlarmClock.EXTRA_SKIP_UI, false)
+                .apply { a.str("label").takeIf { it.isNotBlank() }?.let { putExtra(AlarmClock.EXTRA_MESSAGE, it) } }
+        }
 
+        // The calendar's new-event screen, filled in: the person saves it.
         "calendar_event" -> Intent(Intent.ACTION_INSERT, CalendarContract.Events.CONTENT_URI)
             .putExtra(CalendarContract.Events.TITLE, a.str("title"))
             .apply {
@@ -146,38 +172,47 @@ object PhoneActions {
                 a.time("end")?.let { putExtra(CalendarContract.EXTRA_EVENT_END_TIME, it) }
                 if (a.bool("all_day") == true) putExtra(CalendarContract.EXTRA_EVENT_ALL_DAY, true)
                 a.str("location").takeIf { it.isNotBlank() }?.let { putExtra(CalendarContract.Events.EVENT_LOCATION, it) }
-                a.str("description").takeIf { it.isNotBlank() }?.let { putExtra(CalendarContract.Events.DESCRIPTION, it) }
+                a.str("notes").takeIf { it.isNotBlank() }?.let { putExtra(CalendarContract.Events.DESCRIPTION, it) }
             }
 
-        "sms_draft" -> Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:" + Uri.encode(a.str("to"))))
+        // A draft: the messaging app opens with it, and the person sends.
+        "sms_draft" -> Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:" + smsNumbers(a.strings("to")).joinToString(";") { Uri.encode(it) }))
             .putExtra("sms_body", a.str("body"))
 
         "email_draft" -> Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:"))
-            .putExtra(
-                Intent.EXTRA_EMAIL,
-                a.list("to").mapNotNull {
-                    (it as? JsonPrimitive)?.content
-                }.ifEmpty { listOf(a.str("to")) }.filter { it.isNotBlank() }.toTypedArray(),
-            )
+            .putExtra(Intent.EXTRA_EMAIL, a.strings("to").toTypedArray())
+            .putExtra(Intent.EXTRA_CC, a.strings("cc").toTypedArray())
             .putExtra(Intent.EXTRA_SUBJECT, a.str("subject"))
             .putExtra(Intent.EXTRA_TEXT, a.str("body"))
 
-        // The dialler with the number in it: the person presses call.
+        // The dialler with the number in it: the person places the call.
         "dial" -> Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + Uri.encode(a.str("number"))))
 
         "open_url" -> a.str("url").trim().takeIf(::urlAllowed)?.let { Intent(Intent.ACTION_VIEW, Uri.parse(it)) }
 
-        "open_app" -> appIntent(context, a.str("package"), a.str("name"))
+        "open_app" -> appIntent(context, "", a.str("app"))
 
         "settings_panel" -> PANELS[a.str("panel")]?.let { Intent(it) }
 
-        "automation" -> a.str("action").takeIf(::broadcastAllowed)?.let { name ->
-            Intent(name).apply {
-                a.str("package").takeIf { it.isNotBlank() }?.let { setPackage(it) }
-                a.obj("extras")?.let { extras ->
-                    // Strings only: an automation app reads its variables as text.
-                    extras.json.forEach { (k, v) -> (v as? JsonPrimitive)?.let { putExtra(k, it.content) } }
-                }
+        // Tasker (by default) runs the task by its name, the values as its local variables; any
+        // other automation app gets LLeMbas's own broadcast, with the task's name and the values.
+        "automation_intent" -> {
+            val task = a.str("task")
+            val app = a.str("app").trim()
+            val values = a.obj("values")?.json.orEmpty().mapNotNull { (k, v) -> (v as? JsonPrimitive)?.let { k to it.content } }
+            if (app.isBlank() || app.equals("tasker", ignoreCase = true)) {
+                Intent(TASKER_ACTION)
+                    .setPackage(TASKER_PACKAGE)
+                    .putExtra("version_number", "1.1")
+                    .putExtra("task_name", task)
+                    .putExtra("task_priority", 5)
+                    .putStringArrayListExtra("varNames", ArrayList(values.map { "%" + it.first.lowercase() }))
+                    .putStringArrayListExtra("varValues", ArrayList(values.map { it.second }))
+            } else {
+                Intent(AUTOMATION_ACTION)
+                    .putExtra("task", task)
+                    .putExtra("app", app)
+                    .apply { values.forEach { (k, v) -> putExtra(k, v) } }
             }
         }
 
@@ -216,7 +251,7 @@ object PhoneActions {
 
     /** A media key to whatever is playing. */
     fun media(context: Context, key: String): ActionOutcome {
-        val code = MEDIA[key] ?: return ActionOutcome(ActionStatus.Failed, "unknown media key: $key")
+        val code = MEDIA[key] ?: return ActionOutcome(ActionStatus.Failed, "unknown media command: $key")
         val audio = context.getSystemService(AudioManager::class.java) ?: return ActionOutcome(ActionStatus.Failed, "no audio")
         audio.dispatchMediaKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, code))
         audio.dispatchMediaKeyEvent(KeyEvent(KeyEvent.ACTION_UP, code))
