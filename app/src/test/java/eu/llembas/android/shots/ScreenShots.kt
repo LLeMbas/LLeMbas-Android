@@ -33,6 +33,9 @@ import eu.llembas.android.ui.home.ArchivedContent
 import eu.llembas.android.ui.home.ChatsState
 import eu.llembas.android.ui.home.DrawerActions
 import eu.llembas.android.ui.home.DrawerContent
+import eu.llembas.android.ui.memory.MemoryActions
+import eu.llembas.android.ui.memory.MemoryContent
+import eu.llembas.android.ui.memory.MemoryState
 import eu.llembas.android.ui.scheduled.RunContent
 import eu.llembas.android.ui.scheduled.ScheduleContent
 import eu.llembas.android.ui.scheduled.ScheduleEditContent
@@ -54,6 +57,8 @@ private object NoChatActions : ChatActions
 private object NoDrawerActions : DrawerActions
 
 private object NoArchivedActions : ArchivedActions
+
+private object NoMemoryActions : MemoryActions
 
 private object NoActivityActions : ActivityActions
 
@@ -243,6 +248,13 @@ class ScreenShots {
         shoot("27-archived") { ArchivedContent(Fakes.chats, NoArchivedActions) }
         shoot("27-archived", Phone.Small, fontScale = 1.5f) { ArchivedContent(Fakes.chats, NoArchivedActions) }
         shoot("27-archived-none") { ArchivedContent(ChatsState(), NoArchivedActions) }
+    }
+
+    @Test
+    fun memory() {
+        shoot("28-memory") { MemoryContent(Fakes.memory, NoMemoryActions) }
+        shoot("28-memory", Phone.Small, fontScale = 1.5f) { MemoryContent(Fakes.memory, NoMemoryActions) }
+        shoot("28-memory-none") { MemoryContent(MemoryState(), NoMemoryActions) }
     }
 }
 

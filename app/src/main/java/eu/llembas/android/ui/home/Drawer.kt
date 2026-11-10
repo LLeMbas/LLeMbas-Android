@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Inventory2
+import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Search
@@ -230,14 +231,15 @@ interface DrawerActions {
     fun files() {}
     fun scheduled() {}
     fun archived() {}
+    fun memory() {}
     fun settings() {}
     fun more() {}
     fun retry() {}
 }
 
 /**
- * The navigation drawer: New chat (and New folder) at the top, search, Files, Scheduled and
- * Archived, then the chats -- the pinned ones, the folders as a tree with theirs, then today's,
+ * The navigation drawer: New chat (and New folder) at the top, search, Files, Scheduled,
+ * Archived and Memory, then the chats -- the pinned ones, the folders as a tree with theirs, then today's,
  * the earlier ones and the agent chats -- and Settings with the account at the foot. A long press
  * on a chat offers Pin, Move to folder and Archive; on a folder, Rename and Delete.
  */
@@ -296,6 +298,7 @@ fun DrawerContent(
                 item { DrawerItem(Icons.Filled.Folder, stringResource(R.string.files), onClick = actions::files) }
                 item { DrawerItem(Icons.Filled.Schedule, stringResource(R.string.scheduled), onClick = actions::scheduled) }
                 item { DrawerItem(Icons.Filled.Inventory2, stringResource(R.string.archived), onClick = actions::archived) }
+                item { DrawerItem(Icons.Filled.Psychology, stringResource(R.string.memory), onClick = actions::memory) }
                 item { HorizontalDivider(color = palette.border, modifier = Modifier.padding(horizontal = 28.dp, vertical = 8.dp)) }
                 state.error?.let { error ->
                     item {

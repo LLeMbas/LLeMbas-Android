@@ -15,6 +15,8 @@ import eu.llembas.android.api.JobsFrame
 import eu.llembas.android.api.LembasJson
 import eu.llembas.android.api.LiveReply
 import eu.llembas.android.api.Me
+import eu.llembas.android.api.MemoryEnvelope
+import eu.llembas.android.api.MemoryList
 import eu.llembas.android.api.Message
 import eu.llembas.android.api.Metrics
 import eu.llembas.android.api.ModelList
@@ -56,6 +58,17 @@ class ContractTest {
         assertEquals("fold1", folders[1].parentId)
         assertTrue(folders[1].collapsed)
         assertEquals("Waybread", read("folder", FolderEnvelope.serializer()).folder.name)
+    }
+
+    @Test
+    fun theMemoriesAndOne() {
+        val list = read("memories", MemoryList.serializer())
+        val one = list.memories.single()
+        assertEquals("Prefers lembas warm.", one.content)
+        assertFalse(one.byModel)
+        assertEquals("default", one.dataGroup.id)
+        assertEquals(listOf("Default"), list.groups.map { it.name })
+        assertEquals("mem1", read("memory", MemoryEnvelope.serializer()).memory.id)
     }
 
     @Test

@@ -188,6 +188,32 @@ data class Folder(
 @Serializable
 data class FolderEnvelope(val folder: Folder)
 
+/** A data group: whose records a memory is kept among. */
+@Serializable
+data class DataGroup(val id: String = "", val name: String = "")
+
+/**
+ * One memory (`/api/v2/memories`, Settings › Memory on the web): its text, who wrote it (`user`
+ * or `model` -- a model's is model output, drawn as plain text), and its data group.
+ */
+@Serializable
+data class Memory(
+    val id: String,
+    val content: String = "",
+    val author: String = "",
+    @SerialName("data_group") val dataGroup: DataGroup = DataGroup(),
+    @SerialName("created_at") val createdAt: String? = null,
+    @SerialName("updated_at") val updatedAt: String? = null,
+) {
+    val byModel: Boolean get() = author == "model"
+}
+
+@Serializable
+data class MemoryList(val memories: List<Memory> = emptyList(), val groups: List<DataGroup> = emptyList())
+
+@Serializable
+data class MemoryEnvelope(val memory: Memory)
+
 @Serializable
 data class FolderList(val folders: List<Folder> = emptyList())
 

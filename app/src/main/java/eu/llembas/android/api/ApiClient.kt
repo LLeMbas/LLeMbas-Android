@@ -171,6 +171,25 @@ class ApiClient(val base: String, private val token: String, val http: OkHttpCli
     /** The folder and the folders inside it; their chats fall back to no folder. */
     suspend fun deleteFolder(id: String) = empty(authed("$v2/folders/${segment(id)}").delete().build())
 
+    // --- Memory (`library.use`) -----------------------------------------------------------------
+
+    /** The person's memories, every data group, and the groups they may file one in. */
+    suspend fun memories(): MemoryList = get("/memories")
+
+    suspend fun addMemory(content: String, groupId: String? = null): Memory = send<MemoryEnvelope>(
+        "POST",
+        "/memories",
+        buildJsonObject {
+            put("content", content)
+            if (groupId != null) put("data_group_id", groupId)
+        },
+    ).memory
+
+    suspend fun editMemory(id: String, content: String): Memory =
+        send<MemoryEnvelope>("PATCH", "/memories/${segment(id)}", buildJsonObject { put("content", content) }).memory
+
+    suspend fun forgetMemory(id: String) = empty(authed("$v2/memories/${segment(id)}").delete().build())
+
     suspend fun devices(): List<LinkedDevice> = get<DeviceList>("/devices").devices
 
     /** The token revokes itself (`lembas logout`'s route). */

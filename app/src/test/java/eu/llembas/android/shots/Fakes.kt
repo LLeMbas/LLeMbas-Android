@@ -8,10 +8,12 @@ import eu.llembas.android.api.AgentsSetting
 import eu.llembas.android.api.Attachment
 import eu.llembas.android.api.Chat
 import eu.llembas.android.api.ContextPart
+import eu.llembas.android.api.DataGroup
 import eu.llembas.android.api.Folder
 import eu.llembas.android.api.LembasJson
 import eu.llembas.android.api.LinkedDevice
 import eu.llembas.android.api.LiveReply
+import eu.llembas.android.api.Memory
 import eu.llembas.android.api.Message
 import eu.llembas.android.api.Metrics
 import eu.llembas.android.api.ModelList
@@ -42,6 +44,7 @@ import eu.llembas.android.auth.Prefs
 import eu.llembas.android.ui.chat.ChatState
 import eu.llembas.android.ui.chat.Draft
 import eu.llembas.android.ui.home.ChatsState
+import eu.llembas.android.ui.memory.MemoryState
 import eu.llembas.android.ui.scheduled.EditState
 import eu.llembas.android.ui.scheduled.ModelsState
 import eu.llembas.android.ui.scheduled.RunState
@@ -274,6 +277,21 @@ object Fakes {
             Folder(id = "f2", name = "Recipes from the Shire, the long list", parentId = "f1", position = 0),
             Folder(id = "f3", name = "Letters", position = 1, collapsed = true),
         ),
+    )
+
+    // Memory: one the person wrote, two a model did, in two data groups.
+    val memory = MemoryState(
+        memories = listOf(
+            Memory("m1", "Prefers lembas warm, with a little honey.", author = "user", dataGroup = DataGroup("default", "Default")),
+            Memory(
+                "m2",
+                "Is walking to the mountain with three friends and asks for recipes that keep for weeks without spoiling on the road.",
+                author = "model",
+                dataGroup = DataGroup("default", "Default"),
+            ),
+            Memory("m3", "Writes the garden's diary in Slovak.", author = "model", dataGroup = DataGroup("garden", "The garden")),
+        ),
+        groups = listOf(DataGroup("default", "Default"), DataGroup("garden", "The garden")),
     )
 
     private val home = Instance(id = "i1", base = "https://llm.example.org", name = "Home", email = "frodo@example.org", sealedToken = "")

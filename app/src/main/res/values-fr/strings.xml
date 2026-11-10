@@ -26,6 +26,15 @@
     <string name="archived">Archivées</string>
     <string name="archived_restore">Restaurer la conversation</string>
     <string name="archived_none">Aucune conversation archivée.</string>
+    <string name="memory">Mémoire</string>
+    <string name="memory_intro">Ce que les modèles retiennent de vous</string>
+    <string name="memory_none">Rien pour l\'instant. Un modèle disposant de l\'outil de mémoire ajoute ici ce que vous lui dites qui vaut la peine d\'être retenu.</string>
+    <string name="memory_remember">Retenir</string>
+    <string name="memory_label">Ce que dit ce souvenir</string>
+    <string name="memory_hint">Quelque chose qui vaut la peine d\'être retenu</string>
+    <string name="memory_group">Groupe de données</string>
+    <string name="memory_forget">Oublier</string>
+    <string name="memory_by_model">Modèle</string>
     <string name="chats_pinned">Discussions épinglées</string>
     <string name="chat_pin">Épingler la discussion</string>
     <string name="chat_unpin">Désépingler la discussion</string>

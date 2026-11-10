@@ -24,6 +24,9 @@ is in alpha and releases come off `main`.
   too), then the rest. A long press on a chat offers **Pin chat** and **Move to folder**; on a
   folder, **Rename folder** and **Delete folder** (its chats stay). **New folder** is beside New
   chat at the top of the drawer.
+- **Memory**, in the drawer: what models remember about you, as Settings › Memory on the web.
+  A tap changes or forgets one; **Remember** adds one (in the data group you pick, when you have
+  more than one). What a model wrote is marked, and shown as plain text.
 - **A scheduled task that watches a web page** says so on its page (*Only when this page
   changes*, and the address), and a run that found the page unchanged is shown as *Unchanged*.
 - **A scheduled task's notification shows its result.** Unlocked, it carries the task's name

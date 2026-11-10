@@ -27,6 +27,15 @@
     <string name="archived">Archived</string>
     <string name="archived_restore">Restore chat</string>
     <string name="archived_none">No archived chats.</string>
+    <string name="memory">Memory</string>
+    <string name="memory_intro">What models remember about you</string>
+    <string name="memory_none">Nothing yet. A model with the memory tool adds to this when you tell it something worth keeping.</string>
+    <string name="memory_remember">Remember</string>
+    <string name="memory_label">What this memory says</string>
+    <string name="memory_hint">Something worth remembering</string>
+    <string name="memory_group">Data group</string>
+    <string name="memory_forget">Forget</string>
+    <string name="memory_by_model">Model</string>
     <string name="chats_pinned">Pinned chats</string>
     <string name="chat_pin">Pin chat</string>
     <string name="chat_unpin">Unpin chat</string>

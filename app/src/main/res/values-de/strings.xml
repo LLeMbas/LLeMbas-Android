@@ -26,6 +26,15 @@
     <string name="archived">Archiviert</string>
     <string name="archived_restore">Chat wiederherstellen</string>
     <string name="archived_none">Keine archivierten Chats.</string>
+    <string name="memory">Gedächtnis</string>
+    <string name="memory_intro">Was sich Modelle über Sie merken</string>
+    <string name="memory_none">Noch nichts. Ein Modell mit dem Gedächtniswerkzeug ergänzt dies, wenn Sie ihm etwas Merkenswertes sagen.</string>
+    <string name="memory_remember">Merken</string>
+    <string name="memory_label">Was diese Erinnerung besagt</string>
+    <string name="memory_hint">Etwas Merkenswertes</string>
+    <string name="memory_group">Datengruppe</string>
+    <string name="memory_forget">Vergessen</string>
+    <string name="memory_by_model">Modell</string>
     <string name="chats_pinned">Angeheftete Chats</string>
     <string name="chat_pin">Chat anheften</string>
     <string name="chat_unpin">Chat loslösen</string>

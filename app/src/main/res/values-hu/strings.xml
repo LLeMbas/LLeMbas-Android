@@ -26,6 +26,15 @@
     <string name="archived">Archivált</string>
     <string name="archived_restore">Csevegés visszaállítása</string>
     <string name="archived_none">Nincs archivált csevegés.</string>
+    <string name="memory">Memória</string>
+    <string name="memory_intro">Amit a modellek megjegyeztek Önről</string>
+    <string name="memory_none">Még semmi. A memóriaeszközzel rendelkező modell akkor egészíti ki, amikor valami megjegyzésre érdemeset mond neki.</string>
+    <string name="memory_remember">Megjegyzés</string>
+    <string name="memory_label">Mit mond ez a memória</string>
+    <string name="memory_hint">Valami, amit érdemes megjegyezni</string>
+    <string name="memory_group">Adatcsoport</string>
+    <string name="memory_forget">Elfelejtés</string>
+    <string name="memory_by_model">Modell</string>
     <string name="chats_pinned">Kitűzött beszélgetések</string>
     <string name="chat_pin">Beszélgetés kitűzése</string>
     <string name="chat_unpin">Kitűzés megszüntetése</string>

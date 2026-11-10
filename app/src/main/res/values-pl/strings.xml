@@ -26,6 +26,15 @@
     <string name="archived">Zarchiwizowane</string>
     <string name="archived_restore">Przywróć czat</string>
     <string name="archived_none">Brak zarchiwizowanych czatów.</string>
+    <string name="memory">Pamięć</string>
+    <string name="memory_intro">Co modele pamiętają o użytkowniku</string>
+    <string name="memory_none">Jeszcze nic. Model z narzędziem pamięci dodaje tu wpis, gdy usłyszy coś, co warto zachować.</string>
+    <string name="memory_remember">Zapamiętaj</string>
+    <string name="memory_label">Treść tego wspomnienia</string>
+    <string name="memory_hint">Coś, co warto zapamiętać</string>
+    <string name="memory_group">Grupa danych</string>
+    <string name="memory_forget">Zapomnij</string>
+    <string name="memory_by_model">Model</string>
     <string name="chats_pinned">Przypięte czaty</string>
     <string name="chat_pin">Przypnij czat</string>
     <string name="chat_unpin">Odepnij czat</string>

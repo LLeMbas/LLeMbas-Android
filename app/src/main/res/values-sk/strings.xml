@@ -26,6 +26,15 @@
     <string name="archived">Archivované</string>
     <string name="archived_restore">Obnoviť konverzáciu</string>
     <string name="archived_none">Žiadne archivované konverzácie.</string>
+    <string name="memory">Pamäť</string>
+    <string name="memory_intro">Čo si o vás modely pamätajú</string>
+    <string name="memory_none">Zatiaľ nič. Model, ktorý má nástroj pamäti, tu pridá záznam, keď mu povieš niečo, čo sa vyplatí uchovať.</string>
+    <string name="memory_remember">Zapamätať</string>
+    <string name="memory_label">Čo si táto pamäť pamätá</string>
+    <string name="memory_hint">Niečo, čo sa vyplatí zapamätať</string>
+    <string name="memory_group">Dátová oblasť</string>
+    <string name="memory_forget">Zabudnúť</string>
+    <string name="memory_by_model">Model</string>
     <string name="chats_pinned">Pripnuté konverzácie</string>
     <string name="chat_pin">Pripnúť konverzáciu</string>
     <string name="chat_unpin">Odopnúť konverzáciu</string>

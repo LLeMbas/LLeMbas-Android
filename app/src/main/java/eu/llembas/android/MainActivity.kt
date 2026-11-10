@@ -44,6 +44,7 @@ import eu.llembas.android.ui.home.ArchivedScreen
 import eu.llembas.android.ui.home.ChatsViewModel
 import eu.llembas.android.ui.home.DrawerActions
 import eu.llembas.android.ui.home.DrawerContent
+import eu.llembas.android.ui.memory.MemoryScreen
 import eu.llembas.android.ui.scheduled.RunScreen
 import eu.llembas.android.ui.scheduled.ScheduleEditScreen
 import eu.llembas.android.ui.scheduled.ScheduleScreen
@@ -223,6 +224,8 @@ class MainActivity : ComponentActivity() {
 
                 override fun archived() = over("archived")
 
+                override fun memory() = over("memory")
+
                 override fun settings() = over("settings")
 
                 override fun more() = chats.more()
@@ -273,6 +276,7 @@ class MainActivity : ComponentActivity() {
                 composable("archived") {
                     ArchivedScreen(onBack = { nav.popBackStack() }, onOpen = { top("chat/$it") }, onRestored = { chats.load() })
                 }
+                composable("memory") { MemoryScreen(onBack = { nav.popBackStack() }) }
                 composable("scheduled") {
                     ScheduledScreen(
                         onBack = { nav.popBackStack() },
