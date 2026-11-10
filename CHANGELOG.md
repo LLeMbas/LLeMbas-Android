@@ -17,6 +17,29 @@ is in alpha and releases come off `main`.
   one line each, side by side. With no computer linked, Agent chat is still there and says how
   to link one -- install the LLeMbas CLI, `lembas login` to this instance, allow remote work and
   start the service, each command with Copy -- with **Check again**.
+- **The assistant is a sheet over the app you are in**, not a full screen. Holding the power
+  button raises it to half the height, with the app still in sight under it; drag its handle up
+  for the full height, down (or Back, or a tap outside) to close it.
+  - **The microphone first**: it opens listening, and the words appear as you say them. A pause
+    sends them; tap the microphone to send at once, or the keyboard to type instead. (Settings ›
+    Assistant can turn the listening off.)
+  - **The model and the connection** at the top: the model's picture and name, the instance and
+    a dot that says whether it answers; a tap picks another model, which the assistant keeps.
+  - **Use screen**: when Android hands the assistant the screen (its text, a screenshot, or
+    both), one tap sends it with your next question -- never without the tap. Quick actions do
+    it in one go: **Summarise this**, **Translate this**, **Explain this**.
+  - **Continue the last chat** the assistant made, from where it stopped; and every question in
+    the sheet carries on the same chat, until **New chat**.
+  - **Voice reply**: a spoken question is answered aloud through your instance's text-to-speech
+    (switch it off at the top), and **Read aloud** reads any answer.
+  - **Open in app** carries on the same chat in the app.
+  - Why there is no wake word is said where you look for one: on stock Android only the
+    assistant built into the phone may listen for one.
+- **Settings › Voice input** says what each choice is: **LLeMbas** is your instance's
+  speech-to-text, through the server -- the recording goes to your instance and nowhere else;
+  **Phone (Google or the system's)** is the phone's own recogniser -- words appear as you speak,
+  and the recording goes wherever that recogniser sends it. No Google library is in the app: it
+  uses whichever recogniser the phone has, and says so when it has none.
 
 ## [1.0.0-beta.4] — 2026-11-09
 

@@ -27,10 +27,13 @@ import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Assistant
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.RecordVoiceOver
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.filled.Timer
@@ -68,6 +71,7 @@ import androidx.compose.ui.unit.dp
 import eu.llembas.android.AppLanguage
 import eu.llembas.android.BuildConfig
 import eu.llembas.android.R
+import eu.llembas.android.assist.PhoneRecognizer
 import eu.llembas.android.auth.Instance
 import eu.llembas.android.auth.Prefs
 import eu.llembas.android.lembas
@@ -87,6 +91,8 @@ interface SettingsActions {
     fun notificationSettings() {}
     fun assistantSettings() {}
     fun assistantTemporary(on: Boolean) {}
+    fun voiceInput(value: String) {}
+    fun assistantListens(on: Boolean) {}
     fun readAloud(on: Boolean) {}
     fun checkUpdate() {}
 }
@@ -101,6 +107,8 @@ data class SettingsState(
     val updateNote: String? = null,
     val version: String = "",
     val selfUpdate: Boolean = false,
+    /** Whether the phone has a speech recogniser of its own (Settings › Voice input › Phone). */
+    val phoneRecognizer: Boolean = false,
 )
 
 @Composable
@@ -161,6 +169,14 @@ fun SettingsScreen(onBack: () -> Unit, onAddInstance: () -> Unit) {
                 scope.launch { store.savePrefs { it.copy(assistantTemporary = on) } }
             }
 
+            override fun voiceInput(value: String) {
+                scope.launch { store.savePrefs { it.copy(voiceInput = value) } }
+            }
+
+            override fun assistantListens(on: Boolean) {
+                scope.launch { store.savePrefs { it.copy(assistantListens = on) } }
+            }
+
             override fun readAloud(on: Boolean) {
                 scope.launch { store.savePrefs { it.copy(readAloudSpoken = on) } }
             }
@@ -180,6 +196,7 @@ fun SettingsScreen(onBack: () -> Unit, onAddInstance: () -> Unit) {
             updateNote = updateNote,
             version = BuildConfig.VERSION_NAME,
             selfUpdate = BuildConfig.SELF_UPDATE,
+            phoneRecognizer = remember { PhoneRecognizer.available(context) },
         ),
         actions,
         onBack,
@@ -326,6 +343,13 @@ fun SettingsContent(state: SettingsState, actions: SettingsActions, onBack: () -
                     )
                     Rule()
                     SettingRow(
+                        Icons.Filled.Mic,
+                        stringResource(R.string.assistant_listens),
+                        onClick = { actions.assistantListens(!state.prefs.assistantListens) },
+                        trailing = { Switch(checked = state.prefs.assistantListens, onCheckedChange = actions::assistantListens) },
+                    )
+                    Rule()
+                    SettingRow(
                         Icons.Filled.RecordVoiceOver,
                         stringResource(R.string.assistant_read_aloud),
                         onClick = { actions.readAloud(!state.prefs.readAloudSpoken) },
@@ -333,7 +357,43 @@ fun SettingsContent(state: SettingsState, actions: SettingsActions, onBack: () -
                     )
                 }
                 Text(
-                    stringResource(R.string.assistant_samsung),
+                    stringResource(R.string.assistant_samsung) + "\n\n" + stringResource(R.string.assist_no_wake_word),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = palette.inkFaint,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                )
+            }
+            item {
+                // Which recogniser turns speech into words: the instance's or the phone's -- what
+                // each one is, and where the recording goes, said in the row itself.
+                Group(stringResource(R.string.voice_input)) {
+                    SettingRow(
+                        Icons.Filled.Dns,
+                        stringResource(R.string.voice_input_lembas),
+                        subtitle = stringResource(R.string.voice_input_lembas_line),
+                        onClick = { actions.voiceInput(Prefs.VOICE_LEMBAS) },
+                        trailing = {
+                            RadioButton(selected = state.prefs.voiceInput != Prefs.VOICE_PHONE, onClick = { actions.voiceInput(Prefs.VOICE_LEMBAS) })
+                        },
+                    )
+                    Rule()
+                    SettingRow(
+                        Icons.Filled.PhoneAndroid,
+                        stringResource(R.string.voice_input_phone),
+                        subtitle = stringResource(if (state.phoneRecognizer) R.string.voice_input_phone_line else R.string.voice_input_phone_none),
+                        enabled = state.phoneRecognizer,
+                        onClick = { actions.voiceInput(Prefs.VOICE_PHONE) },
+                        trailing = {
+                            RadioButton(
+                                selected = state.prefs.voiceInput == Prefs.VOICE_PHONE,
+                                enabled = state.phoneRecognizer,
+                                onClick = { actions.voiceInput(Prefs.VOICE_PHONE) },
+                            )
+                        },
+                    )
+                }
+                Text(
+                    stringResource(R.string.voice_input_hint),
                     style = MaterialTheme.typography.bodySmall,
                     color = palette.inkFaint,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),

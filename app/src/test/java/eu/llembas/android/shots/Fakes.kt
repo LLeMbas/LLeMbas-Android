@@ -28,6 +28,10 @@ import eu.llembas.android.api.SubagentsOffer
 import eu.llembas.android.api.Tail
 import eu.llembas.android.api.ToolBlock
 import eu.llembas.android.api.ToolCall
+import eu.llembas.android.assist.AssistTurn
+import eu.llembas.android.assist.AssistUiState
+import eu.llembas.android.assist.Connection
+import eu.llembas.android.assist.LastAssist
 import eu.llembas.android.auth.Instance
 import eu.llembas.android.auth.Prefs
 import eu.llembas.android.ui.chat.ChatState
@@ -220,6 +224,56 @@ object Fakes {
         hasDistributor = true,
         version = "1.0.0-beta.3",
         selfUpdate = true,
+        phoneRecognizer = true,
+    )
+
+    // The assistant's sheet, as it opens and as it answers.
+    private val assistBase = AssistUiState(
+        instanceName = "Home",
+        connection = Connection.Online,
+        models = models,
+        modelId = models.firstOrNull { it.default }?.id ?: models.firstOrNull()?.id,
+        canSpeak = true,
+    )
+
+    /** Just opened over an app that handed over its screen: listening, the words coming in. */
+    val assistListening = assistBase.copy(
+        listening = true,
+        heard = "How long does waybread keep if it is wrapped in",
+        level = 0.4f,
+        screenText = true,
+        last = LastAssist("c1", "Packing for the road", 0),
+    )
+
+    /** Opened from the tile, nothing asked yet: the last chat, the help, the microphone. */
+    val assistOpened = assistBase.copy(last = LastAssist("c1", "Packing for the road", 0), screenText = true, includeScreen = true)
+
+    /** A spoken question answered, the answer read aloud. */
+    val assistAnswered = assistBase.copy(
+        chatId = "c9",
+        turns = listOf(AssistTurn(question.text.orEmpty(), earlier = answer.steps)),
+        speaking = true,
+    )
+
+    /** An answer being written. */
+    val assistWriting = assistBase.copy(
+        chatId = "c9",
+        busy = true,
+        turns = listOf(
+            AssistTurn(
+                "What is on my screen?",
+                reply = LiveReply("m9", tail = Tail(text = "It is a recipe for waybread: flour, honey and a leaf to wrap it in. The"), status = "Writing…"),
+            ),
+        ),
+    )
+
+    /** The instance cannot be reached. */
+    val assistOffline = assistBase.copy(
+        connection = Connection.Offline,
+        models = emptyList(),
+        modelId = null,
+        canSpeak = false,
+        error = "Home cannot be reached.",
     )
 
     // Scheduled: shaped as the server's contract fixtures are (contract/schedule*.json).

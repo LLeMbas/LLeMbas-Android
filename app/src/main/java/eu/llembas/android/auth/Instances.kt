@@ -70,6 +70,11 @@ private val PREFS = stringPreferencesKey("prefs")
  * What the person chose in Settings, for this phone. [language]: "" the account's language (the
  * default), "system" the phone's, or a language's code -- see [eu.llembas.android.AppLanguage].
  * [accountLanguage] is the account's language as the instance in use last said it.
+ *
+ * The assistant's: [voiceInput] `lembas` (the instance's speech-to-text) or `phone` (the phone's
+ * recogniser); [assistantListens] whether it opens listening; [assistantModel] the model it
+ * starts chats on ("" the account's default); and the last chat it made, which its sheet
+ * offers to continue ([lastAssistChat], its first question, when).
  */
 @Serializable
 data class Prefs(
@@ -78,7 +83,18 @@ data class Prefs(
     val readAloudSpoken: Boolean = true,
     val language: String = "",
     val accountLanguage: String = "",
-)
+    val voiceInput: String = VOICE_LEMBAS,
+    val assistantListens: Boolean = true,
+    val assistantModel: String = "",
+    val lastAssistChat: String = "",
+    val lastAssistTitle: String = "",
+    val lastAssistAt: Long = 0,
+) {
+    companion object {
+        const val VOICE_LEMBAS = "lembas"
+        const val VOICE_PHONE = "phone"
+    }
+}
 
 class InstanceStore(private val context: Context) {
     private val listSerializer = ListSerializer(Instance.serializer())

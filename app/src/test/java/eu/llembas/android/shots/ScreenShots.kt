@@ -16,6 +16,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import eu.llembas.android.assist.AssistActions
+import eu.llembas.android.assist.AssistSheetContent
+import eu.llembas.android.assist.AssistSheetFrame
+import eu.llembas.android.assist.AssistUiState
 import eu.llembas.android.ui.chat.ActivityActions
 import eu.llembas.android.ui.chat.ActivityContent
 import eu.llembas.android.ui.chat.ChatActions
@@ -48,6 +52,8 @@ private object NoDrawerActions : DrawerActions
 private object NoActivityActions : ActivityActions
 
 private object NoSettingsActions : SettingsActions
+
+private object NoAssistActions : AssistActions
 
 /**
  * The app's screens with made-up data ([Fakes]), as a phone shows them: each in Shire and
@@ -124,6 +130,8 @@ class ScreenShots {
     fun settings() {
         shoot("08-settings") { SettingsContent(Fakes.settings, NoSettingsActions) }
         shoot("08-settings", Phone.Small) { SettingsContent(Fakes.settings, NoSettingsActions) }
+        // The whole page: Language, the assistant's switches and Voice input.
+        shoot("08-settings", Phone.Scroll) { SettingsContent(Fakes.settings, NoSettingsActions) }
     }
 
     @Test
@@ -164,6 +172,30 @@ class ScreenShots {
         shoot("16-activity-new-chat") {
             SheetOver { ActivityContent(eu.llembas.android.api.Activity(), readAt = 0, now = 0, actions = NoActivityActions, canCompact = false) }
         }
+    }
+
+    /**
+     * The assistant's sheet over an app (a chat stands in for whatever was on screen): at half
+     * height as it opens, at a small phone's size and with large type too.
+     */
+    @Test
+    fun assistant() {
+        val over: (AssistUiState, Boolean) -> @Composable () -> Unit = { state, locked ->
+            {
+                Box(Modifier.fillMaxSize()) {
+                    ChatContent(Fakes.transcript, NoChatActions, agent = false)
+                    AssistSheetFrame(onDismiss = {}) { handle, _ -> AssistSheetContent(state, NoAssistActions, locked, handle) }
+                }
+            }
+        }
+        shoot("18-assistant-listening", content = over(Fakes.assistListening, false))
+        shoot("18-assistant-listening", Phone.Small, fontScale = 1.5f, content = over(Fakes.assistListening, false))
+        shoot("19-assistant-opened", content = over(Fakes.assistOpened, false))
+        shoot("19-assistant-opened", Phone.Small, content = over(Fakes.assistOpened, false))
+        shoot("20-assistant-answered", content = over(Fakes.assistAnswered, false))
+        shoot("21-assistant-writing", content = over(Fakes.assistWriting, false))
+        shoot("22-assistant-locked", content = over(Fakes.assistOpened, true))
+        shoot("23-assistant-offline", Phone.Small, content = over(Fakes.assistOffline, false))
     }
 
     @Test
