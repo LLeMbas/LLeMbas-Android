@@ -20,7 +20,8 @@ import java.util.Locale
 
 /**
  * The progress line (harness spec 3.4.0, `progress.md`): the spec's own conformance cases
- * (`conformance/progress.json`, the file every client and the server test against), drawn with
+ * (`conformance/progress.json`, the file every client and the server test against, pinned as
+ * `contract/harness_progress.json` from the server's copy of the spec), drawn with
  * the app's English strings as `res/values/strings.xml` has them -- so a string that drifted
  * from `loop.json`'s `progress.texts` fails here too.
  */
@@ -35,10 +36,8 @@ class ProgressTest {
     }
 
     private val cases: List<JsonObject> by lazy {
-        // The server's pinned copy (`contract/harness_progress.json`) once it vendors spec 3.4.0;
-        // until then the spec's own file, copied from LLeMbas CLI 3.4.0 into the test resources.
-        val loader = javaClass.classLoader!!
-        val text = requireNotNull(loader.getResource("harness_progress.json") ?: loader.getResource("progress_conformance.json")).readText()
+        // The server's vendored copy of the spec's file, pinned with the contract.
+        val text = requireNotNull(javaClass.classLoader!!.getResource("harness_progress.json")) { "contract/harness_progress.json is missing" }.readText()
         LembasJson.parseToJsonElement(text).jsonObject.getValue("cases").jsonArray.map { it.jsonObject }
     }
 
