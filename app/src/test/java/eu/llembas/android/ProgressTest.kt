@@ -32,7 +32,7 @@ class ProgressTest {
     /** The app's English, read from the generated resources, formatted as Android formats it. */
     private val english: ProgressWords by lazy {
         val xml = File("src/main/res/values/strings.xml").readText()
-        val strings = Regex("""<string name="progress_([a-z_]+)">(.*?)</string>""").findAll(xml)
+        val strings = Regex("""<string name="progress_([a-z_]+)"[^>]*>(.*?)</string>""").findAll(xml)
             .associate { it.groupValues[1] to it.groupValues[2].replace("\\'", "'").replace("&amp;", "&") }
         val keys = mapOf("stopped_reason_person" to "stopped_person", "stopped_reason_steps" to "stopped_steps", "stopped_reason_budget" to "stopped_budget")
         ProgressWords { key, args -> strings[keys[key] ?: key]?.let { String.format(Locale.ROOT, it, *args) } }
