@@ -477,8 +477,13 @@ data class StepsFrame(val steps: List<Step> = emptyList(), val tail: Tail = Tail
 @Serializable
 data class SteeredFrame(val ids: List<String> = emptyList())
 
+/**
+ * The `status` frame: the free [text] every server sends, and beside it from harness spec 3.4.0
+ * the structured [progress] (`progress.md`) -- null when the session is doing nothing, or from
+ * an older server. A client that reads [progress] draws it and ignores [text].
+ */
 @Serializable
-data class StatusFrame(val text: String = "")
+data class StatusFrame(val text: String = "", val progress: Progress? = null)
 
 @Serializable
 data class AskFrame(val cards: List<Card> = emptyList())

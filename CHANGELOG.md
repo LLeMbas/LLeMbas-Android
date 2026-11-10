@@ -41,6 +41,14 @@ is in alpha and releases come off `main`.
   and the recording goes wherever that recogniser sends it. No Google library is in the app: it
   uses whichever recogniser the phone has, and says so when it has none.
 
+- **What a reply is doing, in the words every LLeMbas app uses.** Under a reply being written
+  the app draws the server's progress -- *Queued*, *Waiting for* a model *and why*, *Loading*,
+  *Reading the prompt: 1999 / 3000 tokens (66%)*, *Thinking*, *Writing: 12.5 tok/s*,
+  *Running bash: bun test*, *Waiting for you*, *Waiting for subagents*, *Compacting*,
+  *Retrying in 7 s*, *Stopped*, *Failed* -- with how long it has been at it, ticking each
+  second (`· 1m 05s`). The same in the assistant's sheet. A server that does not send it yet
+  is shown as before.
+
 ### Fixed
 
 - **A corrected command on an approval runs as corrected.** A linked computer's approval card

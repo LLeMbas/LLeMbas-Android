@@ -15,6 +15,8 @@ data class LiveReply(
     val tail: Tail = Tail(),
     val plan: Plan? = null,
     val status: String = "",
+    /** The structured progress beside [status] (spec 3.4.0); null from an older server, or idle. */
+    val progress: Progress? = null,
     val cards: List<Card> = emptyList(),
     val jobs: List<Job> = emptyList(),
     val metrics: Metrics? = null,
@@ -45,7 +47,7 @@ data class LiveReply(
 
         "plan" -> copy(plan = decodePlan(data))
 
-        "status" -> decode(StatusFrame.serializer(), data)?.let { copy(status = it.text) } ?: this
+        "status" -> decode(StatusFrame.serializer(), data)?.let { copy(status = it.text, progress = it.progress) } ?: this
 
         "ask" -> decode(AskFrame.serializer(), data)?.let { copy(cards = it.cards) } ?: this
 
@@ -54,7 +56,7 @@ data class LiveReply(
         "metrics" -> decode(Metrics.serializer(), data)?.let { copy(metrics = it) } ?: this
 
         "done" -> decode(DoneFrame.serializer(), data)?.let {
-            copy(finished = it.message, title = it.chat.title.ifEmpty { null }, next = it.next, cards = emptyList(), status = "")
+            copy(finished = it.message, title = it.chat.title.ifEmpty { null }, next = it.next, cards = emptyList(), status = "", progress = null)
         } ?: this
 
         "close" -> copy(closed = true)

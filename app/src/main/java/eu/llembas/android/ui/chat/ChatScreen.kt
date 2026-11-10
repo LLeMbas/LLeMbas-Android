@@ -92,6 +92,7 @@ import eu.llembas.android.R
 import eu.llembas.android.api.Message
 import eu.llembas.android.api.ShowCard
 import eu.llembas.android.ui.ModelAvatar
+import eu.llembas.android.ui.progressLineOf
 import eu.llembas.android.ui.theme.LocalPalette
 import eu.llembas.android.ui.viewer.FileViewer
 import kotlinx.coroutines.launch
@@ -286,9 +287,12 @@ fun ChatContent(
                             }
                         }
                     }
-                    if (live != null && live.status.isNotBlank()) {
+                    // The 3.4.0 progress line, ticking; the free status text from an older server.
+                    val progressLine = progressLineOf(live?.progress)
+                    val statusLine = progressLine ?: live?.status.orEmpty()
+                    if (live != null && statusLine.isNotBlank()) {
                         Text(
-                            live.status,
+                            statusLine,
                             style = MaterialTheme.typography.labelSmall,
                             color = palette.inkFaint,
                             maxLines = 1,

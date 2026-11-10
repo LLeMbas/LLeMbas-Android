@@ -88,7 +88,11 @@ class ScreenShots {
     }
 
     @Test
-    fun writing() = shoot("04-writing") { ChatContent(Fakes.writing, NoChatActions, agent = false) }
+    fun writing() {
+        // The 3.4.0 progress line under the reply: `{{text}} · {{elapsed}}`, the clock still.
+        shoot("04-writing") { ChatContent(Fakes.writing, NoChatActions, agent = false) }
+        shoot("04-waiting-for-model", Phone.Small, fontScale = 1.5f) { ChatContent(Fakes.waitingForModel, NoChatActions, agent = false) }
+    }
 
     @Test
     fun drawer() {

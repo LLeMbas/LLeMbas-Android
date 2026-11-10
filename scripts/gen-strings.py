@@ -61,15 +61,21 @@ def server_catalogue(code: str, ref: str | None = None) -> dict[str, str]:
 
 
 def numbered(server_english: str, translation: str) -> str:
-    """A server translation with its named placeholders (`%(n)s`) numbered as Android's
-    (`%1$s`), in the order the server's English names them. `%%` stays as it is: both write a
-    percent sign that way."""
+    """A server translation with its named placeholders numbered as Android's (`%1$s`), in the
+    order the server's English names them. Two kinds: `%(n)s`, where `%%` stays as it is (both
+    write a percent sign that way); and the harness's shared texts' `{{n}}` (the progress
+    keys, `loop.json` `progress.texts`), which are not %-formatted on the server, so a lone `%`
+    there becomes Android's `%%`."""
     names: list[str] = []
-    for name in re.findall(r"%\((\w+)\)s", server_english):
+    braces = "{{" in server_english
+    pattern = r"\{\{(\w+)\}\}" if braces else r"%\((\w+)\)s"
+    for name in re.findall(pattern, server_english):
         if name not in names:
             names.append(name)
+    if braces:
+        translation = translation.replace("%", "%%")
     for i, name in enumerate(names, start=1):
-        translation = translation.replace(f"%({name})s", f"%{i}$s")
+        translation = translation.replace("{{" + name + "}}" if braces else f"%({name})s", f"%{i}$s")
     return translation
 
 
@@ -81,7 +87,7 @@ def server_text(catalogue: dict[str, str], key: str, english: str) -> str | None
     source = SERVER_ENGLISH.get(key)
     if source and source in catalogue:
         text = numbered(source, catalogue[source])
-        return None if "%(" in text else text
+        return None if "%(" in text or "{{" in text else text
     return None
 
 

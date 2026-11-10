@@ -89,6 +89,7 @@ import androidx.compose.ui.unit.dp
 import eu.llembas.android.R
 import eu.llembas.android.ui.ModelAvatar
 import eu.llembas.android.ui.chat.Steps
+import eu.llembas.android.ui.progressLineOf
 import eu.llembas.android.ui.theme.LocalPalette
 import kotlinx.coroutines.launch
 
@@ -470,10 +471,11 @@ private fun Turn(turn: AssistTurn, last: Boolean, state: AssistUiState, actions:
         }
         if (turn.steps.isNotEmpty()) Steps(turn.steps)
         val reply = turn.reply
+        val statusLine = progressLineOf(reply?.progress) ?: reply?.status.orEmpty()
         when {
             reply != null && reply.cards.isNotEmpty() -> TextButton(onClick = onOpenApp) { Text(stringResource(R.string.assist_answer_in_app)) }
 
-            turn.writing && reply?.status?.isNotBlank() == true -> Text(reply.status, style = MaterialTheme.typography.labelSmall, color = palette.inkFaint)
+            turn.writing && statusLine.isNotBlank() -> Text(statusLine, style = MaterialTheme.typography.labelSmall, color = palette.inkFaint)
 
             last && !turn.writing && turn.steps.isNotEmpty() -> Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (state.canSpeak) {

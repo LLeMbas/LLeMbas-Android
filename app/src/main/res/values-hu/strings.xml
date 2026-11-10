@@ -222,6 +222,8 @@
     <string name="card_answer">Az Ön válasza</string>
     <string name="card_something_else">Valami más</string>
     <string name="card_send">Küldés</string>
+    <string name="progress_thinking">Gondolkodás</string>
+    <string name="progress_stopped">Leállítva</string>
     <string name="card_asker">%1$s kérdezi:</string>
     <string name="card_it_says">Ezt mondja: %1$s</string>
     <string name="card_change_before">Módosítás futtatás előtt</string>

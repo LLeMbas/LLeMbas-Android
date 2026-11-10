@@ -14,6 +14,7 @@ import eu.llembas.android.api.LiveReply
 import eu.llembas.android.api.Message
 import eu.llembas.android.api.Metrics
 import eu.llembas.android.api.ModelList
+import eu.llembas.android.api.Progress
 import eu.llembas.android.api.RunError
 import eu.llembas.android.api.RunModel
 import eu.llembas.android.api.RunResult
@@ -183,8 +184,19 @@ object Fakes {
     /** The last reply while it is being written: its tools done, its words coming in. */
     val writing = transcript.copy(
         messages = listOf(question, answer, packing, packingAnswer.copy(steps = emptyList(), complete = false)),
-        live = LiveReply(messageId = "m4", steps = packingSteps.take(2), tail = Tail(text = "Here is a list for **three days**, light enough")),
+        live = LiveReply(
+            messageId = "m4",
+            steps = packingSteps.take(2),
+            tail = Tail(text = "Here is a list for **three days**, light enough"),
+            status = "Writing",
+            progress = Progress(phase = "writing", since = 1762790400000, rate = 12.46),
+        ),
         summary = null,
+    )
+
+    /** Waiting for a model, the long reason: the progress line at its widest. */
+    val waitingForModel = writing.copy(
+        live = writing.live!!.copy(progress = Progress(phase = "waiting_for_model", since = 1762790400000, model = "Qwen 27B", reason = "busy")),
     )
 
     /** A chat on a model with effort levels, a team and a plan: the tune sheet with everything. */

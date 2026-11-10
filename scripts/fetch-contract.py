@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""The server's contract, pinned: `contract/*.json` from `tests/fixtures/api_v2/` at a ref.
+"""The server's contract, pinned: `contract/*.json` from `tests/fixtures/api_v2/` at a ref, and
+the harness spec's conformance cases the app draws by (`harness_*.json`) from the server's copy.
 
     scripts/fetch-contract.py <server-ref>   copy the fixtures at that ref, write contract/lock.json
     scripts/fetch-contract.py                verify: contract/ matches contract/lock.json
@@ -22,6 +23,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 SERVER = Path(os.environ.get("LEMBAS_SERVER", ROOT.parent / "LLeMbas"))
 SOURCE = "tests/fixtures/api_v2"
+# The harness spec's conformance cases a client draws by, from the server's vendored copy of the
+# spec at the same ref: `harness_<name>.json` beside the fixtures, once the server has them.
+HARNESS = "src/lembas/harness_spec/conformance"
+HARNESS_CASES = ("progress.json",)
 OUT = ROOT / "contract"
 LOCK = OUT / "lock.json"
 
@@ -56,8 +61,18 @@ def main() -> None:
         old.unlink()
     for name in names:
         (OUT / name).write_text(git("show", f"{commit}:{SOURCE}/{name}"), encoding="utf-8")
+    have = set(git("ls-tree", "--name-only", f"{commit}:{HARNESS}").split()) if harness_at(commit) else set()
+    for name in HARNESS_CASES:
+        if name in have:
+            (OUT / f"harness_{name}").write_text(git("show", f"{commit}:{HARNESS}/{name}"), encoding="utf-8")
+            names.append(f"harness_{name}")
     LOCK.write_text(json.dumps({"ref": ref, "commit": commit, "sha256": digest()}, indent=2) + "\n")
     print(f"fetch-contract: {len(names)} files from {ref} ({commit[:12]})")
+
+
+def harness_at(commit: str) -> bool:
+    found = subprocess.run(["git", "-C", str(SERVER), "cat-file", "-e", f"{commit}:{HARNESS}"], capture_output=True)
+    return found.returncode == 0
 
 
 if __name__ == "__main__":

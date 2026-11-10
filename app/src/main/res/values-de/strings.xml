@@ -222,6 +222,8 @@
     <string name="card_answer">Ihre Antwort</string>
     <string name="card_something_else">Etwas anderes</string>
     <string name="card_send">Senden</string>
+    <string name="progress_thinking">Denkt nach</string>
+    <string name="progress_stopped">Angehalten</string>
     <string name="card_asker">%1$s fragt:</string>
     <string name="card_it_says">Es sagt: %1$s</string>
     <string name="card_change_before">Vor dem Ausführen ändern</string>

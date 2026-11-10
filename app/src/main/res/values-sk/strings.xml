@@ -222,6 +222,8 @@
     <string name="card_answer">Vaša odpoveď</string>
     <string name="card_something_else">Niečo iné</string>
     <string name="card_send">Poslať</string>
+    <string name="progress_thinking">Premýšľa</string>
+    <string name="progress_stopped">Zastavené</string>
     <string name="card_asker">%1$s sa pýta:</string>
     <string name="card_it_says">Model uvádza: %1$s</string>
     <string name="card_change_before">Upraviť to pred spustením</string>
