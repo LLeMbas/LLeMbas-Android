@@ -47,6 +47,7 @@ import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Keyboard
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.ScreenshotMonitor
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Summarize
@@ -442,6 +443,10 @@ private fun Starting(state: AssistUiState, actions: AssistActions, locked: Boole
             QuickAction(Icons.Filled.Translate, stringResource(R.string.assist_quick_translate)) { actions.quick(translate) }
             QuickAction(Icons.Filled.Lightbulb, stringResource(R.string.assist_quick_explain)) { actions.quick(explain) }
         }
+    }
+    // The notifications, read only now that it is asked, and never over the lock screen.
+    if (state.canReadNotifications && !locked) {
+        QuickAction(Icons.Filled.Notifications, stringResource(R.string.assist_notifications)) { actions.summariseNotifications() }
     }
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(stringResource(R.string.assist_help), style = MaterialTheme.typography.bodySmall, color = palette.inkFaint)

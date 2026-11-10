@@ -93,6 +93,8 @@ data class Prefs(
     val wakePhrase: String = "hey_lembas",
     /** Listen only while the screen is on. */
     val wakeScreenOnly: Boolean = true,
+    /** The assistant may read the notifications when asked (with Android's notification access). */
+    val notificationSummaries: Boolean = false,
     val assistantModel: String = "",
     val lastAssistChat: String = "",
     val lastAssistTitle: String = "",

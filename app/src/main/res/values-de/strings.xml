@@ -417,6 +417,16 @@
     <string name="wake_heard">Gehört. Tippe, um zu fragen.</string>
     <string name="wake_resume">Wieder auf das Aktivierungswort hören</string>
     <string name="wake_resume_line">Das Telefon wurde neu gestartet. Tippe, um wieder zuzuhören.</string>
+    <string name="assist_notifications">Meine Benachrichtigungen zusammenfassen</string>
+    <string name="assist_notifications_prompt">Fasse meine Benachrichtigungen zusammen: Was braucht meine Aufmerksamkeit?</string>
+    <string name="assist_notifications_phrases">meine benachrichtigungen|meinen benachrichtigungen|meiner benachrichtigungen</string>
+    <string name="notification_summaries">Zusammenfassungen der Benachrichtigungen</string>
+    <string name="notification_summaries_switch">Den Assistenten meine Benachrichtigungen lesen lassen, wenn ich frage</string>
+    <string name="notification_summaries_line">Sag „fasse meine Benachrichtigungen zusammen“ oder tippe auf den Chip im Assistenten.</string>
+    <string name="notification_access">Zugriff auf Benachrichtigungen</string>
+    <string name="notification_access_on">Erteilt. Der Schalter dafür ist in den Android-Einstellungen.</string>
+    <string name="notification_access_off">Noch nicht erteilt. Tippe, um den Android-Schalter für LLeMbas zu öffnen.</string>
+    <string name="notification_summaries_privacy">Standardmäßig aus. Wenn du fragst, geht der Text der Benachrichtigungen, die gerade auf deinem Telefon sind (App, Titel, Text), mit dieser einen Frage an deine Instanz und ihr Modell. Vorher wird nichts gelesen, die App behält nichts davon, und bei gesperrtem Telefon wird nichts gelesen. Der Benachrichtigungszugriff von Android lässt eine App jede Benachrichtigung sehen; ihn zu erteilen und zu entziehen liegt bei dir.</string>
     <string name="assist_recogniser_failed">Die Spracherkennung des Telefons hat angehalten. Versuchen Sie es erneut oder wählen Sie LLeMbas unter Einstellungen › Spracheingabe.</string>
     <string name="assistant_listens">Beim Öffnen des Assistenten zuhören</string>
     <string name="voice_input">Spracheingabe</string>

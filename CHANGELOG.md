@@ -26,6 +26,11 @@ is in alpha and releases come off `main`.
   you change it -- with the screen off. Settings explains what it costs in battery and how to
   keep a phone's battery optimisation from stopping it. Not in the F-Droid build, which builds
   every library from source.
+- **"Summarise my notifications"**, if you allow it (off by default). Settings › Assistant ›
+  *Notification summaries*, plus Android's own notification-access switch, which Settings opens
+  for you. Then ask the assistant about "my notifications", or tap its chip, and the
+  notifications on the phone right now go with that one question -- never before you ask, never
+  while the phone is locked, and the app keeps none of them.
 - **Code in colour.** The file viewer highlights a source file by its language (as the server
   names it), and a reply's code blocks by their fence's language: comments, strings, numbers,
   keywords, type names, and markup's tags and attributes, in the theme's own colours in Shire

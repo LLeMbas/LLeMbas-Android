@@ -357,7 +357,7 @@ object Fakes {
     val settings = SettingsState(
         instances = listOf(home, work),
         active = home,
-        prefs = Prefs(theme = "", assistantTemporary = true, accountLanguage = "en"),
+        prefs = Prefs(theme = "", assistantTemporary = true, accountLanguage = "en", notificationSummaries = true),
         hasDistributor = true,
         version = "1.0.0-beta.3",
         selfUpdate = true,
@@ -384,7 +384,7 @@ object Fakes {
     )
 
     /** Opened from the tile, nothing asked yet: the last chat, the help, the microphone. */
-    val assistOpened = assistBase.copy(last = LastAssist("c1", "Packing for the road", 0), screenText = true, includeScreen = true)
+    val assistOpened = assistBase.copy(last = LastAssist("c1", "Packing for the road", 0), screenText = true, includeScreen = true, canReadNotifications = true)
 
     /** A spoken question answered, the answer read aloud. */
     val assistAnswered = assistBase.copy(

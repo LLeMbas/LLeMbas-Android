@@ -419,6 +419,16 @@
     <string name="wake_heard">Heard you. Tap to ask.</string>
     <string name="wake_resume">Listen for the wake word again</string>
     <string name="wake_resume_line">The phone restarted. Tap to start listening again.</string>
+    <string name="assist_notifications">Summarise my notifications</string>
+    <string name="assist_notifications_prompt">Summarise my notifications: what needs my attention?</string>
+    <string name="assist_notifications_phrases">my notifications|notifications on my phone</string>
+    <string name="notification_summaries">Notification summaries</string>
+    <string name="notification_summaries_switch">Let the assistant read my notifications when I ask</string>
+    <string name="notification_summaries_line">Ask “summarise my notifications”, or tap the chip in the assistant.</string>
+    <string name="notification_access">Notification access</string>
+    <string name="notification_access_on">Given. Android\'s switch for it is in the system\'s settings.</string>
+    <string name="notification_access_off">Not given yet. Tap to open Android\'s switch for LLeMbas.</string>
+    <string name="notification_summaries_privacy">Off by default. When you ask, the text of the notifications on your phone right now (app, title, text) goes with that one question to your instance and its model. Nothing is read before you ask, the app keeps none of it, and none is read while the phone is locked. Android\'s notification access lets an app see every notification, so it is yours to give and to take back.</string>
     <string name="assist_recogniser_failed">The phone\'s speech recogniser stopped. Try again, or choose LLeMbas under Settings › Voice input.</string>
     <string name="assistant_listens">Start listening when the assistant opens</string>
     <string name="voice_input">Voice input</string>

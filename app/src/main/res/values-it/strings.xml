@@ -417,6 +417,16 @@
     <string name="wake_heard">Ti ho sentito. Tocca per chiedere.</string>
     <string name="wake_resume">Ascolta di nuovo la parola di attivazione</string>
     <string name="wake_resume_line">Il telefono si è riavviato. Tocca per ricominciare ad ascoltare.</string>
+    <string name="assist_notifications">Riassumi le mie notifiche</string>
+    <string name="assist_notifications_prompt">Riassumi le mie notifiche: cosa richiede la mia attenzione?</string>
+    <string name="assist_notifications_phrases">le mie notifiche|mie notifiche</string>
+    <string name="notification_summaries">Riepiloghi delle notifiche</string>
+    <string name="notification_summaries_switch">Lascia che l’assistente legga le mie notifiche quando lo chiedo</string>
+    <string name="notification_summaries_line">Chiedi «riassumi le mie notifiche» o tocca il pulsante nell’assistente.</string>
+    <string name="notification_access">Accesso alle notifiche</string>
+    <string name="notification_access_on">Concesso. L’interruttore di Android è nelle impostazioni di sistema.</string>
+    <string name="notification_access_off">Non ancora concesso. Tocca per aprire l’interruttore di Android per LLeMbas.</string>
+    <string name="notification_summaries_privacy">Disattivato per impostazione predefinita. Quando lo chiedi, il testo delle notifiche presenti ora sul telefono (app, titolo, testo) va con quella sola domanda alla tua istanza e al suo modello. Prima non si legge nulla, l’app non conserva nulla e a telefono bloccato non si legge nulla. L’accesso alle notifiche di Android permette a un’app di vedere ogni notifica: concederlo e revocarlo spetta a te.</string>
     <string name="assist_recogniser_failed">Il riconoscimento vocale del telefono si è fermato. Riprovi, oppure scelga LLeMbas in Impostazioni › Input vocale.</string>
     <string name="assistant_listens">Inizia ad ascoltare all’apertura dell’assistente</string>
     <string name="voice_input">Input vocale</string>

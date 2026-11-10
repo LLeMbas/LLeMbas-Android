@@ -417,6 +417,16 @@
     <string name="wake_heard">Slyšel jsem vás. Klepněte a ptejte se.</string>
     <string name="wake_resume">Znovu naslouchat budicímu slovu</string>
     <string name="wake_resume_line">Telefon se restartoval. Klepnutím znovu spustíte naslouchání.</string>
+    <string name="assist_notifications">Shrnout má oznámení</string>
+    <string name="assist_notifications_prompt">Shrň moje oznámení: co potřebuje mou pozornost?</string>
+    <string name="assist_notifications_phrases">moje oznámení|má oznámení|mých oznámení|moje notifikace</string>
+    <string name="notification_summaries">Shrnutí oznámení</string>
+    <string name="notification_summaries_switch">Dovolit asistentovi číst má oznámení, když o to požádám</string>
+    <string name="notification_summaries_line">Řekněte „shrň moje oznámení“, nebo klepněte na tlačítko v asistentovi.</string>
+    <string name="notification_access">Přístup k oznámením</string>
+    <string name="notification_access_on">Uděleno. Přepínač Androidu je v systémovém nastavení.</string>
+    <string name="notification_access_off">Zatím neuděleno. Klepnutím otevřete přepínač Androidu pro LLeMbas.</string>
+    <string name="notification_summaries_privacy">Ve výchozím stavu vypnuto. Když požádáte, text oznámení, která jsou v telefonu právě teď (aplikace, název, text), půjde s touto jedinou otázkou na vaši instanci a její model. Dřív se nic nečte, aplikace si nic neponechá a při zamčeném telefonu se nečte nic. Přístup k oznámením v Androidu dovolí aplikaci vidět každé oznámení, proto je na vás, zda ho dáte a zase vezmete.</string>
     <string name="assist_recogniser_failed">Rozpoznávání řeči v telefonu se zastavilo. Zkuste to znovu nebo zvolte LLeMbas v Nastavení › Hlasový vstup.</string>
     <string name="assistant_listens">Začít poslouchat, když se asistent otevře</string>
     <string name="voice_input">Hlasový vstup</string>

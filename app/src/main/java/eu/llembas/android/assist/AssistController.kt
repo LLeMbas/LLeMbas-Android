@@ -15,6 +15,7 @@ import eu.llembas.android.api.ModelInfo
 import eu.llembas.android.api.Step
 import eu.llembas.android.api.StreamClient
 import eu.llembas.android.lembas
+import eu.llembas.android.notify.NotificationReader
 import eu.llembas.android.push.Notifications
 import eu.llembas.android.ui.explain
 import kotlinx.coroutines.CoroutineScope
@@ -76,6 +77,8 @@ data class AssistUiState(
      * until the person says stop, taps End, types, or says nothing.
      */
     val conversation: Boolean = false,
+    /** Whether the person let the assistant read the notifications when asked (Settings and Android both). */
+    val canReadNotifications: Boolean = false,
 ) {
     val screenAvailable: Boolean get() = screenText || screenshot != null
     val modelInfo: ModelInfo? get() = models.firstOrNull { it.id == modelId }
@@ -100,6 +103,7 @@ interface AssistActions {
     fun readAloud() {}
     fun stopReading() {}
     fun endConversation() {}
+    fun summariseNotifications() {}
 }
 
 /**
@@ -145,6 +149,7 @@ class AssistController(private val context: Context, private val scope: Coroutin
                 signedIn = instance != null,
                 instanceName = instance?.name?.ifBlank { instance.base }.orEmpty(),
                 voiceReply = prefs.readAloudSpoken,
+                canReadNotifications = prefs.notificationSummaries && NotificationReader.granted(context),
                 last = prefs.lastAssistChat.takeIf { id -> id.isNotBlank() && !prefs.assistantTemporary }
                     ?.let { id -> LastAssist(id, prefs.lastAssistTitle, prefs.lastAssistAt) },
             )
@@ -366,7 +371,10 @@ class AssistController(private val context: Context, private val scope: Coroutin
         ask(prompt, spoken = false)
     }
 
-    fun ask(question: String, spoken: Boolean) {
+    /** The sheet's "Summarise my notifications": the notifications up now go with the question. */
+    override fun summariseNotifications() = ask(context.getString(R.string.assist_notifications_prompt), spoken = false, notifications = true)
+
+    fun ask(question: String, spoken: Boolean, notifications: Boolean = false) {
         if (question.isBlank()) return
         if (_state.value.listening) type()
         following?.cancel()
@@ -386,7 +394,19 @@ class AssistController(private val context: Context, private val scope: Coroutin
                 val attachments = buildList {
                     if (withScreen) now.screenshot?.let { shot -> add(api.upload("screen.png", "image/png", png(shot), now.chatId).id) }
                 }
-                val text = if (withScreen && screenText != null) "$question\n\n---\nOn my screen:\n\n$screenText" else question
+                // The notifications, when asked for by the chip or by name ("my notifications") --
+                // read now, only while unlocked (NotificationReader.read), and for this question only.
+                val phrases = context.getString(R.string.assist_notifications_phrases).split("|")
+                val notices = if (now.canReadNotifications && (notifications || NotificationReader.asksAbout(question, phrases))) {
+                    NotificationReader.asText(NotificationReader.read(context)).ifBlank { NO_NOTIFICATIONS }
+                } else {
+                    null
+                }
+                val text = buildString {
+                    append(question)
+                    if (withScreen && screenText != null) append("\n\n---\nOn my screen:\n\n$screenText")
+                    if (notices != null) append("\n\n---\nMy notifications:\n\n$notices")
+                }
                 // The screen goes with one question, not every one after it.
                 _state.update { it.copy(includeScreen = false) }
                 val chatId = now.chatId
@@ -523,6 +543,7 @@ class AssistController(private val context: Context, private val scope: Coroutin
 
     companion object {
         const val MAX_SCREEN_CHARS = 8_000
+        private const val NO_NOTIFICATIONS = "(none)"
 
         // Listening, for the instance's speech-to-text (the phone's recogniser finds the end of
         // speech itself). Levels are the RMS of 16-bit samples, 0..1: a room is under 0.01,

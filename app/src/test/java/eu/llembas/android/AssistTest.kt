@@ -11,6 +11,8 @@ import eu.llembas.android.assist.isStopPhrase
 import eu.llembas.android.assist.settle
 import eu.llembas.android.assist.usePhoneRecognizer
 import eu.llembas.android.auth.Prefs
+import eu.llembas.android.notify.Notice
+import eu.llembas.android.notify.NotificationReader
 import eu.llembas.android.share.shareMessage
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -107,5 +109,21 @@ class AssistTest {
         assertFalse(isStopPhrase("How do I stop the kettle from whistling in the morning?", phrases))
         assertFalse(isStopPhrase("", phrases))
         assertTrue(isStopPhrase("Ďakujem, to je všetko", listOf("ďakujem to je všetko")))
+    }
+
+    @Test
+    fun notificationsGoAsShortBlocksAndOnlyWhenAskedFor() {
+        val now = 10 * 3_600_000L
+        val text = NotificationReader.asText(
+            listOf(
+                Notice("Mail", "Bilbo", "The party is on Thursday.", now - 5 * 60_000),
+                Notice("Weather", "Rain", "", now - 3 * 3_600_000),
+            ),
+            now,
+        )
+        assertEquals("[Mail · 5m ago] Bilbo\nThe party is on Thursday.\n\n[Weather · 3h ago] Rain", text)
+        val phrases = listOf("my notifications")
+        assertTrue(NotificationReader.asksAbout("Anything urgent in My Notifications?", phrases))
+        assertFalse(NotificationReader.asksAbout("How do notifications work on Android?", phrases))
     }
 }

@@ -417,6 +417,16 @@
     <string name="wake_heard">Hallottalak. Koppints a kérdezéshez.</string>
     <string name="wake_resume">Ébresztőszó figyelése újra</string>
     <string name="wake_resume_line">A telefon újraindult. Koppints a figyelés folytatásához.</string>
+    <string name="assist_notifications">Értesítéseim összefoglalása</string>
+    <string name="assist_notifications_prompt">Foglald össze az értesítéseimet: mi igényli a figyelmemet?</string>
+    <string name="assist_notifications_phrases">értesítéseim|értesítéseimet|az értesítéseimről</string>
+    <string name="notification_summaries">Értesítések összefoglalása</string>
+    <string name="notification_summaries_switch">Az asszisztens kérésemre elolvashatja az értesítéseimet</string>
+    <string name="notification_summaries_line">Kérd, hogy „foglald össze az értesítéseimet”, vagy koppints a gombra az asszisztensben.</string>
+    <string name="notification_access">Hozzáférés az értesítésekhez</string>
+    <string name="notification_access_on">Megadva. Az Android kapcsolója a rendszerbeállításokban van.</string>
+    <string name="notification_access_off">Még nincs megadva. Koppints az Android LLeMbas-kapcsolójának megnyitásához.</string>
+    <string name="notification_summaries_privacy">Alapból ki van kapcsolva. Ha kéred, a telefonon éppen látható értesítések szövege (alkalmazás, cím, szöveg) ezzel az egy kérdéssel együtt a példányodhoz és a modelljéhez kerül. Előtte semmit nem olvas, az alkalmazás semmit nem tart meg, és zárolt telefonnál semmit nem olvas. Az Android értesítés-hozzáférése minden értesítést láthatóvá tesz egy alkalmazásnak, ezért rajtad múlik, megadod-e, és visszavonod-e.</string>
     <string name="assist_recogniser_failed">A telefon beszédfelismerője leállt. Próbálja újra, vagy válassza a LLeMbast a Beállítások › Hangbevitel alatt.</string>
     <string name="assistant_listens">Hallgatás indítása az asszisztens megnyitásakor</string>
     <string name="voice_input">Hangbevitel</string>

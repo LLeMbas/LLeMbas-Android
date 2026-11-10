@@ -417,6 +417,16 @@
     <string name="wake_heard">Słyszę. Dotknij, aby zapytać.</string>
     <string name="wake_resume">Znów nasłuchuj słowa aktywującego</string>
     <string name="wake_resume_line">Telefon uruchomił się ponownie. Dotknij, aby znów słuchać.</string>
+    <string name="assist_notifications">Podsumuj moje powiadomienia</string>
+    <string name="assist_notifications_prompt">Podsumuj moje powiadomienia: co wymaga mojej uwagi?</string>
+    <string name="assist_notifications_phrases">moje powiadomienia|moich powiadomień|moje notyfikacje</string>
+    <string name="notification_summaries">Podsumowania powiadomień</string>
+    <string name="notification_summaries_switch">Pozwól asystentowi czytać moje powiadomienia, gdy poproszę</string>
+    <string name="notification_summaries_line">Poproś „podsumuj moje powiadomienia” albo dotknij przycisku w asystencie.</string>
+    <string name="notification_access">Dostęp do powiadomień</string>
+    <string name="notification_access_on">Przyznany. Przełącznik Androida jest w ustawieniach systemu.</string>
+    <string name="notification_access_off">Jeszcze nie przyznany. Dotknij, aby otworzyć przełącznik Androida dla LLeMbas.</string>
+    <string name="notification_summaries_privacy">Domyślnie wyłączone. Gdy poprosisz, tekst powiadomień, które są teraz na telefonie (aplikacja, tytuł, treść), trafi z tym jednym pytaniem do Twojej instancji i jej modelu. Wcześniej nic nie jest czytane, aplikacja niczego nie zachowuje i nic nie jest czytane przy zablokowanym telefonie. Dostęp do powiadomień w Androidzie pozwala aplikacji widzieć każde powiadomienie, więc to Ty decydujesz, czy go dać i odebrać.</string>
     <string name="assist_recogniser_failed">Rozpoznawanie mowy w telefonie przestało działać. Spróbuj ponownie albo wybierz LLeMbas w Ustawienia › Wprowadzanie głosowe.</string>
     <string name="assistant_listens">Zacznij słuchać po otwarciu asystenta</string>
     <string name="voice_input">Wprowadzanie głosowe</string>

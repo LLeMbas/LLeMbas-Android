@@ -417,6 +417,16 @@
     <string name="wake_heard">Te he oído. Toca para preguntar.</string>
     <string name="wake_resume">Volver a escuchar la palabra de activación</string>
     <string name="wake_resume_line">El teléfono se reinició. Toca para volver a escuchar.</string>
+    <string name="assist_notifications">Resumir mis notificaciones</string>
+    <string name="assist_notifications_prompt">Resume mis notificaciones: ¿qué necesita mi atención?</string>
+    <string name="assist_notifications_phrases">mis notificaciones</string>
+    <string name="notification_summaries">Resúmenes de notificaciones</string>
+    <string name="notification_summaries_switch">Dejar que el asistente lea mis notificaciones cuando lo pida</string>
+    <string name="notification_summaries_line">Pide «resume mis notificaciones» o toca el botón en el asistente.</string>
+    <string name="notification_access">Acceso a notificaciones</string>
+    <string name="notification_access_on">Concedido. El interruptor de Android está en los ajustes del sistema.</string>
+    <string name="notification_access_off">Aún no concedido. Toca para abrir el interruptor de Android para LLeMbas.</string>
+    <string name="notification_summaries_privacy">Desactivado por defecto. Cuando lo pides, el texto de las notificaciones que hay ahora en tu teléfono (app, título, texto) va con esa única pregunta a tu instancia y su modelo. No se lee nada antes, la app no guarda nada y no se lee nada con el teléfono bloqueado. El acceso a notificaciones de Android permite a una app ver todas las notificaciones; darlo y retirarlo es cosa tuya.</string>
     <string name="assist_recogniser_failed">El reconocimiento de voz del teléfono se detuvo. Inténtelo de nuevo o elija LLeMbas en Ajustes › Entrada de voz.</string>
     <string name="assistant_listens">Empezar a escuchar al abrir el asistente</string>
     <string name="voice_input">Entrada de voz</string>

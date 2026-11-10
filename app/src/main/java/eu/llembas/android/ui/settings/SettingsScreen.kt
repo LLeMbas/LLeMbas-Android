@@ -45,6 +45,7 @@ import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.RecordVoiceOver
 import androidx.compose.material.icons.filled.Science
 import androidx.compose.material.icons.filled.ScreenLockPortrait
+import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.Translate
@@ -87,6 +88,7 @@ import eu.llembas.android.assist.PhoneRecognizer
 import eu.llembas.android.auth.Instance
 import eu.llembas.android.auth.Prefs
 import eu.llembas.android.lembas
+import eu.llembas.android.notify.NotificationReader
 import eu.llembas.android.push.Push
 import eu.llembas.android.ui.theme.LocalPalette
 import eu.llembas.android.update.AppVersion
@@ -119,6 +121,8 @@ interface SettingsActions {
     fun wakePhrase(id: String) {}
     fun wakeScreenOnly(on: Boolean) {}
     fun batterySettings() {}
+    fun notificationSummaries(on: Boolean) {}
+    fun notificationAccess() {}
     fun readAloud(on: Boolean) {}
     fun checkUpdate() {}
     fun openRelease() {}
@@ -145,6 +149,8 @@ data class SettingsState(
     val phoneRecognizer: Boolean = false,
     /** Whether this build has a wake-word engine (the F-Droid build has none). */
     val wakeAvailable: Boolean = false,
+    /** Whether Android's notification access is given to LLeMbas. */
+    val notificationAccess: Boolean = false,
 )
 
 @Composable
@@ -258,6 +264,16 @@ fun SettingsScreen(onBack: () -> Unit, onAddInstance: () -> Unit) {
                 runCatching { context.startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
             }
 
+            // On: Android's own switch is the person's to flip, so its page opens if it is off.
+            override fun notificationSummaries(on: Boolean) {
+                scope.launch { store.savePrefs { it.copy(notificationSummaries = on) } }
+                if (on && !NotificationReader.granted(context)) notificationAccess()
+            }
+
+            override fun notificationAccess() {
+                runCatching { context.startActivity(NotificationReader.settingsIntent(context)) }
+            }
+
             override fun readAloud(on: Boolean) {
                 scope.launch { store.savePrefs { it.copy(readAloudSpoken = on) } }
             }
@@ -313,6 +329,8 @@ fun SettingsScreen(onBack: () -> Unit, onAddInstance: () -> Unit) {
             beta = beta,
             phoneRecognizer = remember { PhoneRecognizer.available(context) },
             wakeAvailable = WakeEngine.AVAILABLE,
+            // Read again each time Settings is composed: the person comes back from the system's page.
+            notificationAccess = NotificationReader.granted(context),
         ),
         actions,
         onBack,
@@ -495,6 +513,7 @@ fun SettingsContent(state: SettingsState, actions: SettingsActions, onBack: () -
                 )
             }
             item { WakeWordGroup(state, actions) }
+            item { NotificationSummaryGroup(state, actions) }
             item {
                 // Which recogniser turns speech into words: the instance's or the phone's -- what
                 // each one is, and where the recording goes, said in the row itself.
@@ -623,6 +642,38 @@ private fun WakeWordGroup(state: SettingsState, actions: SettingsActions) {
     }
     Text(
         stringResource(R.string.wake_word_privacy) + "\n\n" + stringResource(R.string.wake_word_cost),
+        style = MaterialTheme.typography.bodySmall,
+        color = palette.inkFaint,
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+    )
+}
+
+/** Notification summaries: off by default; on needs Android's notification access too, which this explains. */
+@Composable
+private fun NotificationSummaryGroup(state: SettingsState, actions: SettingsActions) {
+    val palette = LocalPalette.current
+    val on = state.prefs.notificationSummaries
+    Group(stringResource(R.string.notification_summaries)) {
+        SettingRow(
+            Icons.Filled.Notifications,
+            stringResource(R.string.notification_summaries_switch),
+            subtitle = stringResource(R.string.notification_summaries_line),
+            onClick = { actions.notificationSummaries(!on) },
+            trailing = { Switch(checked = on, onCheckedChange = actions::notificationSummaries) },
+        )
+        if (on) {
+            Rule()
+            SettingRow(
+                Icons.Filled.Security,
+                stringResource(R.string.notification_access),
+                subtitle = stringResource(if (state.notificationAccess) R.string.notification_access_on else R.string.notification_access_off),
+                tint = if (state.notificationAccess) null else palette.warning,
+                onClick = actions::notificationAccess,
+            )
+        }
+    }
+    Text(
+        stringResource(R.string.notification_summaries_privacy),
         style = MaterialTheme.typography.bodySmall,
         color = palette.inkFaint,
         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
