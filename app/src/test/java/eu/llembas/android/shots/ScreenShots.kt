@@ -123,6 +123,23 @@ class ScreenShots {
         }
         shoot("05-drawer", content = drawn)
         shoot("05-drawer", Phone.Small, content = drawn)
+        // Searching: the titles that match, then what the instance found inside the messages.
+        shoot("05-drawer-search") {
+            ModalNavigationDrawer(
+                drawerState = rememberDrawerState(DrawerValue.Open),
+                drawerContent = {
+                    DrawerContent(
+                        Fakes.chatsFound,
+                        current = null,
+                        account = "Home · frodo@example.org",
+                        actions = NoDrawerActions,
+                        today = Fakes.today,
+                        zone = ZoneOffset.UTC,
+                        initialQuery = "bread",
+                    )
+                },
+            ) { ChatContent(Fakes.transcript, NoChatActions, agent = false) }
+        }
     }
 
     @Test

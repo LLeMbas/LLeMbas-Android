@@ -147,6 +147,7 @@
     <string name="chats_today">Ma</string>
     <string name="chats_earlier">Korábban</string>
     <string name="chats_agents">Ügynök-csevegések</string>
+    <string name="chats_found_in_messages">Az üzenetekben</string>
     <string name="chats_none_found">Egy csevegés címében sincs ilyen.</string>
     <string name="clear">Törlés</string>
     <string name="composer_hint_agent">Mondja meg az ügynöknek, mit tegyen</string>

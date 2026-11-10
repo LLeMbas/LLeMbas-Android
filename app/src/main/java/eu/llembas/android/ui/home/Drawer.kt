@@ -65,6 +65,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.AndroidViewModel
@@ -73,11 +75,14 @@ import eu.llembas.android.R
 import eu.llembas.android.api.Chat
 import eu.llembas.android.api.Doorstep
 import eu.llembas.android.api.Folder
+import eu.llembas.android.api.SearchHit
 import eu.llembas.android.api.fit
 import eu.llembas.android.lembas
 import eu.llembas.android.ui.explain
 import eu.llembas.android.ui.signin.refusal
 import eu.llembas.android.ui.theme.LocalPalette
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -95,6 +100,9 @@ data class ChatsState(
     val error: String? = null,
     /** The person's chat folders (`GET /folders`); empty where they have none. */
     val folders: List<Folder> = emptyList(),
+    /** Chats whose messages hold the search words (`GET /search?in=chats`), and the words asked. */
+    val found: List<SearchHit> = emptyList(),
+    val foundFor: String = "",
 )
 
 /** The drawer's list: every chat of the instance in use, both kinds, newest first. */
@@ -161,6 +169,28 @@ class ChatsViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    private var searching: Job? = null
+
+    /**
+     * Search the chats' messages on the instance for [query], once typing pauses: the title
+     * filter is the phone's own, this finds the words inside. Under two characters, nothing.
+     */
+    fun search(query: String) {
+        searching?.cancel()
+        val q = query.trim()
+        if (q.length < 2) {
+            _state.update { it.copy(found = emptyList(), foundFor = "") }
+            return
+        }
+        searching = viewModelScope.launch {
+            delay(SEARCH_PAUSE_MS)
+            // A failure leaves the title filter alone; the search is the extra.
+            runCatching { getApplication<Application>().lembas.instances.client()?.search(q, within = "chats") }
+                .getOrNull()
+                ?.let { found -> _state.update { it.copy(found = found.hits("chats"), foundFor = q) } }
+        }
+    }
+
     /** Pinned chats stay at the top of the list, wherever they are filed (the web's Pin). */
     fun pin(chat: Chat, pinned: Boolean) = changeChat(chat.copy(pinned = pinned), buildJsonObject { put("pinned", pinned) })
 
@@ -216,6 +246,8 @@ class ChatsViewModel(app: Application) : AndroidViewModel(app) {
     }
 }
 
+private const val SEARCH_PAUSE_MS = 400L
+
 /** Where the drawer can go, besides a chat. */
 interface DrawerActions {
     fun newChat() {}
@@ -235,6 +267,7 @@ interface DrawerActions {
     fun settings() {}
     fun more() {}
     fun retry() {}
+    fun search(query: String) {}
 }
 
 /**
@@ -252,9 +285,11 @@ fun DrawerContent(
     modifier: Modifier = Modifier,
     today: LocalDate = LocalDate.now(),
     zone: ZoneId = ZoneId.systemDefault(),
+    initialQuery: String = "",
 ) {
     val palette = LocalPalette.current
-    var query by rememberSaveable { mutableStateOf("") }
+    var query by rememberSaveable { mutableStateOf(initialQuery) }
+    LaunchedEffect(query) { actions.search(query) }
     val groups = remember(state.chats, state.folders, query, today) { groupChats(state.chats, query, today, zone, state.folders) }
     // The one dialog open at a time: a chat to file, a folder to name (new or renamed), one to delete.
     var moving by remember { mutableStateOf<Chat?>(null) }
@@ -326,7 +361,20 @@ fun DrawerContent(
                 section(R.string.chats_today, groups.today, current, chatActions)
                 section(R.string.chats_earlier, groups.earlier, current, chatActions)
                 section(R.string.chats_agents, groups.agents, current, chatActions)
-                if (groups.isEmpty && !state.loading && state.error == null) {
+                // What the instance found inside the messages, for the words in the box now.
+                val inMessages = if (query.isNotBlank() && state.foundFor == query.trim()) state.found.filter { it.id != null } else emptyList()
+                if (inMessages.isNotEmpty()) {
+                    item(key = "hfound") {
+                        Text(
+                            stringResource(R.string.chats_found_in_messages),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = palette.inkFaint,
+                            modifier = Modifier.padding(start = 28.dp, end = 28.dp, top = 12.dp, bottom = 4.dp),
+                        )
+                    }
+                    items(inMessages, key = { "s${it.id}" }) { hit -> FoundItem(hit, onOpen = { actions.open(hit.id!!) }) }
+                }
+                if (groups.isEmpty && inMessages.isEmpty() && !state.loading && state.error == null) {
                     item {
                         Text(
                             stringResource(if (query.isBlank()) R.string.empty_chats else R.string.chats_none_found),
@@ -383,6 +431,38 @@ fun DrawerContent(
             },
             dismissButton = { TextButton(onClick = { deleting = null }) { Text(stringResource(R.string.cancel)) } },
         )
+    }
+}
+
+/**
+ * A chat found by its words: its title, and the snippet with the matched words marked (plain
+ * text -- a snippet can be model output).
+ */
+@Composable
+private fun FoundItem(hit: SearchHit, onOpen: () -> Unit) {
+    val palette = LocalPalette.current
+    val marked = remember(hit.snippet, hit.marks, palette) {
+        markedSnippet(hit.snippet, hit.marks, SpanStyle(color = palette.ink, fontWeight = FontWeight.SemiBold, background = palette.accentSoft))
+    }
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp)
+            .clip(RoundedCornerShape(20.dp))
+            .clickable(onClick = onOpen)
+            .heightIn(min = 48.dp)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+    ) {
+        Text(
+            hit.title.ifBlank { stringResource(R.string.new_chat) },
+            style = MaterialTheme.typography.bodyLarge,
+            color = palette.ink,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        if (hit.snippet.isNotBlank()) {
+            Text(marked, style = MaterialTheme.typography.bodySmall, color = palette.inkMuted, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        }
     }
 }
 

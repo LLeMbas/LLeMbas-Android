@@ -231,6 +231,8 @@ class MainActivity : ComponentActivity() {
                 override fun more() = chats.more()
 
                 override fun retry() = chats.load()
+
+                override fun search(query: String) = chats.search(query)
             }
         }
         val menu: () -> Unit = { scope.launch { drawer.open() } }

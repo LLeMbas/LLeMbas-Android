@@ -21,6 +21,7 @@ import eu.llembas.android.api.Message
 import eu.llembas.android.api.Metrics
 import eu.llembas.android.api.ModelList
 import eu.llembas.android.api.Plan
+import eu.llembas.android.api.SearchResults
 import eu.llembas.android.api.StatusFrame
 import eu.llembas.android.api.SteeredFrame
 import eu.llembas.android.api.StepsFrame
@@ -69,6 +70,18 @@ class ContractTest {
         assertEquals("default", one.dataGroup.id)
         assertEquals(listOf("Default"), list.groups.map { it.name })
         assertEquals("mem1", read("memory", MemoryEnvelope.serializer()).memory.id)
+    }
+
+    @Test
+    fun theSearchFindsAChatAFileAndAMemory() {
+        val found = read("search", SearchResults.serializer())
+        assertEquals(listOf("chats", "files", "memories"), found.offered)
+        val chat = found.hits("chats").single()
+        assertEquals("chat1", chat.id)
+        assertEquals("lembas", chat.snippet.substring(chat.marks[0][0], chat.marks[0][1]))
+        assertEquals("/home/frodo/bread.md", found.hits("files").single().path)
+        assertEquals("mem1", found.hits("memories").single().id)
+        assertTrue(found.results.first().more)
     }
 
     @Test

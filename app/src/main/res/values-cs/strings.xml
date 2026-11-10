@@ -147,6 +147,7 @@
     <string name="chats_today">Dnes</string>
     <string name="chats_earlier">Dříve</string>
     <string name="chats_agents">Chaty s agentem</string>
+    <string name="chats_found_in_messages">Ve zprávách</string>
     <string name="chats_none_found">Žádný chat to nemá v názvu.</string>
     <string name="clear">Vymazat</string>
     <string name="composer_hint_agent">Řekněte agentovi, co má udělat</string>

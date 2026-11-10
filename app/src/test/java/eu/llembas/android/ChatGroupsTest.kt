@@ -1,9 +1,12 @@
 package eu.llembas.android
 
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.font.FontWeight
 import eu.llembas.android.api.Chat
 import eu.llembas.android.api.Folder
 import eu.llembas.android.ui.home.folderTree
 import eu.llembas.android.ui.home.groupChats
+import eu.llembas.android.ui.home.markedSnippet
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -86,5 +89,13 @@ class ChatGroupsTest {
         // Searching opens everything, and leaves out folders without a match.
         val found = groupChats(chats, "rye", today, zone, folders)
         assertEquals(listOf("inner" to listOf("r")), found.folders.map { it.folder.id to it.chats.map { c -> c.id } })
+    }
+
+    @Test
+    fun aSnippetsMarksAndOnesThatDoNotFit() {
+        val bold = SpanStyle(fontWeight = FontWeight.Bold)
+        val marked = markedSnippet("how long does lembas keep", listOf(listOf(14, 20), listOf(22, 99), listOf(5), listOf(9, 3)), bold)
+        assertEquals("how long does lembas keep", marked.text)
+        assertEquals(listOf(14 to 20, 22 to 25), marked.spanStyles.map { it.start to it.end })
     }
 }

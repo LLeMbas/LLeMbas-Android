@@ -147,6 +147,7 @@
     <string name="chats_today">Aujourd’hui</string>
     <string name="chats_earlier">Plus tôt</string>
     <string name="chats_agents">Discussions d’agent</string>
+    <string name="chats_found_in_messages">Dans les messages</string>
     <string name="chats_none_found">Aucune discussion ne l’a dans son titre.</string>
     <string name="clear">Effacer</string>
     <string name="composer_hint_agent">Dites à l’agent quoi faire</string>

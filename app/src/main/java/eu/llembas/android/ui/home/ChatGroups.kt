@@ -1,5 +1,8 @@
 package eu.llembas.android.ui.home
 
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import eu.llembas.android.api.Chat
 import eu.llembas.android.api.Folder
 import java.time.LocalDate
@@ -84,4 +87,18 @@ fun groupChats(chats: List<Chat>, query: String, today: LocalDate, zone: ZoneId,
     val (agents, plain) = unfiled.partition { it.isAgent }
     val (now, before) = plain.partition { it.day(zone) == today }
     return ChatGroups(today = now, earlier = before, agents = agents, pinned = pinned, folders = groups)
+}
+
+/**
+ * A search hit's snippet with its [marks] drawn in [style]. The ranges are the server's; one that
+ * runs past the text (it counts characters, not UTF-16 units) is cut to fit, and a broken one is
+ * left out, so a bad range never throws.
+ */
+fun markedSnippet(snippet: String, marks: List<List<Int>>, style: SpanStyle): AnnotatedString = buildAnnotatedString {
+    append(snippet)
+    marks.forEach { range ->
+        val start = range.getOrNull(0)?.coerceIn(0, snippet.length) ?: return@forEach
+        val end = range.getOrNull(1)?.coerceIn(start, snippet.length) ?: return@forEach
+        if (end > start) addStyle(style, start, end)
+    }
 }

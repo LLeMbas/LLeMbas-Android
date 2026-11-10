@@ -24,6 +24,9 @@ is in alpha and releases come off `main`.
   too), then the rest. A long press on a chat offers **Pin chat** and **Move to folder**; on a
   folder, **Rename folder** and **Delete folder** (its chats stay). **New folder** is beside New
   chat at the top of the drawer.
+- **Search finds words inside your chats.** Typing in the drawer's search box still filters
+  the titles at once; a moment later the chats whose messages hold the words follow under *In
+  the messages*, with the words marked.
 - **Generate images** in a chat, when your instance makes pictures: from **+** in the composer,
   the next message asks for one, and the picture shows in the reply at its own size. A tap opens
   it whole. Only pictures your instance made and keeps are drawn; nothing is loaded from an

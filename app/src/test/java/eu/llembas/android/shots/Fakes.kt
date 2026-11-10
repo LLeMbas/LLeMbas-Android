@@ -28,6 +28,7 @@ import eu.llembas.android.api.ScheduleCompiled
 import eu.llembas.android.api.ScheduleRun
 import eu.llembas.android.api.SchedulingModel
 import eu.llembas.android.api.SchedulingModels
+import eu.llembas.android.api.SearchHit
 import eu.llembas.android.api.Step
 import eu.llembas.android.api.SubagentTree
 import eu.llembas.android.api.SubagentsOffer
@@ -325,6 +326,26 @@ object Fakes {
             Memory("m3", "Writes the garden's diary in Slovak.", author = "model", dataGroup = DataGroup("garden", "The garden")),
         ),
         groups = listOf(DataGroup("default", "Default"), DataGroup("garden", "The garden")),
+    )
+
+    val chatsFound = chats.copy(
+        foundFor = "bread",
+        found = listOf(
+            SearchHit(
+                kind = "chat",
+                id = "c4",
+                title = "Sourdough timings",
+                snippet = "…leave the bread to rise overnight, then bake it at dawn…",
+                marks = listOf(listOf(11, 16)),
+            ),
+            SearchHit(
+                kind = "chat",
+                id = "c6",
+                title = "Why do leaves keep bread fresh, and does it work with any leaf or only some?",
+                snippet = "Mallorn leaves keep waybread fresh for weeks; other leaves dry the bread out within days.",
+                marks = listOf(listOf(20, 28), listOf(67, 72)),
+            ),
+        ),
     )
 
     private val home = Instance(id = "i1", base = "https://llm.example.org", name = "Home", email = "frodo@example.org", sealedToken = "")

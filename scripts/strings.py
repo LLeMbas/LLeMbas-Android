@@ -162,6 +162,7 @@ STRINGS: dict[str, str] = {
     "chats_today": "Today",
     "chats_earlier": "Earlier",
     "chats_agents": "Agent chats",
+    "chats_found_in_messages": "In the messages",
     "chats_none_found": "No chat has that in its title.",
     "clear": "Clear",
     "composer_hint_agent": "Tell the agent what to do",

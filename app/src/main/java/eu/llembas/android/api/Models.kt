@@ -191,6 +191,35 @@ data class Folder(
 @Serializable
 data class FolderEnvelope(val folder: Folder)
 
+/**
+ * One hit of `GET /api/v2/search`: a chat (by [id]), a file (by [path]) or a memory. [snippet] is
+ * plain text -- a chat's may be model output -- and [marks] the `[start, end)` ranges matched in it.
+ */
+@Serializable
+data class SearchHit(
+    val kind: String = "",
+    val id: String? = null,
+    val title: String = "",
+    val snippet: String = "",
+    val marks: List<List<Int>> = emptyList(),
+    val archived: Boolean = false,
+    val agent: Boolean = false,
+    val path: String? = null,
+)
+
+@Serializable
+data class SearchGroup(val kind: String = "", val more: Boolean = false, val hits: List<SearchHit> = emptyList())
+
+@Serializable
+data class SearchResults(
+    val q: String = "",
+    @SerialName("in") val within: String = "",
+    val offered: List<String> = emptyList(),
+    val results: List<SearchGroup> = emptyList(),
+) {
+    fun hits(kind: String): List<SearchHit> = results.firstOrNull { it.kind == kind }?.hits.orEmpty()
+}
+
 /** A data group: whose records a memory is kept among. */
 @Serializable
 data class DataGroup(val id: String = "", val name: String = "")

@@ -147,6 +147,7 @@
     <string name="chats_today">Heute</string>
     <string name="chats_earlier">Früher</string>
     <string name="chats_agents">Agenten-Chats</string>
+    <string name="chats_found_in_messages">In den Nachrichten</string>
     <string name="chats_none_found">Kein Chat hat das im Titel.</string>
     <string name="clear">Leeren</string>
     <string name="composer_hint_agent">Sag dem Agenten, was er tun soll</string>
