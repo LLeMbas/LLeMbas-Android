@@ -423,6 +423,60 @@ object Fakes {
         error = "Home cannot be reached.",
     )
 
+    /** Source files for the viewer's highlighting: language and text. */
+    val codeFiles: Map<String, Pair<String, String>> = mapOf(
+        "kotlin" to (
+            "kotlin" to """
+                |package shire.kitchen
+                |
+                |/** Waybread keeps for days if it is wrapped in a leaf. */
+                |data class Lembas(val pieces: Int = 3, val wrapped: Boolean = true)
+                |
+                |fun share(bread: Lembas, walkers: List<String>): Map<String, Double> {
+                |    if (!bread.wrapped) return emptyMap() // it has gone stale
+                |    val each = bread.pieces.toDouble() / walkers.size
+                |    return walkers.associateWith { each * 0.5 }
+                |}
+            """.trimMargin()
+            ),
+        "python" to (
+            "python" to """
+                |import json
+                |
+                |
+                |class Pantry:
+                |    ""${'"'}What is left for the road.""${'"'}
+                |
+                |    def __init__(self, path: str) -> None:
+                |        self.items = json.load(open(path))  # one file, read once
+                |
+                |    def count(self, name="lembas"):
+                |        return sum(1 for item in self.items if item == name) or None
+            """.trimMargin()
+            ),
+        "yaml" to (
+            "yaml" to """
+                |# The road east
+                |name: Long Road
+                |stops: 7
+                |provisions:
+                |  - lembas
+                |  - "honey cakes"
+                |rest: true
+            """.trimMargin()
+            ),
+        "typescript" to (
+            "typescript" to """
+                |interface Stop { name: string; miles: number }
+                |
+                |export async function next(stops: Stop[]): Promise<Stop | undefined> {
+                |  // the nearest first
+                |  return stops.sort((a, b) => a.miles - b.miles)[0];
+                |}
+            """.trimMargin()
+            ),
+    )
+
     // A share from another app.
     val shareLink = ShareState(
         text = "The Long Road: a walker's guide to waybread\nhttps://example.org/waybread",

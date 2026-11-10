@@ -18,6 +18,10 @@ is in alpha and releases come off `main`.
   say nothing for a few seconds. The sheet says *In conversation* while it lasts. With a
   Bluetooth headset connected, its microphone is used, so the conversation can stay in your ear.
   Settings › Assistant › *Keep a spoken conversation going* (on; it needs voice replies).
+- **Code in colour.** The file viewer highlights a source file by its language (as the server
+  names it), and a reply's code blocks by their fence's language: comments, strings, numbers,
+  keywords, type names, and markup's tags and attributes, in the theme's own colours in Shire
+  and Moria. Still read-only; a language it does not know is shown plain.
 - **Launcher shortcuts** (long-press the icon): Ask LLeMbas, Speak, Last chat.
 - **A headset's voice button** opens the assistant listening, when LLeMbas answers it; over the
   lock screen it asks to unlock first.

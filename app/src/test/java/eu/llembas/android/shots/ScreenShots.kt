@@ -39,6 +39,7 @@ import eu.llembas.android.ui.chat.ActivityContent
 import eu.llembas.android.ui.chat.CardSheet
 import eu.llembas.android.ui.chat.ChatActions
 import eu.llembas.android.ui.chat.ChatContent
+import eu.llembas.android.ui.chat.CodeBlock
 import eu.llembas.android.ui.chat.ModelPickerContent
 import eu.llembas.android.ui.chat.TuneContent
 import eu.llembas.android.ui.chat.modelId
@@ -59,6 +60,7 @@ import eu.llembas.android.ui.settings.LanguageChoices
 import eu.llembas.android.ui.settings.SettingsActions
 import eu.llembas.android.ui.settings.SettingsContent
 import eu.llembas.android.ui.theme.LocalPalette
+import eu.llembas.android.ui.viewer.FileBody
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -304,6 +306,18 @@ class ScreenShots {
         shoot("28-memory") { MemoryContent(Fakes.memory, NoMemoryActions) }
         shoot("28-memory", Phone.Small, fontScale = 1.5f) { MemoryContent(Fakes.memory, NoMemoryActions) }
         shoot("28-memory-none") { MemoryContent(MemoryState(), NoMemoryActions) }
+    }
+
+    /** The file viewer's code in the theme's colours, a few languages, and a reply's code block. */
+    @Test
+    fun highlighting() {
+        for ((name, file) in Fakes.codeFiles) {
+            shoot("33-viewer-$name") { FileBody("code", file.first, line = 3, text = file.second) }
+        }
+        shoot("33-viewer-kotlin", Phone.Small, fontScale = 1.5f) { FileBody("code", "kotlin", line = 0, text = Fakes.codeFiles.getValue("kotlin").second) }
+        shoot("34-code-block") {
+            Column(Modifier.fillMaxSize().padding(16.dp)) { CodeBlock("ts", Fakes.codeFiles.getValue("typescript").second) }
+        }
     }
 
     /** "Ask LLeMbas" from another app's share menu: a link, and a picture with a file. */

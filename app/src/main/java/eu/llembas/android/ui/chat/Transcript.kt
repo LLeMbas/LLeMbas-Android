@@ -88,6 +88,7 @@ import eu.llembas.android.api.ToolCall
 import eu.llembas.android.lembas
 import eu.llembas.android.ui.MarkdownText
 import eu.llembas.android.ui.Segment
+import eu.llembas.android.ui.highlight
 import eu.llembas.android.ui.progressLineOf
 import eu.llembas.android.ui.splitFences
 import eu.llembas.android.ui.theme.LocalPalette
@@ -391,8 +392,10 @@ fun CodeBlock(language: String, code: String, modifier: Modifier = Modifier) {
             }
         }
         HorizontalDivider(color = palette.codeBorder)
+        // The fence's language in the theme's colours (ui/Highlight.kt); plain when it names none it reads.
+        val shown = remember(code, language, palette) { highlight(code, language, palette) }
         Text(
-            code,
+            shown,
             fontFamily = FontFamily.Monospace,
             fontSize = 13.sp,
             lineHeight = 19.sp,

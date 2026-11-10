@@ -38,13 +38,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.rememberTextMeasurer
@@ -61,7 +64,11 @@ import eu.llembas.android.api.ShowCard
 import eu.llembas.android.lembas
 import eu.llembas.android.ui.MarkdownText
 import eu.llembas.android.ui.explain
+import eu.llembas.android.ui.highlight
+import eu.llembas.android.ui.highlights
 import eu.llembas.android.ui.theme.LocalPalette
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.IOException
 
 /**
@@ -74,15 +81,15 @@ private const val MARKDOWN_MAX_CHARS = 200_000
 private sealed interface Loaded {
     data object Loading : Loaded
 
-    /** [kind]: what the server said the file is, when it is only known once it came. */
-    data class Text(val text: String, val kind: String? = null) : Loaded
+    /** [kind], [language]: what the server said the file is, when it is only known once it came. */
+    data class Text(val text: String, val kind: String? = null, val language: String? = null) : Loaded
 
     /** [unavailable]: this server has no door for the app to read the file through. */
     data class Failed(val message: String, val unavailable: Boolean = false) : Loaded
 }
 
 /** What the viewer's title and body need to know before the text comes. */
-private data class Viewed(val name: String, val path: String, val line: Int, val kind: String)
+private data class Viewed(val name: String, val path: String, val line: Int, val kind: String, val language: String = "")
 
 /**
  * What a `show` card opens: the file, full screen, read-only, as the chat sees it now.
@@ -97,7 +104,7 @@ private data class Viewed(val name: String, val path: String, val line: Int, val
 @Composable
 fun FileViewer(chatId: String, show: ShowCard, onClose: () -> Unit) {
     Viewer(
-        file = Viewed(show.name, show.path, show.line, show.viewKind),
+        file = Viewed(show.name, show.path, show.line, show.viewKind, show.language),
         key = chatId to show,
         webUrl = { it.webViewer(chatId, show) },
         load = { api, _ -> Loaded.Text(api.shownText(chatId, show)) },
@@ -120,7 +127,7 @@ fun TreeFileViewer(path: String, onClose: () -> Unit) {
             val file = api.fileContent(path)
             val withheld = file.withheld
             when {
-                withheld == null -> Loaded.Text(file.text, file.viewKind)
+                withheld == null -> Loaded.Text(file.text, file.viewKind, file.language)
                 withheld.message.isNotBlank() -> Loaded.Failed(withheld.message)
                 withheld.reason == "too_large" -> Loaded.Failed(context.getString(R.string.viewer_too_large))
                 else -> Loaded.Failed(context.getString(R.string.viewer_not_text))
@@ -217,15 +224,20 @@ private fun Viewer(file: Viewed, key: Any, webUrl: (ApiClient) -> String?, load:
                         }
                     }
 
-                    is Loaded.Text -> Body(now.kind ?: file.kind, file.line, now.text)
+                    is Loaded.Text -> FileBody(now.kind ?: file.kind, now.language ?: file.language, file.line, now.text)
                 }
             }
         }
     }
 }
 
+/**
+ * A file's text as the viewer draws it, from these alone (what the screenshot tests draw):
+ * Markdown rendered, anything else as numbered lines -- code in the theme's colours when its
+ * [language] is one [highlight] reads. Read-only either way.
+ */
 @Composable
-private fun Body(kind: String, line: Int, text: String) {
+fun FileBody(kind: String, language: String, line: Int, text: String) {
     val palette = LocalPalette.current
     if (kind == "markdown" && text.length <= MARKDOWN_MAX_CHARS) {
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
@@ -247,7 +259,7 @@ private fun Body(kind: String, line: Int, text: String) {
                 modifier = Modifier.fillMaxWidth().background(palette.bgSunken).padding(horizontal = 16.dp, vertical = 10.dp),
             )
         }
-        Lines(text, line)
+        Lines(text, line, language)
     }
 }
 
@@ -258,12 +270,14 @@ private fun Body(kind: String, line: Int, text: String) {
  * text rather than under the numbers.
  */
 @Composable
-private fun Lines(text: String, line: Int) {
+private fun Lines(text: String, line: Int, language: String) {
     val palette = LocalPalette.current
-    val rows = remember(text) {
-        val split = text.split('\n')
-        if (split.size > 1 && split.last().isEmpty()) split.dropLast(1) else split
+    val plain = remember(text) { linesOf(AnnotatedString(text)) }
+    // Highlighted off the main thread: a long file shows plain for a moment, then in colour.
+    val coloured by produceState<List<AnnotatedString>?>(null, text, language, palette) {
+        if (highlights(language)) value = withContext(Dispatchers.Default) { linesOf(highlight(text, language, palette)) }
     }
+    val rows = coloured ?: if (LocalInspectionMode.current && highlights(language)) linesOf(highlight(text, language, palette)) else plain
     val style = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 13.sp, lineHeight = 18.sp, color = palette.ink)
     val measurer = rememberTextMeasurer()
     val density = LocalDensity.current
@@ -286,9 +300,24 @@ private fun Lines(text: String, line: Int) {
             ) {
                 Text((i + 1).toString(), style = style.copy(color = palette.inkFaint), textAlign = TextAlign.End, modifier = Modifier.width(gutter))
                 Spacer(Modifier.width(12.dp))
-                Text(row.ifEmpty { " " }, style = style, modifier = Modifier.weight(1f))
+                Text(if (row.isEmpty()) AnnotatedString(" ") else row, style = style, modifier = Modifier.weight(1f))
             }
         }
+    }
+}
+
+/** [text]'s lines, each with its own spans; a final newline makes no empty last line. */
+private fun linesOf(text: AnnotatedString): List<AnnotatedString> {
+    val out = mutableListOf<AnnotatedString>()
+    var start = 0
+    while (true) {
+        val end = text.text.indexOf('\n', start)
+        if (end < 0) {
+            if (start < text.length || out.isEmpty()) out += text.subSequence(start, text.length)
+            return out
+        }
+        out += text.subSequence(start, end)
+        start = end + 1
     }
 }
 
