@@ -62,6 +62,8 @@
     <string name="attach_take_photo">Fénykép készítése</string>
     <string name="attach_choose_photos">Fényképek kiválasztása</string>
     <string name="attach_choose_files">Fájlok kiválasztása</string>
+    <string name="image_generate">Képek generálása</string>
+    <string name="image_generated">A generált kép</string>
     <string name="copy_message">Üzenet másolása</string>
     <string name="copied">Másolva.</string>
     <string name="rename_chat">Csevegés átnevezése</string>

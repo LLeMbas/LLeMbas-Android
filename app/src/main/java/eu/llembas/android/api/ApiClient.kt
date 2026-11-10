@@ -242,12 +242,14 @@ class ApiClient(val base: String, private val token: String, val http: OkHttpCli
         },
     )
 
-    suspend fun sendMessage(chatId: String, text: String, attachments: List<String> = emptyList()): Turn = send(
+    /** A turn. [forceTool] makes the model call that tool (the server allows `image_generate` only). */
+    suspend fun sendMessage(chatId: String, text: String, attachments: List<String> = emptyList(), forceTool: String? = null): Turn = send(
         "POST",
         "/chats/$chatId/messages",
         buildJsonObject {
             put("text", text)
             put("attachments", JsonArray(attachments.map { JsonPrimitive(it) }))
+            forceTool?.let { put("force_tool", it) }
         },
     )
 

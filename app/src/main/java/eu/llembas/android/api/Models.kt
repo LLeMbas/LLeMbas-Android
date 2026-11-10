@@ -89,6 +89,9 @@ data class Me(
 
     /** The instance's text-to-speech (the assistant's voice reply, Read aloud). */
     val hasTextToSpeech: Boolean get() = services["tts"] == true
+
+    /** The instance makes pictures for this person (`image_generate`, in a chat). */
+    val hasImages: Boolean get() = services["images"] == true
 }
 
 @Serializable
@@ -334,8 +337,18 @@ data class ToolCall(
     val children: List<ToolCall>? = null,
     /** The `show` tool's card: a file put in front of the person. Never its text. */
     val show: ShowCard? = null,
+    /** `image_generate`'s picture: the server's own attachment, by id, and its size. */
+    val image: GeneratedImage? = null,
     val block: ToolBlock = ToolBlock(),
 )
+
+/**
+ * A picture the instance made (`event["image"]`): an attachment of the chat's owner, fetched
+ * with the token from `GET /api/v2/attachments/{id}` and nowhere else. Its size is known before
+ * it loads, so the space it takes does not jump.
+ */
+@Serializable
+data class GeneratedImage(val id: String = "", val width: Int = 0, val height: Int = 0)
 
 /**
  * What a `show` call put in front of the person (`event["show"]`, harness spec 3.0.0): the

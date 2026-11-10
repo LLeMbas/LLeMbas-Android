@@ -24,6 +24,10 @@ is in alpha and releases come off `main`.
   too), then the rest. A long press on a chat offers **Pin chat** and **Move to folder**; on a
   folder, **Rename folder** and **Delete folder** (its chats stay). **New folder** is beside New
   chat at the top of the drawer.
+- **Generate images** in a chat, when your instance makes pictures: from **+** in the composer,
+  the next message asks for one, and the picture shows in the reply at its own size. A tap opens
+  it whole. Only pictures your instance made and keeps are drawn; nothing is loaded from an
+  address a reply names.
 - **Memory**, in the drawer: what models remember about you, as Settings › Memory on the web.
   A tap changes or forgets one; **Remember** adds one (in the data group you pick, when you have
   more than one). What a model wrote is marked, and shown as plain text.

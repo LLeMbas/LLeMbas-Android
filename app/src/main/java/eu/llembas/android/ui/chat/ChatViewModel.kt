@@ -75,6 +75,8 @@ data class ChatState(
     val compacting: Boolean = false,
     /** What a chat not made yet will be made with: chosen in the top bar and the tune sheet. */
     val draft: Draft = Draft(),
+    /** The instance makes pictures for this person (`/me` `services.images`). */
+    val imagesOffered: Boolean = false,
     /** The subagent tree (spec 3.4.0) from this chat's last `tree` frame; null until one came. */
     val tree: SubagentTree? = null,
     /** For a new agent chat: whether it may have subagents, and whether its device runs them. */
@@ -93,7 +95,12 @@ data class Draft(
     val agentMode: String = "edit",
     val device: String? = null,
     val directory: String = "",
+    /** The next message asks for a picture (`force_tool: image_generate`); cleared once sent. */
+    val image: Boolean = false,
 )
+
+/** The one tool a message may force (the server's `FORCEABLE_TOOLS`): make a picture. */
+const val IMAGE_TOOL = "image_generate"
 
 /** The model in force: the chat's, else the one chosen for the new chat, else the default. */
 val ChatState.modelId: String?
@@ -227,6 +234,7 @@ class ChatViewModel(app: Application) :
                     if (agent) readAgentFacts()
                     return@launch
                 }
+                runCatching { client.me() }.onSuccess { me -> _state.update { it.copy(imagesOffered = me.hasImages) } }
                 val detail = client.chat(chatId)
                 _state.update {
                     it.copy(chat = detail.chat, messages = detail.messages, more = detail.more, models = models, loading = false)
@@ -361,7 +369,9 @@ class ChatViewModel(app: Application) :
                     _state.update { it.copy(chat = made.chat, messages = listOfNotNull(made.message, made.reply)) }
                     made.reply?.let { follow(it.id) }
                 } else {
-                    took(client.sendMessage(chat.id, text, files))
+                    val picture = _state.value.draft.image && _state.value.imagesOffered
+                    _state.update { it.copy(draft = it.draft.copy(image = false)) }
+                    took(client.sendMessage(chat.id, text, files, forceTool = if (picture) IMAGE_TOOL else null))
                 }
             } catch (e: Exception) {
                 // Nothing was sent: the words and the attachments go back to the composer.

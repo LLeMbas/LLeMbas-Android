@@ -75,6 +75,8 @@ STRINGS: dict[str, str] = {
     "attach_take_photo": "Take a photo",
     "attach_choose_photos": "Choose photos",
     "attach_choose_files": "Choose files",
+    "image_generate": "Generate images",
+    "image_generated": "The generated image",
     "copy_message": "Copy message",
     "copied": "Copied.",
     "rename_chat": "Rename chat",

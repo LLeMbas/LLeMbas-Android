@@ -466,8 +466,8 @@ private fun ThinkingChip(step: Step) {
 
 /**
  * One round of tools as one chip: a single call by its title ("bake --slow"), several by their
- * count. Open, each call is its block (command, change, output). A `show` card is drawn apart,
- * always in view.
+ * count. Open, each call is its block (command, change, output). A `show` card and a picture
+ * the instance made are drawn apart, always in view.
  */
 @Composable
 private fun ToolsChip(step: Step, onShow: ((ShowCard) -> Unit)?) {
@@ -502,6 +502,9 @@ private fun ToolsChip(step: Step, onShow: ((ShowCard) -> Unit)?) {
         }
     }
     shows.forEach { call -> ToolCallBlock(call, onShow = onShow) }
+    // A picture the instance made stays in view, like a `show` card: it is the answer.
+    step.calls.mapNotNull { call -> call.image?.takeIf { it.id.isNotBlank() && call.status != "error" && call.error.isNullOrEmpty() } }
+        .forEach { GeneratedPicture(it) }
 }
 
 @Composable

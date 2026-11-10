@@ -31,6 +31,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.Brush
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Mic
@@ -47,6 +48,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.InputChip
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -220,6 +222,17 @@ fun Composer(state: ChatState, actions: ChatActions, agent: Boolean, onTune: () 
     ) {
         Column {
             if (state.uploading) LinearProgressIndicator(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 4.dp))
+            if (state.draft.image) {
+                // The next message asks for a picture: said where it is typed, and undone here.
+                InputChip(
+                    selected = true,
+                    onClick = { actions.updateDraft { it.copy(image = false) } },
+                    label = { Text(stringResource(R.string.image_generate)) },
+                    leadingIcon = { Icon(Icons.Filled.Brush, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                    trailingIcon = { Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.remove), modifier = Modifier.size(18.dp)) },
+                    modifier = Modifier.padding(start = 12.dp, top = 8.dp).heightIn(min = 40.dp),
+                )
+            }
             if (state.pending.isNotEmpty()) {
                 Row(
                     Modifier.horizontalScroll(rememberScrollState()).padding(start = 12.dp, end = 12.dp, top = 12.dp),
@@ -310,6 +323,18 @@ fun Composer(state: ChatState, actions: ChatActions, agent: Boolean, onTune: () 
                                 pickFiles.launch("*/*")
                             },
                         )
+                        // A picture made by the instance, in a chat that exists (the server takes
+                        // `force_tool` on a turn, not on the message that makes a chat).
+                        if (state.imagesOffered && state.chat != null && !agent) {
+                            DropdownMenuItem(
+                                leadingIcon = { Icon(Icons.Filled.Brush, contentDescription = null) },
+                                text = { Text(stringResource(R.string.image_generate)) },
+                                onClick = {
+                                    attachMenu = false
+                                    actions.updateDraft { it.copy(image = true) }
+                                },
+                            )
+                        }
                     }
                 }
                 // The tune button: the icon, and what is set in a few words. It sits in the one

@@ -15,6 +15,21 @@ import org.junit.Test
  * cards are in `contract/tool_show.json` and read by `ContractTest`.
  */
 class ShowAndServerTest {
+    @Test
+    fun aGeneratedPictureIsAnAttachmentIdAndASize() {
+        // services/images/tool.py: `image: {id, width, height}` on the tool event; no URL at all.
+        val call = LembasJson.decodeFromString(
+            ToolCall.serializer(),
+            """{"id":"t1","name":"image_generate","status":"ok","attachment_id":"att1",
+               "image":{"id":"att1","width":1216,"height":832},"block":{"kind":"image","title":"a leaf"}}""",
+        )
+        assertEquals("att1", call.image!!.id)
+        assertEquals(1216, call.image!!.width)
+        assertEquals(832, call.image!!.height)
+        assertNull(LembasJson.decodeFromString(ToolCall.serializer(), """{"name":"read"}""").image)
+        assertEquals("image_generate", eu.llembas.android.ui.chat.IMAGE_TOOL)
+    }
+
     private fun call(json: String) = LembasJson.decodeFromString(ToolCall.serializer(), json)
 
     @Test

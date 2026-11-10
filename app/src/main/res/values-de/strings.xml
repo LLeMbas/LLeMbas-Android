@@ -62,6 +62,8 @@
     <string name="attach_take_photo">Foto aufnehmen</string>
     <string name="attach_choose_photos">Fotos auswählen</string>
     <string name="attach_choose_files">Dateien auswählen</string>
+    <string name="image_generate">Bilder generieren</string>
+    <string name="image_generated">Das generierte Bild</string>
     <string name="copy_message">Nachricht kopieren</string>
     <string name="copied">Kopiert.</string>
     <string name="rename_chat">Chat umbenennen</string>

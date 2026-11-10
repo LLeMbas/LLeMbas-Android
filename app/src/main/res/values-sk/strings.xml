@@ -62,6 +62,8 @@
     <string name="attach_take_photo">Odfotiť</string>
     <string name="attach_choose_photos">Vybrať fotky</string>
     <string name="attach_choose_files">Vybrať súbory</string>
+    <string name="image_generate">Generovať obrázky</string>
+    <string name="image_generated">Vygenerovaný obrázok</string>
     <string name="copy_message">Skopírovať správu</string>
     <string name="copied">Skopírované.</string>
     <string name="rename_chat">Premenovať konverzáciu</string>

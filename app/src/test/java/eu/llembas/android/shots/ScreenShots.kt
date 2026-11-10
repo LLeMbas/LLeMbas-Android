@@ -251,6 +251,13 @@ class ScreenShots {
     }
 
     @Test
+    fun picture() {
+        // The picture's place is its size before it loads (screenshots fetch nothing).
+        shoot("29-generated-image") { ChatContent(Fakes.picture, NoChatActions, agent = false) }
+        shoot("29-generated-image", Phone.Small, fontScale = 1.5f) { ChatContent(Fakes.picture, NoChatActions, agent = false) }
+    }
+
+    @Test
     fun memory() {
         shoot("28-memory") { MemoryContent(Fakes.memory, NoMemoryActions) }
         shoot("28-memory", Phone.Small, fontScale = 1.5f) { MemoryContent(Fakes.memory, NoMemoryActions) }

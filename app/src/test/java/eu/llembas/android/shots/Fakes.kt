@@ -10,6 +10,7 @@ import eu.llembas.android.api.Chat
 import eu.llembas.android.api.ContextPart
 import eu.llembas.android.api.DataGroup
 import eu.llembas.android.api.Folder
+import eu.llembas.android.api.GeneratedImage
 import eu.llembas.android.api.LembasJson
 import eu.llembas.android.api.LinkedDevice
 import eu.llembas.android.api.LiveReply
@@ -114,6 +115,38 @@ object Fakes {
     )
 
     val chat = Chat(id = "c1", title = "Packing for the road", model = "qwen", updatedAt = "2026-03-10T09:00:00+00:00")
+
+    // A picture the instance made, and the composer asking for the next one.
+    val picture = ChatState(
+        chat = chat,
+        models = models,
+        imagesOffered = true,
+        draft = Draft(image = true),
+        messages = listOf(
+            Message(id = "p1", role = "user", text = "Draw lembas wrapped in a mallorn leaf, on a wooden table."),
+            Message(
+                id = "p2",
+                role = "assistant",
+                model = "qwen",
+                steps = listOf(
+                    Step(
+                        index = 0,
+                        kind = "tools",
+                        calls = listOf(
+                            ToolCall(
+                                id = "g1",
+                                name = "image_generate",
+                                status = "ok",
+                                image = GeneratedImage(id = "att-picture", width = 1216, height = 832),
+                                block = ToolBlock(kind = "image", title = "lembas in a mallorn leaf"),
+                            ),
+                        ),
+                    ),
+                    Step(index = 1, kind = "text", markdown = "Here it is: the leaf folded twice, as the elves wrap it."),
+                ),
+            ),
+        ),
+    )
 
     val newChat = ChatState(models = models)
 
