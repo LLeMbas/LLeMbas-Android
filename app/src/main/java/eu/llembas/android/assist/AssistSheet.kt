@@ -240,7 +240,9 @@ fun ColumnScope.AssistSheetContent(
             }
         }
         if (state.busy) {
-            LinearProgressIndicator(Modifier.fillMaxWidth().padding(horizontal = 16.dp).height(2.dp))
+            val bar = Modifier.fillMaxWidth().padding(horizontal = 16.dp).height(2.dp)
+            // A preview (the screenshot tests) cannot wait out an endless animation: a still bar there.
+            if (LocalInspectionMode.current) LinearProgressIndicator(progress = { 0.4f }, modifier = bar) else LinearProgressIndicator(bar)
         } else {
             Spacer(Modifier.height(2.dp))
         }

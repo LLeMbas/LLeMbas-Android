@@ -10,6 +10,7 @@ import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.IntrinsicSize
@@ -431,39 +432,47 @@ private fun Greeting(
     modifier: Modifier = Modifier,
 ) {
     val palette = LocalPalette.current
-    Column(modifier.fillMaxSize()) {
-        if (onKind != null) KindChoice(agent, onKind, Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
-        if (agent && state.devices.isEmpty() && !state.loading) {
+    if (agent && state.devices.isEmpty() && !state.loading) {
+        Column(modifier.fillMaxSize()) {
+            if (onKind != null) KindChoice(agent, onKind, Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
             LinkComputer(state.instanceBase, onRecheck, Modifier.weight(1f))
-            return@Column
         }
-        Column(
-            Modifier.weight(1f).fillMaxWidth().padding(horizontal = 32.dp),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            if (agent) {
-                Box(Modifier.size(64.dp).background(palette.accentSoft, RoundedCornerShape(20.dp)), contentAlignment = Alignment.Center) {
-                    Icon(Icons.Filled.Terminal, contentDescription = null, tint = palette.accent, modifier = Modifier.size(32.dp))
-                }
-                Spacer(Modifier.height(20.dp))
-                Text(stringResource(R.string.agent_greeting), style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
-                Spacer(Modifier.height(8.dp))
-                val device = state.device
-                val where = when {
-                    device == null -> stringResource(R.string.agent_no_device)
+        return
+    }
+    // One scroll for the choice and the greeting, so a small phone at large type still reaches
+    // both; on a tall one the greeting sits in the middle of what is left.
+    BoxWithConstraints(modifier.fillMaxSize()) {
+        val room = maxHeight
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+            if (onKind != null) KindChoice(agent, onKind, Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+            Column(
+                Modifier.fillMaxWidth().heightIn(min = room * 0.6f).padding(horizontal = 32.dp, vertical = 16.dp),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                if (agent) {
+                    Box(Modifier.size(64.dp).background(palette.accentSoft, RoundedCornerShape(20.dp)), contentAlignment = Alignment.Center) {
+                        Icon(Icons.Filled.Terminal, contentDescription = null, tint = palette.accent, modifier = Modifier.size(32.dp))
+                    }
+                    Spacer(Modifier.height(20.dp))
+                    Text(stringResource(R.string.agent_greeting), style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
+                    Spacer(Modifier.height(8.dp))
+                    val device = state.device
+                    val where = when {
+                        device == null -> stringResource(R.string.agent_no_device)
 
-                    else -> stringResource(
-                        R.string.agent_runs_on,
-                        device.name.ifBlank { device.host },
-                        state.draft.directory.ifBlank { stringResource(R.string.agent_directory_default) },
-                    )
+                        else -> stringResource(
+                            R.string.agent_runs_on,
+                            device.name.ifBlank { device.host },
+                            state.draft.directory.ifBlank { stringResource(R.string.agent_directory_default) },
+                        )
+                    }
+                    TextButton(onClick = onTune) { Text(where, textAlign = TextAlign.Center, color = palette.inkMuted) }
+                } else {
+                    ModelAvatar(state.modelInfo, state.modelId ?: "?", size = 64.dp)
+                    Spacer(Modifier.height(20.dp))
+                    Text(stringResource(R.string.empty_chat), style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
                 }
-                TextButton(onClick = onTune) { Text(where, textAlign = TextAlign.Center, color = palette.inkMuted) }
-            } else {
-                ModelAvatar(state.modelInfo, state.modelId ?: "?", size = 64.dp)
-                Spacer(Modifier.height(20.dp))
-                Text(stringResource(R.string.empty_chat), style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
             }
         }
     }
