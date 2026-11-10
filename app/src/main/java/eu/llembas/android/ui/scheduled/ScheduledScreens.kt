@@ -27,6 +27,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Computer
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Pause
@@ -75,11 +76,13 @@ import eu.llembas.android.R
 import eu.llembas.android.api.ApiClient
 import eu.llembas.android.api.ApiException
 import eu.llembas.android.api.LembasJson
+import eu.llembas.android.api.RunsOn
 import eu.llembas.android.api.Schedule
 import eu.llembas.android.api.ScheduleCompiled
 import eu.llembas.android.api.ScheduleRun
 import eu.llembas.android.api.SchedulesFrame
 import eu.llembas.android.api.StreamClient
+import eu.llembas.android.api.computerAway
 import eu.llembas.android.lembas
 import eu.llembas.android.ui.explain
 import eu.llembas.android.ui.progressLineOf
@@ -536,6 +539,7 @@ private fun ScheduleBody(
                     if (facts.isNotEmpty()) {
                         Text(facts.joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = palette.inkFaint)
                     }
+                    schedule.runsOn?.let { on -> ComputerLine(on, away = schedule.lastRun?.computerAway == true) }
                     schedule.watch?.target?.takeIf { it.isNotBlank() }?.let { url ->
                         Text(
                             stringResource(R.string.schedule_watching) + ": " + url,
@@ -590,7 +594,7 @@ private fun ScheduleBody(
                 )
             }
         }
-        items(state.runs, key = { it.id }) { run -> RunRow(run, onOpen = { onOpenRun(run) }) }
+        items(state.runs, key = { it.id }) { run -> RunRow(run, schedule.runsOn, onOpen = { onOpenRun(run) }) }
         if (state.more) item { LaunchedEffect(state.runs.size) { onMore() } }
     }
 }
@@ -610,6 +614,71 @@ private fun modeWords(mode: String): String? = when (mode) {
     else -> null
 }
 
+/**
+ * Where a schedule runs: Computer: its name · the folder there · the mode, and "not linked now"
+ * in the waiting colour when its last run found it away. The folder gives first.
+ */
+@Composable
+private fun ComputerLine(on: RunsOn, away: Boolean) {
+    val palette = LocalPalette.current
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(Icons.Filled.Computer, contentDescription = null, tint = palette.inkFaint, modifier = Modifier.size(16.dp))
+        Spacer(Modifier.width(6.dp))
+        val parts = listOfNotNull(
+            stringResource(R.string.schedule_computer) + ": " + on.deviceName.ifBlank { on.device },
+            on.cwd.takeIf { it.isNotBlank() },
+            agentModeWords(on.mode),
+        )
+        Text(parts.joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = palette.inkFaint, maxLines = 2, overflow = TextOverflow.Ellipsis)
+    }
+    if (away) {
+        Text(
+            on.deviceName.ifBlank { on.device } + ": " + stringResource(R.string.schedule_computer_away),
+            style = MaterialTheme.typography.bodySmall,
+            color = palette.warning,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+/** A run row's line: the computer's name, and "not linked now" when the run found it away. */
+@Composable
+private fun ComputerName(on: RunsOn, away: Boolean) {
+    val palette = LocalPalette.current
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(Icons.Filled.Computer, contentDescription = stringResource(R.string.schedule_computer), tint = palette.inkFaint, modifier = Modifier.size(14.dp))
+        Spacer(Modifier.width(4.dp))
+        Text(
+            on.deviceName.ifBlank {
+                on.device
+            },
+            style = MaterialTheme.typography.bodySmall,
+            color = palette.inkMuted,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f, fill = false),
+        )
+        if (away) {
+            Text(
+                " · " + stringResource(R.string.schedule_computer_away),
+                style = MaterialTheme.typography.bodySmall,
+                color = palette.warning,
+                maxLines = 1,
+                softWrap = false,
+            )
+        }
+    }
+}
+
+@Composable
+private fun agentModeWords(mode: String): String? = when (mode) {
+    "manual" -> stringResource(R.string.mode_manual)
+    "edit" -> stringResource(R.string.mode_edit)
+    "auto" -> stringResource(R.string.mode_auto)
+    else -> null
+}
+
 @Composable
 internal fun Header(text: String) {
     Text(
@@ -626,7 +695,7 @@ internal fun Header(text: String) {
  * whole row opens the run.
  */
 @Composable
-private fun RunRow(run: ScheduleRun, onOpen: () -> Unit) {
+private fun RunRow(run: ScheduleRun, runsOn: RunsOn?, onOpen: () -> Unit) {
     val palette = LocalPalette.current
     Surface(
         onClick = onOpen,
@@ -639,6 +708,8 @@ private fun RunRow(run: ScheduleRun, onOpen: () -> Unit) {
             Box(Modifier.width(112.dp)) { StatusChip(run.status, run.missed) }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(ScheduleLogic.moment(run.startedAt ?: run.dueAt) ?: "—", style = MaterialTheme.typography.bodyMedium)
+                // Which computer the run was for, and whether it was away.
+                runsOn?.let { on -> ComputerName(on, away = run.computerAway) }
                 RunFacts(run, maxLines = 2)
             }
         }

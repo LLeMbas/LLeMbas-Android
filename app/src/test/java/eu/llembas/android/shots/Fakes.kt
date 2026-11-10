@@ -25,6 +25,7 @@ import eu.llembas.android.api.RunResult
 import eu.llembas.android.api.RunTokens
 import eu.llembas.android.api.Schedule
 import eu.llembas.android.api.ScheduleCompiled
+import eu.llembas.android.api.ScheduleEnvelope
 import eu.llembas.android.api.ScheduleRun
 import eu.llembas.android.api.SchedulingModel
 import eu.llembas.android.api.SchedulingModels
@@ -509,6 +510,10 @@ object Fakes {
         chatId = "c8",
         preview = "Little happened over the weekend: one grid-storage tender in Austria.",
     )
+
+    private val onComputer = LembasJson.decodeFromString(ScheduleEnvelope.serializer(), text("schedule_on_device")).schedule
+
+    val scheduleOnComputer = ScheduleState(schedule = onComputer, runs = listOfNotNull(onComputer.lastRun))
 
     val schedule = ScheduleState(
         schedule = schedules[0],

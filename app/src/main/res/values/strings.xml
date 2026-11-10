@@ -220,6 +220,8 @@
     <string name="run_ok">Done</string>
     <string name="run_silent">Nothing new</string>
     <string name="run_unchanged">Unchanged</string>
+    <string name="schedule_computer">Computer</string>
+    <string name="schedule_computer_away">not linked now</string>
     <string name="schedule_watching">Only when this page changes</string>
     <string name="run_failed">Failed</string>
     <string name="run_missed">Missed ×%1$s</string>

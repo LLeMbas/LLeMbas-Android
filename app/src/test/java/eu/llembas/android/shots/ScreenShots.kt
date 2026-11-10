@@ -185,6 +185,13 @@ class ScreenShots {
     fun schedule() = shoot("10-schedule") { ScheduleContent(Fakes.schedule) }
 
     @Test
+    fun scheduleOnAComputer() {
+        // The server's own fixture: on bag-end, in a folder, Edit, and the computer away.
+        shoot("10-schedule-on-computer") { ScheduleContent(Fakes.scheduleOnComputer) }
+        shoot("10-schedule-on-computer", Phone.Small, fontScale = 1.5f) { ScheduleContent(Fakes.scheduleOnComputer) }
+    }
+
+    @Test
     fun scheduleEdit() = shoot("11-schedule-edit") { ScheduleEditContent(Fakes.editing, editing = false) }
 
     @Test

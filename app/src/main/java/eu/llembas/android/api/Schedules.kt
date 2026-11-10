@@ -102,6 +102,8 @@ data class Schedule(
     @SerialName("failure_streak") val failureStreak: Int = 0,
     /** Monitor mode: what the schedule watches; the model runs only when it changed. */
     val watch: ScheduleWatch? = null,
+    /** The linked computer it runs on, as an agent chat there; null: on the server. */
+    @SerialName("runs_on") val runsOn: RunsOn? = null,
     @SerialName("last_error") val lastError: String? = null,
     @SerialName("last_run") val lastRun: ScheduleRun? = null,
     val running: Boolean = false,
@@ -205,3 +207,20 @@ data class RunNotification(
     val labels: Map<String, String> = emptyMap(),
     val ask: String = "",
 )
+
+/**
+ * Where a schedule runs when not on the server (harness spec 3.5.0): a linked computer
+ * ([deviceName]), the folder there, the agent mode (never wider than Edit unless chosen), and how
+ * long an approval it needs waits on the phone.
+ */
+@Serializable
+data class RunsOn(
+    val device: String = "",
+    @SerialName("device_name") val deviceName: String = "",
+    val cwd: String = "",
+    val mode: String = "",
+    @SerialName("approval_wait_minutes") val approvalWaitMinutes: Int? = null,
+)
+
+/** A run that waits because its computer is not linked (`error.class` `device_away`). */
+val ScheduleRun.computerAway: Boolean get() = error?.kind == "device_away"

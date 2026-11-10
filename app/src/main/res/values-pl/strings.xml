@@ -219,6 +219,8 @@
     <string name="run_ok">Gotowe</string>
     <string name="run_silent">Nic nowego</string>
     <string name="run_unchanged">Bez zmian</string>
+    <string name="schedule_computer">Komputer</string>
+    <string name="schedule_computer_away">teraz niepołączony</string>
     <string name="schedule_watching">Tylko gdy ta strona się zmieni</string>
     <string name="run_failed">Nieudane</string>
     <string name="run_missed">Pominięto ×%1$s</string>

@@ -219,6 +219,8 @@
     <string name="run_ok">Terminé</string>
     <string name="run_silent">Rien de neuf</string>
     <string name="run_unchanged">Inchangé</string>
+    <string name="schedule_computer">Ordinateur</string>
+    <string name="schedule_computer_away">non relié pour l’instant</string>
     <string name="schedule_watching">Seulement quand cette page change</string>
     <string name="run_failed">Échecs</string>
     <string name="run_missed">Manquée ×%1$s</string>

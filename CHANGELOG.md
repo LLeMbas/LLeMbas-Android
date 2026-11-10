@@ -34,6 +34,8 @@ is in alpha and releases come off `main`.
 - **Memory**, in the drawer: what models remember about you, as Settings › Memory on the web.
   A tap changes or forgets one; **Remember** adds one (in the data group you pick, when you have
   more than one). What a model wrote is marked, and shown as plain text.
+- **A scheduled task that runs on one of your computers** says which, in which folder and mode,
+  on its page and in each run; a run that found the computer away says *not linked now*.
 - **A scheduled task that watches a web page** says so on its page (*Only when this page
   changes*, and the address), and a run that found the page unchanged is shown as *Unchanged*.
 - **A scheduled task's notification shows its result.** Unlocked, it carries the task's name

@@ -219,6 +219,8 @@
     <string name="run_ok">Kész</string>
     <string name="run_silent">Semmi új</string>
     <string name="run_unchanged">Változatlan</string>
+    <string name="schedule_computer">Számítógép</string>
+    <string name="schedule_computer_away">most nincs összekapcsolva</string>
     <string name="schedule_watching">Csak ha ez az oldal megváltozik</string>
     <string name="run_failed">Sikertelen</string>
     <string name="run_missed">Kimaradt ×%1$s</string>

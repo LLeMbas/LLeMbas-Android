@@ -219,6 +219,8 @@
     <string name="run_ok">Hotovo</string>
     <string name="run_silent">Nič nové</string>
     <string name="run_unchanged">Bez zmeny</string>
+    <string name="schedule_computer">Počítač</string>
+    <string name="schedule_computer_away">teraz nie je prepojený</string>
     <string name="schedule_watching">Len keď sa táto stránka zmení</string>
     <string name="run_failed">Zlyhalo</string>
     <string name="run_missed">Zmeškané ×%1$s</string>

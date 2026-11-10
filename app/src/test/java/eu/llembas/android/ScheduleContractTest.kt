@@ -12,6 +12,7 @@ import eu.llembas.android.api.ScheduleList
 import eu.llembas.android.api.ScheduleRuns
 import eu.llembas.android.api.SchedulesFrame
 import eu.llembas.android.api.SchedulingModels
+import eu.llembas.android.api.computerAway
 import eu.llembas.android.push.ScheduledNotice
 import eu.llembas.android.ui.scheduled.ScheduleLogic
 import eu.llembas.android.ui.scheduled.SchedulingLogic
@@ -104,6 +105,20 @@ class ScheduleContractTest {
         assertEquals(Tone.Quiet, ScheduleLogic.tone(run.status))
         // A schedule that watches nothing says null.
         assertNull(read("schedule", ScheduleEnvelope.serializer()).schedule.watch)
+    }
+
+    @Test
+    fun aScheduleOnAComputerAndARunThatFoundItAway() {
+        val on = read("schedule_on_device", ScheduleEnvelope.serializer()).schedule
+        val where = on.runsOn!!
+        assertEquals("bag-end", where.deviceName)
+        assertEquals("/home/frodo/waybread", where.cwd)
+        assertEquals("edit", where.mode)
+        assertEquals(30, where.approvalWaitMinutes)
+        val run = on.lastRun!!
+        assertEquals("device", run.waitingFor)
+        assertTrue(run.computerAway)
+        assertNull(read("schedule", ScheduleEnvelope.serializer()).schedule.runsOn)
     }
 
     @Test
