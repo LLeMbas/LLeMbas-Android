@@ -218,6 +218,7 @@
     <string name="channel_scheduled_failures">Selhání naplánovaných úloh</string>
     <string name="scheduled_result_public">Naplánovaná úloha má výsledek.</string>
     <string name="scheduled_failed_public">Naplánovaná úloha selhala.</string>
+    <string name="schedule_run_again">Spustit znovu</string>
     <string name="card_approval">Povolit to?</string>
     <string name="card_allow_once">Povolit jednou</string>
     <string name="card_allow_always">Toto vždy povolit</string>

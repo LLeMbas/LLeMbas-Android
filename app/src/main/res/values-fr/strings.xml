@@ -218,6 +218,7 @@
     <string name="channel_scheduled_failures">Échecs planifiés</string>
     <string name="scheduled_result_public">Une tâche planifiée a un résultat.</string>
     <string name="scheduled_failed_public">Une tâche planifiée a échoué.</string>
+    <string name="schedule_run_again">Relancer</string>
     <string name="card_approval">Autoriser ceci ?</string>
     <string name="card_allow_once">Autoriser une fois</string>
     <string name="card_allow_always">Toujours autoriser ceci</string>

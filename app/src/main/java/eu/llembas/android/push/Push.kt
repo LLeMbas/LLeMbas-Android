@@ -134,10 +134,11 @@ object Notifications {
 
     /**
      * A scheduled run's result or failure, on its own channel, built from the server's payload
-     * alone ([ScheduledNotice]): the payload carries ids and one of the server's own fixed
-     * sentences, never the result. Unlocked: the instance's name and that sentence. On the lock
-     * screen the public version: the app's name and "a scheduled task has a result" (or failed).
-     * A tap and Open go to the run; Pause is there when the server offers it.
+     * alone ([ScheduledNotice]). Unlocked: the task's name and the result's first lines, as the
+     * server cut them (BigTextStyle opens them). On the lock screen only the public version: the
+     * task's name and Finished / Failed (the owner's choice for beta.9; an older server sends no
+     * words, and the app's name and a fixed sentence stand in). A tap and Open go to the run;
+     * Run again starts it again, once the phone is unlocked; Pause is there when offered.
      */
     private fun scheduled(context: Context, instance: String, payload: PushPayload) {
         val notice = ScheduledNotice.from(payload) ?: return
@@ -146,13 +147,14 @@ object Notifications {
         val open = opener(context, instance, notice.id, chatId = null, scheduleId = notice.scheduleId, runId = notice.runId)
         val public = NotificationCompat.Builder(context, channel)
             .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle(context.getString(R.string.app_name))
-            .setContentText(fixed)
+            .setContentTitle(notice.publicTitle.ifBlank { context.getString(R.string.app_name) })
+            .setContentText(notice.publicBody.ifBlank { fixed })
             .build()
-        val body = payload.body.ifBlank { fixed }
+        val title = notice.title.ifBlank { payload.title.ifBlank { context.getString(R.string.scheduled) } }
+        val body = notice.body.ifBlank { payload.body.ifBlank { fixed } }
         val builder = NotificationCompat.Builder(context, channel)
             .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle(payload.title.ifBlank { context.getString(R.string.scheduled) })
+            .setContentTitle(title)
             .setContentText(body)
             .setStyle(NotificationCompat.BigTextStyle().bigText(body))
             .setAutoCancel(true)
@@ -160,8 +162,15 @@ object Notifications {
             .setCategory(if (notice.failed) Notification.CATEGORY_ERROR else Notification.CATEGORY_STATUS)
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
             .setPublicVersion(public)
-        if (notice.open) builder.addAction(0, context.getString(R.string.viewer_open), open)
-        if (notice.pause) builder.addAction(0, context.getString(R.string.schedule_pause), pause(context, instance, notice.scheduleId, notice.id))
+        if (notice.open) builder.addAction(0, notice.label("open", context.getString(R.string.viewer_open)), open)
+        if (notice.runAgain) {
+            val again = scheduleAction(context, instance, notice.scheduleId, notice.id, ScheduleActionReceiver.RUN_AGAIN)
+            builder.addAction(unlocked(notice.label("run_again", context.getString(R.string.schedule_run_again)), again))
+        }
+        if (notice.pause) {
+            val pause = scheduleAction(context, instance, notice.scheduleId, notice.id, ScheduleActionReceiver.PAUSE)
+            builder.addAction(0, notice.label("pause", context.getString(R.string.schedule_pause)), pause)
+        }
         NotificationManagerCompat.from(context).notify(notice.id, builder.build())
     }
 
@@ -182,15 +191,17 @@ object Notifications {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
 
-    private fun pause(context: Context, instance: String, schedule: String, notification: Int): PendingIntent = PendingIntent.getBroadcast(
-        context,
-        ("pause$schedule").hashCode(),
-        Intent(context, ScheduleActionReceiver::class.java)
-            .putExtra("instance", instance)
-            .putExtra("schedule", schedule)
-            .putExtra("notification", notification),
-        PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-    )
+    private fun scheduleAction(context: Context, instance: String, schedule: String, notification: Int, action: String): PendingIntent =
+        PendingIntent.getBroadcast(
+            context,
+            (action + schedule).hashCode(),
+            Intent(context, ScheduleActionReceiver::class.java)
+                .putExtra("instance", instance)
+                .putExtra("schedule", schedule)
+                .putExtra("action", action)
+                .putExtra("notification", notification),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
 
     private fun answer(context: Context, instance: String, chat: String, card: String, verdict: String, notification: Int): PendingIntent =
         PendingIntent.getBroadcast(
@@ -229,21 +240,30 @@ class CardActionReceiver : BroadcastReceiver() {
     }
 }
 
-/** A scheduled task's Pause, from its notification. */
+/** A scheduled task's Pause or Run again, from its notification. */
 class ScheduleActionReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val pending = goAsync()
         val instance = intent.getStringExtra("instance") ?: return pending.finish()
         val schedule = intent.getStringExtra("schedule") ?: return pending.finish()
+        val action = intent.getStringExtra("action") ?: PAUSE
         background.launch {
             try {
                 Push.instance(context, instance)?.let { found ->
-                    runCatching { context.lembas.instances.clientFor(found).pauseSchedule(schedule, true) }
+                    val client = context.lembas.instances.clientFor(found)
+                    // A failure (gone, busy) is the server's to say on the run page; the
+                    // notification goes either way, and a new run sends its own.
+                    runCatching { if (action == RUN_AGAIN) client.runScheduleNow(schedule) else client.pauseSchedule(schedule, true) }
                 }
                 NotificationManagerCompat.from(context).cancel(intent.getIntExtra("notification", 0))
             } finally {
                 pending.finish()
             }
         }
+    }
+
+    companion object {
+        const val PAUSE = "pause"
+        const val RUN_AGAIN = "run_again"
     }
 }

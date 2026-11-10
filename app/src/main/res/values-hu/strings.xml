@@ -218,6 +218,7 @@
     <string name="channel_scheduled_failures">Ütemezett hibák</string>
     <string name="scheduled_result_public">Egy ütemezett feladatnak eredménye van.</string>
     <string name="scheduled_failed_public">Egy ütemezett feladat sikertelen volt.</string>
+    <string name="schedule_run_again">Futtatás újra</string>
     <string name="card_approval">Engedélyezzük ezt?</string>
     <string name="card_allow_once">Engedélyezés egyszer</string>
     <string name="card_allow_always">Ennek mindig engedélyezése</string>

@@ -210,6 +210,35 @@ class ScheduleContractTest {
     }
 
     @Test
+    fun theServersNotificationWordsAndRunAgain() {
+        // `push_schedule.json`: the task's name and first lines unlocked, Finished on the lock
+        // screen, Open and Run again with the owner's labels.
+        val done = ScheduledNotice.from(read("push_schedule", PushPayload.serializer()))!!
+        assertEquals("Waybread check", done.title)
+        assertEquals("All the waybread is wrapped.", done.body)
+        assertEquals("Waybread check", done.publicTitle)
+        assertEquals("Finished", done.publicBody)
+        assertTrue(done.open)
+        assertTrue(done.runAgain)
+        assertFalse(done.pause)
+        assertEquals("Run again", done.label("run_again", "x"))
+        assertEquals("x", done.label("pause", "x"))
+
+        // `push_schedule_failed.json`: three failures ask about Pause, beside Open and Run again.
+        val failed = ScheduledNotice.from(read("push_schedule_failed", PushPayload.serializer()))!!
+        assertTrue(failed.failed)
+        assertTrue(failed.askPause)
+        assertTrue(failed.pause)
+        assertTrue(failed.runAgain)
+        assertEquals("Failed", failed.publicBody)
+        assertEquals("run3", failed.runId)
+
+        // The run's own copy (the schedules frame) says the same.
+        val run = read("schedule_run", RunResult.serializer()).run
+        assertEquals(listOf("open", "run_again"), run.notification!!.actions)
+    }
+
+    @Test
     fun aPushWithOnlyItsUrlAndOneThatIsNotScheduled() {
         val bare = PushPayload(kind = "schedule", url = "/scheduled/sched1?run=run1")
         val notice = ScheduledNotice.from(bare)!!

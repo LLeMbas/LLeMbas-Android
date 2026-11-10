@@ -218,6 +218,7 @@
     <string name="channel_scheduled_failures">Errori pianificati</string>
     <string name="scheduled_result_public">Un’attività pianificata ha un risultato.</string>
     <string name="scheduled_failed_public">Un’attività pianificata non è riuscita.</string>
+    <string name="schedule_run_again">Esegui di nuovo</string>
     <string name="card_approval">Consentire questo?</string>
     <string name="card_allow_once">Consenti una volta</string>
     <string name="card_allow_always">Consenti sempre questo</string>

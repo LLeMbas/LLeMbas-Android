@@ -218,6 +218,7 @@
     <string name="channel_scheduled_failures">Fallos programados</string>
     <string name="scheduled_result_public">Una tarea programada tiene un resultado.</string>
     <string name="scheduled_failed_public">Una tarea programada falló.</string>
+    <string name="schedule_run_again">Ejecutar de nuevo</string>
     <string name="card_approval">¿Permitir esto?</string>
     <string name="card_allow_once">Permitir una vez</string>
     <string name="card_allow_always">Permitir siempre esto</string>

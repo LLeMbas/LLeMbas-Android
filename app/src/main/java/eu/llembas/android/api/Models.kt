@@ -557,6 +557,12 @@ data class PushPayload(
     val status: String? = null,
     val visibility: String? = null,
     val actions: List<String> = emptyList(),
+    /**
+     * The run's notification as the server wrote it (newer servers; the payload is encrypted end
+     * to end): the task's name and the result's first lines, the lock-screen version, and the
+     * actions' labels in the owner's language. Null from an older server: the fixed sentence then.
+     */
+    val notification: RunNotification? = null,
 )
 
 // --- The activity panel (`GET /chats/{chat}/activity`) -------------------------------------

@@ -21,6 +21,11 @@ is in alpha and releases come off `main`.
   stops it too.
 - **A scheduled task that watches a web page** says so on its page (*Only when this page
   changes*, and the address), and a run that found the page unchanged is shown as *Unchanged*.
+- **A scheduled task's notification shows its result.** Unlocked, it carries the task's name
+  and the first lines of what it found (pull it open for more); on the lock screen only the
+  task's name and *Finished* or *Failed*. **Run again** starts the task again from the
+  notification, once the phone is unlocked. Needs an instance that sends these; an older one
+  keeps the fixed sentence.
 - **A message waiting behind a reply says how many are ahead of it** and for how long it has
   waited, where the instance tells.
 

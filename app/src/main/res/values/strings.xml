@@ -219,6 +219,7 @@
     <string name="channel_scheduled_failures">Scheduled failures</string>
     <string name="scheduled_result_public">A scheduled task has a result.</string>
     <string name="scheduled_failed_public">A scheduled task failed.</string>
+    <string name="schedule_run_again">Run again</string>
     <string name="card_approval">Allow this?</string>
     <string name="card_allow_once">Allow once</string>
     <string name="card_allow_always">Always allow this</string>

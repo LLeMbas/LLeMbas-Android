@@ -235,6 +235,7 @@ STRINGS: dict[str, str] = {
     "channel_scheduled_failures": "Scheduled failures",
     "scheduled_result_public": "A scheduled task has a result.",
     "scheduled_failed_public": "A scheduled task failed.",
+    "schedule_run_again": "Run again",
     # Cards
     "card_approval": "Allow this?",
     "card_allow_once": "Allow once",

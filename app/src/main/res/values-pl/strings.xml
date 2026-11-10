@@ -218,6 +218,7 @@
     <string name="channel_scheduled_failures">Błędy zaplanowanych zadań</string>
     <string name="scheduled_result_public">Zaplanowane zadanie ma wynik.</string>
     <string name="scheduled_failed_public">Zaplanowane zadanie się nie powiodło.</string>
+    <string name="schedule_run_again">Uruchom ponownie</string>
     <string name="card_approval">Zezwolić na to?</string>
     <string name="card_allow_once">Zezwól raz</string>
     <string name="card_allow_always">Zawsze na to zezwalaj</string>
