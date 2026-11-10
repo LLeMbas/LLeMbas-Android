@@ -49,6 +49,12 @@ is in alpha and releases come off `main`.
   second (`· 1m 05s`). The same in the assistant's sheet. A server that does not send it yet
   is shown as before.
 
+- **Subagents, as a list** (the server's subagent tree, once it sends one): the activity sheet
+  shows the main agent and each subagent -- its name, its position, what it is doing now and
+  how full its context is -- with the ones that ended after them, dimmed, saying how each ended
+  (*done*, *out of context*, *stopped*), and the open slots. A subagent's row opens its
+  conversation, read-only.
+
 ### Fixed
 
 - **A corrected command on an approval runs as corrected.** A linked computer's approval card

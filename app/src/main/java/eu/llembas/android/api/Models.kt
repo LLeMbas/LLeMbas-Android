@@ -648,6 +648,11 @@ data class Activity(
     val context: ContextUse? = null,
     val outputs: List<Output> = emptyList(),
     val plan: JsonObject? = null,
+    /**
+     * The subagent tree (harness spec 3.4.0, `subagents.md` §12), where the server sends it;
+     * null from an older one, which the Tasks section's team members stand for.
+     */
+    val tree: SubagentTree? = null,
 )
 
 @Serializable

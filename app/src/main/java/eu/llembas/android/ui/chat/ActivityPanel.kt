@@ -81,6 +81,7 @@ import eu.llembas.android.api.AgentDetail
 import eu.llembas.android.api.ContextUse
 import eu.llembas.android.api.Output
 import eu.llembas.android.api.RoomMessage
+import eu.llembas.android.api.TreeLogic
 import eu.llembas.android.lembas
 import eu.llembas.android.ui.MarkdownText
 import eu.llembas.android.ui.explain
@@ -329,7 +330,18 @@ fun ActivityContent(
                     }
                 }
             }
-            item { Section(stringResource(R.string.activity_tasks)) { TasksSection(activity, readAt, now, actions, unfolded) } }
+            // 3.4.0: the subagents as a reduced list, each opening its conversation read-only;
+            // the Tasks section then holds the background jobs, the members being in the list.
+            val tree = activity.tree?.takeIf { TreeLogic.hasSubagents(it) }
+            if (tree != null) {
+                item {
+                    Section(stringResource(R.string.team_agents), count = tree.agents.count { !it.isMain }.takeIf { it > 0 }) {
+                        SubagentList(tree) { agent -> actions.read(ActivityLogic.ofTreeAgent(agent)) }
+                    }
+                }
+            }
+            val tasks = if (tree != null) activity.copy(agents = activity.agents.filter { it.kind != "member" }) else activity
+            item { Section(stringResource(R.string.activity_tasks)) { TasksSection(tasks, readAt, now, actions, unfolded) } }
             activity.team?.let { team ->
                 item { Section(stringResource(R.string.team_room), count = team.room.size.takeIf { it > 0 }) { RoomSection(team) } }
             }

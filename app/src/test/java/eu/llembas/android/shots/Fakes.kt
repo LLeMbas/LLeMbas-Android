@@ -25,10 +25,13 @@ import eu.llembas.android.api.ScheduleRun
 import eu.llembas.android.api.SchedulingModel
 import eu.llembas.android.api.SchedulingModels
 import eu.llembas.android.api.Step
+import eu.llembas.android.api.SubagentTree
 import eu.llembas.android.api.SubagentsOffer
 import eu.llembas.android.api.Tail
 import eu.llembas.android.api.ToolBlock
 import eu.llembas.android.api.ToolCall
+import eu.llembas.android.api.TreeAgent
+import eu.llembas.android.api.TreeContext
 import eu.llembas.android.assist.AssistTurn
 import eu.llembas.android.assist.AssistUiState
 import eu.llembas.android.assist.Connection
@@ -197,6 +200,46 @@ object Fakes {
     /** Waiting for a model, the long reason: the progress line at its widest. */
     val waitingForModel = writing.copy(
         live = writing.live!!.copy(progress = Progress(phase = "waiting_for_model", since = 1762790400000, model = "Qwen 27B", reason = "busy")),
+    )
+
+    /**
+     * The activity sheet of a chat with subagents (spec 3.4.0's tree): the main agent, a
+     * sub-manager with one under it paused, one waiting for a slot, an open slot and one ended.
+     */
+    val activityTree = activity.copy(
+        tree = SubagentTree(
+            min = 2,
+            max = 5,
+            size = 4,
+            openSlots = 1,
+            agents = listOf(
+                TreeAgent(
+                    id = "lead", name = "lead", position = "the main agent", state = "working", model = "qwen", mode = "edit", manager = true,
+                    context = TreeContext(41_200, 131_072), progress = Progress(phase = "waiting_for_subagents", since = 1762790400000, running = 2),
+                ),
+                TreeAgent(
+                    id = "s1", name = "parser", position = "reviews the parser and everything that reads its output", parent = "lead",
+                    state = "working", model = "qwen", mode = "edit", manager = true, context = TreeContext(9_100, 131_072),
+                    progress = Progress(phase = "running_tool", since = 1762790401000, tool = "read", what = "src/parse.ts"),
+                ),
+                TreeAgent(
+                    id = "s3", name = "lexer", position = "the lexer's tests", parent = "parser", state = "paused",
+                    model = "qwen", mode = "manual", context = TreeContext(112_000, 131_072), progress = Progress(phase = "thinking", since = 1762790402000),
+                ),
+                TreeAgent(id = "s4", name = "docs", position = "writes the changelog", parent = "lead", state = "waiting", model = "qwen", mode = "edit"),
+            ),
+            ended = listOf(
+                TreeAgent(
+                    id = "s2",
+                    name = "scout",
+                    position = "finds the old parser",
+                    parent = "lead",
+                    state = "out_of_context",
+                    ended = 1762790300000,
+                    findings = 2,
+                ),
+            ),
+        ),
     )
 
     /** A chat on a model with effort levels, a team and a plan: the tune sheet with everything. */

@@ -224,6 +224,9 @@
     <string name="card_send">Odeslat</string>
     <string name="progress_thinking">Přemýšlí</string>
     <string name="progress_stopped">Zastaveno</string>
+    <string name="tree_state_working">pracuje</string>
+    <string name="tree_state_done">hotovo</string>
+    <string name="tree_state_stopped">zastaveno</string>
     <string name="card_asker">%1$s se ptá:</string>
     <string name="card_it_says">Model uvádí: %1$s</string>
     <string name="card_change_before">Upravit to před spuštěním</string>

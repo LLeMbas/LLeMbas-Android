@@ -224,6 +224,9 @@
     <string name="card_send">Invia</string>
     <string name="progress_thinking">Ragionamento</string>
     <string name="progress_stopped">Fermato</string>
+    <string name="tree_state_working">al lavoro</string>
+    <string name="tree_state_done">finito</string>
+    <string name="tree_state_stopped">interrotto</string>
     <string name="card_asker">%1$s chiede:</string>
     <string name="card_it_says">Dice: %1$s</string>
     <string name="card_change_before">Modificalo prima che venga eseguito</string>

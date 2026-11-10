@@ -252,6 +252,16 @@
     <string name="progress_stopped_steps">step limit</string>
     <string name="progress_stopped_budget">budget</string>
     <string name="progress_line">%1$s · %2$s</string>
+    <string name="tree_state_working">working</string>
+    <string name="tree_state_waiting">waiting for a slot</string>
+    <string name="tree_state_finished">finished</string>
+    <string name="tree_state_idle">idle</string>
+    <string name="tree_state_paused">paused: context full</string>
+    <string name="tree_state_done">done</string>
+    <string name="tree_state_out_of_context">out of context</string>
+    <string name="tree_state_stopped">stopped</string>
+    <string name="tree_context">%1$s%% context</string>
+    <string name="tree_open_slots">Open slots: %1$s</string>
     <string name="card_asker">%1$s asks:</string>
     <string name="card_it_says">It says: %1$s</string>
     <string name="card_change_before">Change this before it runs</string>

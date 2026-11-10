@@ -174,6 +174,10 @@ class ScreenShots {
         shoot("14-activity", Phone.Small, fontScale = 1.5f, content = sheet)
         shoot("14-activity", Phone.Scroll, content = sheet)
         shoot("15-activity-open", Phone.Scroll, content = open)
+        // Spec 3.4.0's subagents: the reduced list above the background tasks.
+        val tree: @Composable () -> Unit = { SheetOver { ActivityContent(Fakes.activityTree, readAt = 0, now = 0, actions = NoActivityActions) } }
+        shoot("26-subagents", Phone.Scroll, content = tree)
+        shoot("26-subagents", Phone.Small, fontScale = 1.5f, content = tree)
         shoot("16-activity-new-chat") {
             SheetOver { ActivityContent(eu.llembas.android.api.Activity(), readAt = 0, now = 0, actions = NoActivityActions, canCompact = false) }
         }
