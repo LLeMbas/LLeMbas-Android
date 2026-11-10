@@ -351,7 +351,7 @@
     <string name="update_available">Elérhető a(z) %1$s. Koppintson a kiadás oldalának megnyitásához.</string>
     <string name="update_install">%1$s telepítése</string>
     <string name="update_auto">Új verziók keresése</string>
-    <string name="update_auto_line">Naponta legfeljebb egyszer, induláskor az alkalmazás beolvassa a GitHubról a LLeMbas Androidra kiadásainak listáját, és értesítésben jelzi, ha van újabb. Önről és a példányáról semmit sem küld. Béta verzióban alapból bekapcsolva, egyébként kikapcsolva.</string>
+    <string name="update_auto_line">Naponta legfeljebb egyszer, induláskor az alkalmazás megkérdezi a példányát, melyik kiadás illik hozzá (régebbi példánynál a GitHubon lévő kiadások listáját olvassa be), és értesítésben jelzi, ha van újabb. Önről semmi nem megy máshová. Béta verzióban alapból bekapcsolva, egyébként kikapcsolva.</string>
     <string name="update_betas">Béták is</string>
     <string name="update_betas_line">Tesztverziók felajánlása is, nem csak kiadásoké. Alapból bekapcsolva, ha ez az alkalmazás maga is béta.</string>
     <string name="channel_updates">Alkalmazásfrissítések</string>

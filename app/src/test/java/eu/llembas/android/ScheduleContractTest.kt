@@ -86,7 +86,7 @@ class ScheduleContractTest {
         assertWaybread(read("schedules", ScheduleList.serializer()).schedules.single())
         assertWaybread(read("schedule", ScheduleEnvelope.serializer()).schedule)
         val frame = read("event_schedules", SchedulesFrame.serializer())
-        assertEquals("d2f307bf1c7b8d6b", frame.version)
+        assertEquals("8bee85746004dc19", frame.version)
         assertWaybread(frame.schedules.single())
     }
 

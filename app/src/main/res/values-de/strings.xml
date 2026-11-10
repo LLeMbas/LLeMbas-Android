@@ -351,7 +351,7 @@
     <string name="update_available">%1$s ist verfügbar. Tippen Sie, um die Release-Seite zu öffnen.</string>
     <string name="update_install">%1$s installieren</string>
     <string name="update_auto">Nach neuen Versionen suchen</string>
-    <string name="update_auto_line">Höchstens einmal am Tag, beim Start, liest die App die Liste der Releases von LLeMbas für Android auf GitHub und meldet per Benachrichtigung, wenn es eine neuere gibt. Nichts über Sie oder Ihre Instanz wird gesendet. In einer Beta standardmäßig an, sonst aus.</string>
+    <string name="update_auto_line">Höchstens einmal am Tag, beim Start, fragt die App Ihre Instanz, welches Release zu ihr passt (bei einer älteren Instanz: die Liste der Releases auf GitHub), und meldet per Benachrichtigung, wenn es ein neueres gibt. Nichts über Sie wird anderswohin gesendet. In einer Beta standardmäßig an, sonst aus.</string>
     <string name="update_betas">Betas einbeziehen</string>
     <string name="update_betas_line">Auch Testversionen anbieten, nicht nur Releases. Standardmäßig an, wenn diese App selbst eine Beta ist.</string>
     <string name="channel_updates">App-Updates</string>

@@ -351,7 +351,7 @@
     <string name="update_available">Je dostupná %1$s. Ťuknutím otvoríte stránku vydania.</string>
     <string name="update_install">Nainštalovať %1$s</string>
     <string name="update_auto">Hľadať nové verzie</string>
-    <string name="update_auto_line">Najviac raz denne, pri spustení, si aplikácia prečíta z GitHubu zoznam vydaní LLeMbas pre Android a upozornením vám dá vedieť, keď je dostupná novšia. Nič o vás ani o vašej inštancii sa neposiela. V beta verzii zapnuté, inak vypnuté.</string>
+    <string name="update_auto_line">Najviac raz denne, pri spustení, sa aplikácia opýta vašej inštancie, ktoré vydanie k nej patrí (pri staršej inštancii si prečíta zoznam vydaní na GitHube), a upozornením vám dá vedieť, keď je dostupné novšie. Nič o vás sa nikam inam neposiela. V beta verzii zapnuté, inak vypnuté.</string>
     <string name="update_betas">Vrátane beta verzií</string>
     <string name="update_betas_line">Ponúkať aj testovacie verzie, nielen vydania. Zapnuté, keď je táto aplikácia sama beta.</string>
     <string name="channel_updates">Aktualizácie aplikácie</string>

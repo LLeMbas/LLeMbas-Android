@@ -351,7 +351,7 @@
     <string name="update_available">Dostępna jest wersja %1$s. Dotknij, aby otworzyć jej stronę wydania.</string>
     <string name="update_install">Zainstaluj %1$s</string>
     <string name="update_auto">Szukaj nowych wersji</string>
-    <string name="update_auto_line">Najwyżej raz dziennie, przy uruchomieniu, aplikacja odczytuje z GitHuba listę wydań LLeMbas na Androida i daje znać powiadomieniem, gdy jest nowsza. Nic o tobie ani o twojej instancji nie jest wysyłane. W wersji beta domyślnie włączone, w przeciwnym razie wyłączone.</string>
+    <string name="update_auto_line">Najwyżej raz dziennie, przy uruchomieniu, aplikacja pyta twoją instancję, które wydanie do niej pasuje (przy starszej instancji odczytuje listę wydań z GitHuba), i daje znać powiadomieniem, gdy jest nowsze. Nic o tobie nie jest wysyłane nigdzie indziej. W wersji beta domyślnie włączone, w przeciwnym razie wyłączone.</string>
     <string name="update_betas">Uwzględniaj bety</string>
     <string name="update_betas_line">Proponuj też wersje testowe, nie tylko wydania. Domyślnie włączone, gdy ta aplikacja sama jest betą.</string>
     <string name="channel_updates">Aktualizacje aplikacji</string>

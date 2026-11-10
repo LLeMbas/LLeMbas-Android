@@ -8,9 +8,9 @@ is in alpha and releases come off `main`.
 ### Added
 
 - **The app tells you when a newer version is out.** Settings › About › *Look for new versions*:
-  at most once a day, when the app starts, it reads the public list of LLeMbas for Android
-  releases on GitHub (plain HTTPS, no Google service, nothing about you sent) and, when there is
-  a newer one, says so in a notification that opens the release's page with its APKs. On by
+  at most once a day, when the app starts, it asks your instance which release goes with it
+  (an instance older than that reads the public list of LLeMbas for Android releases on GitHub;
+  plain HTTPS, no Google service, nothing about you sent) and, when there is a newer one, says so in a notification that opens the release's page with its APKs. On by
   default in a beta, off in a release. *Include betas* offers test versions too (on by default
   in a beta). **Check for an update** asks at once, in either build; the full build can then
   install a release itself.

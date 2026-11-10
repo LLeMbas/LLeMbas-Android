@@ -171,6 +171,9 @@ class ApiClient(val base: String, private val token: String, val http: OkHttpCli
     /** The folder and the folders inside it; their chats fall back to no folder. */
     suspend fun deleteFolder(id: String) = empty(authed("$v2/folders/${segment(id)}").delete().build())
 
+    /** The app releases this server recommends; 404 from a server older than the route. */
+    suspend fun apps(): AppsInfo = get("/apps")
+
     /** The web's search in JSON: chats by their words (and meaning, where indexed), files, memories. */
     suspend fun search(q: String, within: String = "all", limit: Int = 20): SearchResults = get("/search?q=${segment(q)}&in=${segment(within)}&limit=$limit")
 

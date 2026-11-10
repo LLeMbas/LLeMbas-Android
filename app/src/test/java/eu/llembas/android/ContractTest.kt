@@ -85,6 +85,14 @@ class ContractTest {
     }
 
     @Test
+    fun aScheduleThatRunsOnAComputer() {
+        val schedule = LembasJson.parseToJsonElement(text("schedule_on_device")).jsonObject
+        // Parsed by the app's model without a field for it yet: the rest must still read.
+        assertEquals("sched3", read("schedule_on_device", eu.llembas.android.api.ScheduleEnvelope.serializer()).schedule.id)
+        assertTrue("runs_on" in schedule.getValue("schedule").jsonObject)
+    }
+
+    @Test
     fun theVersionIsOneThisAppReads() {
         val version = LembasJson.parseToJsonElement(text("version")).toString()
         assertEquals("""{"app_api":$APP_API}""", version)

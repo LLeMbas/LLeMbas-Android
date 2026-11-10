@@ -1,5 +1,6 @@
 package eu.llembas.android
 
+import eu.llembas.android.api.AppsInfo
 import eu.llembas.android.api.LembasJson
 import eu.llembas.android.auth.Prefs
 import eu.llembas.android.update.AppVersion
@@ -76,5 +77,25 @@ class UpdateCheckTest {
         assertTrue(ReleaseCheck.due(1_000, 1_000 + day))
         // A clock set back is not a reason to wait a year.
         assertTrue(ReleaseCheck.due(10 * day, day))
+    }
+
+    @Test
+    fun theServersRecommendationComesFirst() {
+        fun read(name: String) = LembasJson.decodeFromString(
+            AppsInfo.serializer(),
+            requireNotNull(javaClass.classLoader!!.getResource("$name.json")).readText(),
+        )
+        val beta = read("apps")
+        assertEquals("1.1.0-beta.2", beta.android!!.version)
+        val offer = ReleaseCheck.recommended(beta, v("1.0.0-beta.5"), betas = true)!!
+        assertEquals("1.1.0-beta.2", offer.version.toString())
+        assertEquals("https://github.com/LLeMbas/LLeMbas-Android/releases/tag/v1.1.0-beta.2", offer.page)
+        // A beta is not offered to someone who did not want betas, nor anything not newer.
+        assertNull(ReleaseCheck.recommended(beta, v("1.0.0-beta.5"), betas = false))
+        assertNull(ReleaseCheck.recommended(beta, v("1.1.0-beta.2"), betas = true))
+        // A stable server with no Android pin recommends nothing, so nothing is offered.
+        val stable = read("apps_stable")
+        assertNull(stable.android)
+        assertNull(ReleaseCheck.recommended(stable, v("1.0.0-beta.5"), betas = true))
     }
 }

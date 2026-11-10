@@ -377,7 +377,7 @@ STRINGS: dict[str, str] = {
     "update_available": "%1$s is available. Tap to open its release page.",
     "update_install": "Install %1$s",
     "update_auto": "Look for new versions",
-    "update_auto_line": "At most once a day, when the app starts, it reads the list of LLeMbas for Android releases from GitHub and tells you in a notification when there is a newer one. Nothing about you or your instance is sent. On by default in a beta, off otherwise.",
+    "update_auto_line": "At most once a day, when the app starts, it asks your instance which release goes with it (an older instance: the list of releases on GitHub) and tells you in a notification when there is a newer one. Nothing about you is sent anywhere else. On by default in a beta, off otherwise.",
     "update_betas": "Include betas",
     "update_betas_line": "Offer test versions as well as releases. On by default when this app is itself a beta.",
     "channel_updates": "App updates",

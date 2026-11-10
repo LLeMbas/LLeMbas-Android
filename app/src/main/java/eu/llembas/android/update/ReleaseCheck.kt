@@ -13,6 +13,7 @@ import androidx.core.content.ContextCompat
 import eu.llembas.android.BuildConfig
 import eu.llembas.android.LembasApp
 import eu.llembas.android.R
+import eu.llembas.android.api.AppsInfo
 import eu.llembas.android.api.LembasJson
 import eu.llembas.android.api.SharedHttp
 import eu.llembas.android.api.await
@@ -79,7 +80,9 @@ sealed interface UpdateResult {
 }
 
 /**
- * The update check: the public releases of the app on GitHub, read over plain HTTPS -- no
+ * The update check: the release the instance recommends (`GET /api/v2/apps`), which knows what
+ * speaks its API; from a server without that, the public releases of the app on GitHub, read
+ * over plain HTTPS -- no
  * Google service, no account, nothing sent but the request itself. It runs when the app starts,
  * at most once a day and only while Settings › About › *Look for new versions* is on (on by
  * default in a beta, off in a release), and when the person taps *Check for an update*. A newer
@@ -92,6 +95,13 @@ class ReleaseCheck(private val context: Context) {
     suspend fun check(): UpdateResult = withContext(Dispatchers.IO) {
         val prefs = context.lembas.instances.prefs.first()
         val installed = AppVersion.parse(BuildConfig.VERSION_NAME) ?: return@withContext UpdateResult.Current
+        // The instance first: it knows which release speaks its /api/v2. Only a server without
+        // the route (or none signed in, or none reachable) leaves it to GitHub's list.
+        val server = runCatching { context.lembas.instances.client()?.apps() }.getOrNull()
+        if (server != null) {
+            return@withContext recommended(server, installed, prefs.offersBetas(installed.isBeta))
+                ?.let { UpdateResult.Newer(it) } ?: UpdateResult.Current
+        }
         try {
             val releases = SharedHttp.newCall(
                 Request.Builder().url(RELEASES).header("Accept", "application/vnd.github+json").build(),
@@ -160,6 +170,20 @@ class ReleaseCheck(private val context: Context) {
             .filter { (v, _) -> v > installed }
             .maxByOrNull { (v, _) -> v }
             ?.let { (v, r) -> UpdateOffer(v, r.page.ifBlank { "$REPOSITORY/releases/tag/${r.tag}" }) }
+
+        /**
+         * The server's recommendation, when it is newer than [installed] and may be offered: a
+         * beta only with [betas]. None recommended (null) is no offer -- the server knows no
+         * Android release that speaks its API, so none is pushed.
+         */
+        fun recommended(info: AppsInfo, installed: AppVersion, betas: Boolean): UpdateOffer? {
+            val app = info.android ?: return null
+            val version = AppVersion.parse(app.version) ?: return null
+            if (version.isBeta && !betas) return null
+            if (version <= installed) return null
+            val tag = app.tag.ifBlank { "v$version" }
+            return UpdateOffer(version, app.page.takeIf { it.startsWith("https://") } ?: "$REPOSITORY/releases/tag/$tag")
+        }
 
         fun due(last: Long, now: Long): Boolean = last <= 0 || now - last >= DAY_MS || now < last
 

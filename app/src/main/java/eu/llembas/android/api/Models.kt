@@ -220,6 +220,22 @@ data class SearchResults(
     fun hits(kind: String): List<SearchHit> = results.firstOrNull { it.kind == kind }?.hits.orEmpty()
 }
 
+/** One app release the server recommends (`GET /api/v2/apps`), with the page its files are on. */
+@Serializable
+data class AppRelease(val version: String = "", val tag: String = "", val channel: String = "", val page: String = "")
+
+@Serializable
+data class ServerChannel(val version: String = "", val channel: String = "")
+
+/**
+ * Which release of each app goes with this server: a stable server names only a stable app, a
+ * beta server the newer of the app's stable and beta. Null for an app it recommends none of.
+ */
+@Serializable
+data class AppsInfo(val server: ServerChannel = ServerChannel(), val apps: Map<String, AppRelease?> = emptyMap()) {
+    val android: AppRelease? get() = apps["android"]
+}
+
 /** A data group: whose records a memory is kept among. */
 @Serializable
 data class DataGroup(val id: String = "", val name: String = "")

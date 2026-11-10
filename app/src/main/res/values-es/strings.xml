@@ -351,7 +351,7 @@
     <string name="update_available">%1$s está disponible. Toque para abrir su página de publicación.</string>
     <string name="update_install">Instalar %1$s</string>
     <string name="update_auto">Buscar nuevas versiones</string>
-    <string name="update_auto_line">Como mucho una vez al día, al iniciarse, la aplicación lee en GitHub la lista de versiones de LLeMbas para Android y le avisa con una notificación cuando hay una más reciente. No se envía nada sobre usted ni sobre su instancia. Activado por defecto en una beta; si no, desactivado.</string>
+    <string name="update_auto_line">Como mucho una vez al día, al iniciarse, la aplicación pregunta a su instancia qué versión le corresponde (con una instancia más antigua, lee la lista de versiones en GitHub) y le avisa con una notificación cuando hay una más reciente. No se envía nada sobre usted a ningún otro sitio. Activado por defecto en una beta; si no, desactivado.</string>
     <string name="update_betas">Incluir betas</string>
     <string name="update_betas_line">Ofrecer también versiones de prueba, no solo publicaciones. Activado por defecto cuando esta aplicación es una beta.</string>
     <string name="channel_updates">Actualizaciones de la aplicación</string>
