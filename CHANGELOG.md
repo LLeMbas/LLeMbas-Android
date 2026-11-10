@@ -3,7 +3,9 @@
 What changed in each release of LLeMbas for Android. Versions follow SemVer; until 1.0.0 the app
 is in alpha and releases come off `main`.
 
-## [Unreleased]
+## [1.0.0-beta.7] — 2026-11-10
+
+For LLeMbas server 2.0 (2.0.0-beta.10 or later for phone actions).
 
 ### Added
 
