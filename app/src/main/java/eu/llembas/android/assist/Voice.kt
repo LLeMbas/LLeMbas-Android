@@ -16,6 +16,7 @@ import android.speech.RecognitionService
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import androidx.annotation.RequiresPermission
+import eu.llembas.android.auth.Prefs
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -276,4 +277,15 @@ class PhoneRecognizer(private val context: Context) {
         /** Whether this phone has a recogniser of its own to offer. */
         fun available(context: Context): Boolean = onDevice(context) || component(context) != null
     }
+}
+
+/**
+ * Which recogniser Settings › Voice input means, for the assistant and the chat's microphone
+ * alike: the phone's when it was chosen and the phone has one, or when the instance said it has
+ * no speech-to-text ([instanceStt] false; null is "not known", which leaves the choice as set).
+ */
+fun usePhoneRecognizer(wanted: String, phoneHas: Boolean, instanceStt: Boolean?): Boolean = when {
+    !phoneHas -> false
+    wanted == Prefs.VOICE_PHONE -> true
+    else -> instanceStt == false
 }

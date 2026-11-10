@@ -383,7 +383,7 @@ STRINGS: dict[str, str] = {
     "voice_input_phone": "Phone (Google or the system's)",
     "voice_input_phone_line": "The phone's own recogniser. The words appear as you speak; the recording goes wherever that recogniser sends it.",
     "voice_input_phone_none": "This phone has no speech recogniser of its own.",
-    "voice_input_hint": "Used by the assistant. With LLeMbas the words appear a moment behind you, and a pause sends them; with the phone's recogniser they appear as you speak.",
+    "voice_input_hint": "Used by the assistant and by the microphone in a chat. With LLeMbas the assistant shows the words a moment behind you and a pause sends them, and a chat writes them down when you stop; with the phone's recogniser they appear as you speak.",
     # Share
     "share_sending": "Sending to LLeMbas…",
     "share_default_prompt": "Have a look at this.",

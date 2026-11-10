@@ -3,6 +3,15 @@
 What changed in each release of LLeMbas for Android. Versions follow SemVer; until 1.0.0 the app
 is in alpha and releases come off `main`.
 
+## [Unreleased]
+
+### Changed
+
+- **The microphone in a chat follows Settings › Voice input**, as the assistant does: with
+  *LLeMbas* it records and your instance writes the words down when you stop; with *Phone* the
+  phone's own recogniser writes them into the box as you speak and stops at the end of what you
+  said. The setting's explanation now says it covers both.
+
 ## [1.0.0-beta.5] — 2026-11-10
 
 For LLeMbas server 2.0 (2.0.0-beta.8 or later for the progress line, the subagent list and the new agent chat's Subagents setting).

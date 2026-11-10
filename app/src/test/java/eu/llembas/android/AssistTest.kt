@@ -8,6 +8,8 @@ import eu.llembas.android.assist.AssistTurn
 import eu.llembas.android.assist.Recorder
 import eu.llembas.android.assist.SheetStop
 import eu.llembas.android.assist.settle
+import eu.llembas.android.assist.usePhoneRecognizer
+import eu.llembas.android.auth.Prefs
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -72,5 +74,17 @@ class AssistTest {
             }
         }
         assertTrue(Recorder.rms(loud, loud.size) > 0.9f)
+    }
+
+    @Test
+    fun voiceInputChoosesTheSameRecogniserForTheAssistantAndTheChat() {
+        // Chosen and present: the phone's.
+        assertTrue(usePhoneRecognizer(Prefs.VOICE_PHONE, phoneHas = true, instanceStt = null))
+        // Chosen but absent: the instance's, whatever it said.
+        assertFalse(usePhoneRecognizer(Prefs.VOICE_PHONE, phoneHas = false, instanceStt = false))
+        // LLeMbas chosen: the instance's, unless it said it has no speech-to-text.
+        assertFalse(usePhoneRecognizer(Prefs.VOICE_LEMBAS, phoneHas = true, instanceStt = null))
+        assertFalse(usePhoneRecognizer(Prefs.VOICE_LEMBAS, phoneHas = true, instanceStt = true))
+        assertTrue(usePhoneRecognizer(Prefs.VOICE_LEMBAS, phoneHas = true, instanceStt = false))
     }
 }

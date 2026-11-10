@@ -356,7 +356,7 @@
     <string name="voice_input_phone">Telefón (Google alebo systémový)</string>
     <string name="voice_input_phone_line">Vlastné rozpoznávanie reči v telefóne. Slová sa objavujú, ako hovoríte; nahrávka ide tam, kam ju to rozpoznávanie pošle.</string>
     <string name="voice_input_phone_none">Tento telefón nemá vlastné rozpoznávanie reči.</string>
-    <string name="voice_input_hint">Používa ho asistent. S LLeMbas sa slová objavujú s malým oneskorením a pauza ich odošle; s rozpoznávaním v telefóne sa objavujú, ako hovoríte.</string>
+    <string name="voice_input_hint">Používa ho asistent aj mikrofón v konverzácii. S LLeMbas asistent ukazuje slová s malým oneskorením a pauza ich odošle, konverzácia ich zapíše, keď prestanete; s rozpoznávaním v telefóne sa objavujú, ako hovoríte.</string>
     <string name="share_sending">Odosiela sa do LLeMbas…</string>
     <string name="share_default_prompt">Pozrite sa na toto.</string>
 </resources>

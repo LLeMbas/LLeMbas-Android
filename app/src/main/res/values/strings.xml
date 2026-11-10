@@ -358,7 +358,7 @@
     <string name="voice_input_phone">Phone (Google or the system\'s)</string>
     <string name="voice_input_phone_line">The phone\'s own recogniser. The words appear as you speak; the recording goes wherever that recogniser sends it.</string>
     <string name="voice_input_phone_none">This phone has no speech recogniser of its own.</string>
-    <string name="voice_input_hint">Used by the assistant. With LLeMbas the words appear a moment behind you, and a pause sends them; with the phone\'s recogniser they appear as you speak.</string>
+    <string name="voice_input_hint">Used by the assistant and by the microphone in a chat. With LLeMbas the assistant shows the words a moment behind you and a pause sends them, and a chat writes them down when you stop; with the phone\'s recogniser they appear as you speak.</string>
     <string name="share_sending">Sending to LLeMbas…</string>
     <string name="share_default_prompt">Have a look at this.</string>
 </resources>

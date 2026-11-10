@@ -14,7 +14,6 @@ import eu.llembas.android.api.LiveReply
 import eu.llembas.android.api.ModelInfo
 import eu.llembas.android.api.Step
 import eu.llembas.android.api.StreamClient
-import eu.llembas.android.auth.Prefs
 import eu.llembas.android.lembas
 import eu.llembas.android.push.Notifications
 import eu.llembas.android.ui.explain
@@ -194,12 +193,7 @@ class AssistController(private val context: Context, private val scope: Coroutin
     /** Which recogniser: the one Settings names, else whichever this phone and instance have. */
     private suspend fun phoneEngine(): Boolean {
         val wanted = context.lembas.instances.prefs.first().voiceInput
-        val phoneHas = PhoneRecognizer.available(context)
-        return when {
-            wanted == Prefs.VOICE_PHONE && phoneHas -> true
-            stt == false && phoneHas -> true
-            else -> false
-        }
+        return usePhoneRecognizer(wanted, PhoneRecognizer.available(context), stt)
     }
 
     @android.annotation.SuppressLint("MissingPermission")

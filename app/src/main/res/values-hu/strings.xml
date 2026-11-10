@@ -356,7 +356,7 @@
     <string name="voice_input_phone">Telefon (Google vagy a rendszeré)</string>
     <string name="voice_input_phone_line">A telefon saját beszédfelismerője. A szavak beszéd közben jelennek meg; a felvétel oda megy, ahová az a felismerő küldi.</string>
     <string name="voice_input_phone_none">Ennek a telefonnak nincs saját beszédfelismerője.</string>
-    <string name="voice_input_hint">Az asszisztens használja. LLeMbasszal a szavak kis késéssel jelennek meg, és egy szünet elküldi őket; a telefon felismerőjével beszéd közben jelennek meg.</string>
+    <string name="voice_input_hint">Az asszisztens és a csevegés mikrofonja használja. LLeMbasszal az asszisztens kis késéssel mutatja a szavakat, és egy szünet elküldi őket, a csevegés pedig akkor írja le őket, amikor abbahagyja; a telefon felismerőjével beszéd közben jelennek meg.</string>
     <string name="share_sending">Küldés az LLeMbas-nak…</string>
     <string name="share_default_prompt">Nézze meg ezt.</string>
 </resources>

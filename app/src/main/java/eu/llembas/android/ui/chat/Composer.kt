@@ -58,6 +58,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -80,9 +81,13 @@ import androidx.core.content.ContextCompat
 import eu.llembas.android.R
 import eu.llembas.android.api.AgentsSetting
 import eu.llembas.android.api.LinkedDevice
+import eu.llembas.android.assist.PhoneRecognizer
 import eu.llembas.android.assist.Recorder
+import eu.llembas.android.assist.usePhoneRecognizer
+import eu.llembas.android.auth.Prefs
 import eu.llembas.android.lembas
 import eu.llembas.android.ui.theme.LocalPalette
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 private val Field = RoundedCornerShape(28.dp)
@@ -152,17 +157,46 @@ fun Composer(state: ChatState, actions: ChatActions, agent: Boolean, onTune: () 
     var listening by remember { mutableStateOf(false) }
     var photo by remember { mutableStateOf<Uri?>(null) }
     val recorder = remember { Recorder(scope) }
+    val phone = remember { PhoneRecognizer(context) }
+    // What was typed before the phone's recogniser began: its words go after it as they come.
+    var before by remember { mutableStateOf("") }
+    DisposableEffect(Unit) { onDispose { phone.stop() } }
     val pickFiles = rememberLauncherForActivityResult(ActivityResultContracts.GetMultipleContents()) { actions.attach(it) }
     val pickPhotos = rememberLauncherForActivityResult(ActivityResultContracts.PickMultipleVisualMedia()) { actions.attach(it) }
     val takePhoto = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { taken ->
         photo?.let { if (taken) actions.attach(listOf(it)) }
         photo = null
     }
-    val askMic = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        if (granted) {
-            recorder.start()
-            listening = true
+
+    // Settings › Voice input decides, as it does for the assistant: the instance's speech-to-text
+    // (record, then written down when the person stops) or the phone's recogniser (words as they
+    // are said, the end found by the recogniser).
+    fun startListening() {
+        scope.launch {
+            val wanted = runCatching { context.lembas.instances.prefs.first().voiceInput }.getOrDefault(Prefs.VOICE_LEMBAS)
+            if (usePhoneRecognizer(wanted, PhoneRecognizer.available(context), instanceStt = null)) {
+                before = text
+                listening = true
+                phone.start(
+                    onPartial = { words -> if (listening) text = (before + " " + words).trim() },
+                    onLevel = {},
+                    onResult = { words ->
+                        listening = false
+                        text = (before + " " + words).trim()
+                    },
+                    onFail = {
+                        listening = false
+                        text = before
+                    },
+                )
+            } else {
+                recorder.start()
+                listening = true
+            }
         }
+    }
+    val askMic = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) startListening()
     }
     // A message the server did not take comes back here, so nothing typed is lost.
     LaunchedEffect(state.unsent) {
@@ -307,7 +341,10 @@ fun Composer(state: ChatState, actions: ChatActions, agent: Boolean, onTune: () 
                     }
                 }
                 IconButton(onClick = {
-                    if (listening) {
+                    if (listening && !recorder.recording) {
+                        // The phone's recogniser: stop, and its last words come to onResult.
+                        phone.finish()
+                    } else if (listening) {
                         listening = false
                         scope.launch {
                             val wav = recorder.stop()
@@ -317,8 +354,7 @@ fun Composer(state: ChatState, actions: ChatActions, agent: Boolean, onTune: () 
                             }
                         }
                     } else if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
-                        recorder.start()
-                        listening = true
+                        startListening()
                     } else {
                         askMic.launch(Manifest.permission.RECORD_AUDIO)
                     }

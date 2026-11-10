@@ -356,7 +356,7 @@
     <string name="voice_input_phone">Teléfono (Google o el del sistema)</string>
     <string name="voice_input_phone_line">El reconocimiento de voz del propio teléfono. Las palabras aparecen mientras habla; la grabación va adonde ese reconocimiento la envíe.</string>
     <string name="voice_input_phone_none">Este teléfono no tiene reconocimiento de voz propio.</string>
-    <string name="voice_input_hint">La usa el asistente. Con LLeMbas las palabras aparecen un momento después y una pausa las envía; con el reconocimiento del teléfono aparecen mientras habla.</string>
+    <string name="voice_input_hint">La usan el asistente y el micrófono de un chat. Con LLeMbas el asistente muestra las palabras un momento después y una pausa las envía, y un chat las escribe cuando usted para; con el reconocimiento del teléfono aparecen mientras habla.</string>
     <string name="share_sending">Enviando a LLeMbas…</string>
     <string name="share_default_prompt">Échele un vistazo a esto.</string>
 </resources>

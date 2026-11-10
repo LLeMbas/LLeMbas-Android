@@ -356,7 +356,7 @@
     <string name="voice_input_phone">Telefon (Google oder das System)</string>
     <string name="voice_input_phone_line">Die eigene Spracherkennung des Telefons. Die Wörter erscheinen beim Sprechen; die Aufnahme geht dorthin, wohin diese Erkennung sie schickt.</string>
     <string name="voice_input_phone_none">Dieses Telefon hat keine eigene Spracherkennung.</string>
-    <string name="voice_input_hint">Wird vom Assistenten genutzt. Mit LLeMbas erscheinen die Wörter einen Moment später, und eine Pause sendet sie; mit der Erkennung des Telefons erscheinen sie beim Sprechen.</string>
+    <string name="voice_input_hint">Wird vom Assistenten und vom Mikrofon im Chat genutzt. Mit LLeMbas zeigt der Assistent die Wörter einen Moment später, und eine Pause sendet sie, ein Chat schreibt sie auf, wenn Sie aufhören; mit der Erkennung des Telefons erscheinen sie beim Sprechen.</string>
     <string name="share_sending">Wird an LLeMbas gesendet…</string>
     <string name="share_default_prompt">Schauen Sie sich das an.</string>
 </resources>
