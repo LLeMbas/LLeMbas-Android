@@ -73,7 +73,14 @@ private fun Approval(card: Card, onAnswer: (CardAnswer) -> Unit) {
     Text(stringResource(R.string.card_approval), style = MaterialTheme.typography.titleMedium)
     card.items.forEach { item ->
         // A subagent asks, not the chat's own turn: said first, as the page says it.
-        if (item.job.isNotBlank()) {
+        val subagent = item.subagent
+        if (subagent != null) {
+            Text(
+                stringResource(R.string.card_subagent_asks, subagent.name, subagent.id, subagent.position.ifBlank { "—" }),
+                style = MaterialTheme.typography.labelLarge,
+                color = palette.accent,
+            )
+        } else if (item.job.isNotBlank()) {
             Text(stringResource(R.string.card_asker, item.job), style = MaterialTheme.typography.labelLarge, color = palette.accent)
         }
         // `title` is the heading ("Run a command"); `detail` is the thing itself, the command.

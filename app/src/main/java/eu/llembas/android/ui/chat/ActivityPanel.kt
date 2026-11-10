@@ -81,6 +81,7 @@ import eu.llembas.android.api.AgentDetail
 import eu.llembas.android.api.ContextUse
 import eu.llembas.android.api.Output
 import eu.llembas.android.api.RoomMessage
+import eu.llembas.android.api.SubagentTree
 import eu.llembas.android.api.TreeLogic
 import eu.llembas.android.lembas
 import eu.llembas.android.ui.MarkdownText
@@ -254,6 +255,7 @@ fun ActivityPanel(chatId: String?, state: ChatState, model: ChatViewModel, canOp
             canCompact = chatId != null && !state.running,
             compacting = state.compacting,
             canOpenFiles = canOpenFiles,
+            tree = state.tree,
             onClose = close,
         )
     }
@@ -299,6 +301,7 @@ fun ActivityContent(
     compacting: Boolean = false,
     canOpenFiles: Boolean = true,
     unfolded: Boolean = false,
+    tree: SubagentTree? = null,
     onClose: () -> Unit = {},
 ) {
     val palette = LocalPalette.current
@@ -332,15 +335,15 @@ fun ActivityContent(
             }
             // 3.4.0: the subagents as a reduced list, each opening its conversation read-only;
             // the Tasks section then holds the background jobs, the members being in the list.
-            val tree = activity.tree?.takeIf { TreeLogic.hasSubagents(it) }
-            if (tree != null) {
+            val shownTree = tree?.takeIf { TreeLogic.hasSubagents(it) }
+            if (shownTree != null) {
                 item {
-                    Section(stringResource(R.string.team_agents), count = tree.agents.count { !it.isMain }.takeIf { it > 0 }) {
-                        SubagentList(tree) { agent -> actions.read(ActivityLogic.ofTreeAgent(agent)) }
+                    Section(stringResource(R.string.team_agents), count = shownTree.agents.count { !it.isMain }.takeIf { it > 0 }) {
+                        SubagentList(shownTree) { agent -> actions.read(ActivityLogic.ofTreeAgent(agent)) }
                     }
                 }
             }
-            val tasks = if (tree != null) activity.copy(agents = activity.agents.filter { it.kind != "member" }, team = null) else activity
+            val tasks = if (shownTree != null) activity.copy(agents = activity.agents.filter { it.kind != "member" }, team = null) else activity
             item { Section(stringResource(R.string.activity_tasks)) { TasksSection(tasks, readAt, now, actions, unfolded) } }
             activity.team?.let { team ->
                 item { Section(stringResource(R.string.team_room), count = team.room.size.takeIf { it > 0 }) { RoomSection(team) } }

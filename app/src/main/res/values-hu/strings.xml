@@ -254,6 +254,7 @@
     <string name="tree_state_done">kész</string>
     <string name="tree_state_stopped">leállítva</string>
     <string name="card_asker">%1$s kérdezi:</string>
+    <string name="card_subagent_asks">A(z) %1$s alügynök (%2$s), %3$s, kérdezi:</string>
     <string name="card_it_says">Ezt mondja: %1$s</string>
     <string name="card_change_before">Módosítás futtatás előtt</string>
     <string name="card_edit_runs">Az Engedélyezés azt futtatja, ami a mezőben van. Nem ellenőrizzük újra a csevegés szabályai szerint – ezt Ön írta be.</string>

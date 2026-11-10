@@ -19,6 +19,8 @@ data class LiveReply(
     val progress: Progress? = null,
     val cards: List<Card> = emptyList(),
     val jobs: List<Job> = emptyList(),
+    /** The subagent tree (spec 3.4.0), from the `tree` frame; null until there is one. */
+    val tree: SubagentTree? = null,
     val metrics: Metrics? = null,
     val steered: Set<String> = emptySet(),
     /** Set by `done`: the finished row, which replaces this in the transcript. */
@@ -52,6 +54,8 @@ data class LiveReply(
         "ask" -> decode(AskFrame.serializer(), data)?.let { copy(cards = it.cards) } ?: this
 
         "jobs" -> decode(JobsFrame.serializer(), data)?.let { copy(jobs = it.jobs) } ?: this
+
+        "tree" -> decode(TreeFrame.serializer(), data)?.let { copy(tree = it.tree) } ?: this
 
         "metrics" -> decode(Metrics.serializer(), data)?.let { copy(metrics = it) } ?: this
 

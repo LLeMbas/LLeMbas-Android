@@ -43,8 +43,8 @@ class SubagentsTest {
         val chat = read("chat", Chat.serializer())
         assertEquals(SubagentsOffer(offered = true, namedOnly = false, cap = 32), chat.subagents)
         val agentChat = read("chat_agent", Chat.serializer())
-        // An agent chat is never offered subagents by the server (they run on its device); the cap is said.
-        assertEquals(SubagentsOffer(offered = false, cap = 32), agentChat.subagents)
+        // An agent chat is offered subagents (3.4.0): its device runs them, the setting goes down.
+        assertEquals(SubagentsOffer(offered = true, cap = 32), agentChat.subagents)
 
         val activity = read("activity", ActivityEnvelope.serializer()).activity
         assertEquals(true, activity.subagentsOffered)

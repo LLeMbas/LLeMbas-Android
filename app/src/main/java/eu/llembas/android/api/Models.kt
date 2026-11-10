@@ -419,7 +419,12 @@ data class CardItem(
     val plan: JsonObject? = null,
     @SerialName("mode_choice") val modeChoice: Boolean = false,
     val job: String = "",
+    /** The tree subagent asking (spec 3.4.0), for a call nobody in the tree may allow; null otherwise. */
+    val subagent: CardSubagent? = null,
 )
+
+@Serializable
+data class CardSubagent(val id: String = "", val name: String = "", val position: String = "")
 
 @Serializable
 data class Card(
@@ -484,6 +489,10 @@ data class SteeredFrame(val ids: List<String> = emptyList())
  */
 @Serializable
 data class StatusFrame(val text: String = "", val progress: Progress? = null)
+
+/** The `tree` frame (spec 3.4.0): the subagent tree, once there is one, whenever it changes. */
+@Serializable
+data class TreeFrame(val tree: SubagentTree? = null)
 
 @Serializable
 data class AskFrame(val cards: List<Card> = emptyList())
@@ -648,11 +657,6 @@ data class Activity(
     val context: ContextUse? = null,
     val outputs: List<Output> = emptyList(),
     val plan: JsonObject? = null,
-    /**
-     * The subagent tree (harness spec 3.4.0, `subagents.md` §12), where the server sends it;
-     * null from an older one, which the Tasks section's team members stand for.
-     */
-    val tree: SubagentTree? = null,
 )
 
 @Serializable

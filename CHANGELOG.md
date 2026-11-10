@@ -50,11 +50,14 @@ is in alpha and releases come off `main`.
   is shown as before. A scheduled run under way says it too (*Waiting for coder: all its
   slots are in use*). The words are your instance's, in your language.
 
-- **Subagents, as a list** (the server's subagent tree, once it sends one): the activity sheet
+- **Subagents, as a list**: while a reply runs with subagents, the activity sheet
   shows the main agent and each subagent -- its name, its position, what it is doing now and
   how full its context is -- with the ones that ended after them, dimmed, saying how each ended
   (*done*, *out of context*, *stopped*), and the open slots. A subagent's row opens its
-  conversation, read-only.
+  conversation, read-only. In an agent chat the Subagents setting is there too, and goes to the
+  computer the chat runs on, which runs them.
+- **An approval says which subagent asks** -- *Subagent parser (s1), reviews the parser,
+  asks:* -- when a subagent needs something nobody in its tree may allow.
 
 ### Fixed
 

@@ -254,6 +254,7 @@
     <string name="tree_state_done">terminado</string>
     <string name="tree_state_stopped">detenido</string>
     <string name="card_asker">%1$s pregunta:</string>
+    <string name="card_subagent_asks">El subagente %1$s (%2$s), %3$s, pregunta:</string>
     <string name="card_it_says">Dice: %1$s</string>
     <string name="card_change_before">Cambiar esto antes de que se ejecute</string>
     <string name="card_edit_runs">Permitir ejecuta lo que hay en el cuadro. No se vuelve a comprobar con las reglas de este chat: lo ha escrito usted.</string>

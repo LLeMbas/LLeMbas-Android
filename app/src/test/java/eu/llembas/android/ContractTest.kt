@@ -2,6 +2,7 @@ package eu.llembas.android
 
 import eu.llembas.android.api.APP_API
 import eu.llembas.android.api.AskFrame
+import eu.llembas.android.api.CardSubagent
 import eu.llembas.android.api.Chat
 import eu.llembas.android.api.ChatPage
 import eu.llembas.android.api.DoneFrame
@@ -18,6 +19,7 @@ import eu.llembas.android.api.SteeredFrame
 import eu.llembas.android.api.StepsFrame
 import eu.llembas.android.api.Tail
 import eu.llembas.android.api.ToolCall
+import eu.llembas.android.api.TreeFrame
 import eu.llembas.android.ui.chat.approvalTexts
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.builtins.ListSerializer
@@ -137,7 +139,7 @@ class ContractTest {
     fun aDeviceApprovalCorrectsItsDetail() {
         // A device's approval: the heading in `title`, the command in `detail` -- the text an
         // `editable` item corrects -- no "Something else", and the subagent asking in `job`.
-        val approval = read("event_ask", AskFrame.serializer()).cards.single { it.kind == "approval" }
+        val approval = read("event_ask", AskFrame.serializer()).cards.first { it.kind == "approval" }
         val item = approval.items.single()
         assertEquals("Run a command", item.title)
         assertEquals("rm -rf build", item.detail)
@@ -163,10 +165,34 @@ class ContractTest {
         assertNull(chat.subagents)
         assertEquals(4, chat.agents?.max)
         assertFalse(page.more)
-        // The agent chat's own facts: not offered (its subagents run on its device), the cap said.
+        // The agent chat's own facts (3.4.0): offered -- the setting goes to its device -- the cap said.
         val agent = read("chat_agent", Chat.serializer())
-        assertEquals(false, agent.subagents?.offered)
+        assertEquals(true, agent.subagents?.offered)
         assertEquals(32, agent.subagents?.cap)
+    }
+
+    @Test
+    fun aTreeSubagentAsksThePerson() {
+        // A device's subagent asks for what nobody in its tree may allow: the card names it.
+        val cards = read("event_ask", AskFrame.serializer()).cards
+        val item = cards.single { c -> c.items.any { it.subagent != null } }.items.single()
+        assertEquals(CardSubagent(id = "s1", name = "parser", position = "reviews the parser"), item.subagent)
+        assertEquals("git push", item.detail)
+        assertEquals("", item.job)
+        assertNull(cards.first().items.single().subagent)
+    }
+
+    @Test
+    fun theTreeFrame() {
+        val tree = read("event_tree", TreeFrame.serializer()).tree!!
+        assertEquals(1, tree.openSlots)
+        assertEquals(listOf("lead", "parser"), tree.agents.map { it.name })
+        assertEquals("Review src/parse.ts.", tree.agents[1].task)
+        assertEquals(6, tree.agents[1].contextPercent)
+        assertEquals("done", tree.ended.single().state)
+        assertNull(tree.ended.single().progress)
+        // The stream carries it; the reply keeps it.
+        assertEquals(tree, LiveReply("m").apply("tree", text("event_tree")).tree)
     }
 
     @Test
@@ -177,7 +203,7 @@ class ContractTest {
         assertEquals("Bake lembas", read("event_plan", Plan.serializer()).title)
         assertTrue(read("event_status", StatusFrame.serializer()).text.isNotEmpty())
         val cards = read("event_ask", AskFrame.serializer()).cards
-        assertEquals(listOf("question", "approval", "plan"), cards.map { it.kind })
+        assertEquals(listOf("question", "approval", "plan", "approval"), cards.map { it.kind })
         assertEquals(listOf("Honey", "Plain"), cards[0].items[0].options.map { it.label })
         assertTrue(cards[1].items[0].editable)
         assertNotNull(cards[2].items[0].plan)

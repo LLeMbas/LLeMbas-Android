@@ -254,6 +254,7 @@
     <string name="tree_state_done">finito</string>
     <string name="tree_state_stopped">interrotto</string>
     <string name="card_asker">%1$s chiede:</string>
+    <string name="card_subagent_asks">Il subagente %1$s (%2$s), %3$s, chiede:</string>
     <string name="card_it_says">Dice: %1$s</string>
     <string name="card_change_before">Modificalo prima che venga eseguito</string>
     <string name="card_edit_runs">Consenti esegue ciò che c\'è nel campo. Non viene ricontrollato rispetto alle regole di questa chat — l\'hai scritto tu.</string>

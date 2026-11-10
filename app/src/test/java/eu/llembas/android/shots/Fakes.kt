@@ -203,41 +203,39 @@ object Fakes {
     )
 
     /**
-     * The activity sheet of a chat with subagents (spec 3.4.0's tree): the main agent, a
+     * The subagent tree beside the activity sheet (spec 3.4.0's tree): the main agent, a
      * sub-manager with one under it paused, one waiting for a slot, an open slot and one ended.
      */
-    val activityTree = activity.copy(
-        tree = SubagentTree(
-            min = 2,
-            max = 5,
-            size = 4,
-            openSlots = 1,
-            agents = listOf(
-                TreeAgent(
-                    id = "lead", name = "lead", position = "the main agent", state = "working", model = "qwen", mode = "edit", manager = true,
-                    context = TreeContext(41_200, 131_072), progress = Progress(phase = "waiting_for_subagents", since = 1762790400000, running = 2),
-                ),
-                TreeAgent(
-                    id = "s1", name = "parser", position = "reviews the parser and everything that reads its output", parent = "lead",
-                    state = "working", model = "qwen", mode = "edit", manager = true, context = TreeContext(9_100, 131_072),
-                    progress = Progress(phase = "running_tool", since = 1762790401000, tool = "read", what = "src/parse.ts"),
-                ),
-                TreeAgent(
-                    id = "s3", name = "lexer", position = "the lexer's tests", parent = "parser", state = "paused",
-                    model = "qwen", mode = "manual", context = TreeContext(112_000, 131_072), progress = Progress(phase = "thinking", since = 1762790402000),
-                ),
-                TreeAgent(id = "s4", name = "docs", position = "writes the changelog", parent = "lead", state = "waiting", model = "qwen", mode = "edit"),
+    val tree = SubagentTree(
+        min = 2,
+        max = 5,
+        size = 4,
+        openSlots = 1,
+        agents = listOf(
+            TreeAgent(
+                id = "lead", name = "lead", position = "the main agent", state = "working", model = "qwen", mode = "edit", manager = true,
+                context = TreeContext(41_200, 131_072), progress = Progress(phase = "waiting_for_subagents", since = 1762790400000, running = 2),
             ),
-            ended = listOf(
-                TreeAgent(
-                    id = "s2",
-                    name = "scout",
-                    position = "finds the old parser",
-                    parent = "lead",
-                    state = "out_of_context",
-                    ended = 1762790300000,
-                    findings = 2,
-                ),
+            TreeAgent(
+                id = "s1", name = "parser", position = "reviews the parser and everything that reads its output", parent = "lead",
+                state = "working", model = "qwen", mode = "edit", manager = true, context = TreeContext(9_100, 131_072),
+                progress = Progress(phase = "running_tool", since = 1762790401000, tool = "read", what = "src/parse.ts"),
+            ),
+            TreeAgent(
+                id = "s3", name = "lexer", position = "the lexer's tests", parent = "parser", state = "paused",
+                model = "qwen", mode = "manual", context = TreeContext(112_000, 131_072), progress = Progress(phase = "thinking", since = 1762790402000),
+            ),
+            TreeAgent(id = "s4", name = "docs", position = "writes the changelog", parent = "lead", state = "waiting", model = "qwen", mode = "edit"),
+        ),
+        ended = listOf(
+            TreeAgent(
+                id = "s2",
+                name = "scout",
+                position = "finds the old parser",
+                parent = "lead",
+                state = "out_of_context",
+                ended = 1762790300000,
+                findings = 2,
             ),
         ),
     )

@@ -175,7 +175,9 @@ class ScreenShots {
         shoot("14-activity", Phone.Scroll, content = sheet)
         shoot("15-activity-open", Phone.Scroll, content = open)
         // Spec 3.4.0's subagents: the reduced list above the background tasks.
-        val tree: @Composable () -> Unit = { SheetOver { ActivityContent(Fakes.activityTree, readAt = 0, now = 0, actions = NoActivityActions) } }
+        val tree: @Composable () -> Unit = {
+            SheetOver { ActivityContent(Fakes.activity, readAt = 0, now = 0, actions = NoActivityActions, tree = Fakes.tree) }
+        }
         shoot("26-subagents", Phone.Scroll, content = tree)
         shoot("26-subagents", Phone.Small, fontScale = 1.5f, content = tree)
         shoot("16-activity-new-chat") {
@@ -216,9 +218,11 @@ class ScreenShots {
     fun cards() {
         val frame = requireNotNull(javaClass.classLoader!!.getResource("event_ask.json")).readText()
         val cards = eu.llembas.android.api.LembasJson.decodeFromString(eu.llembas.android.api.AskFrame.serializer(), frame).cards
-        val approval = cards.single { it.kind == "approval" }
+        val approval = cards.first { it.kind == "approval" }
+        val fromSubagent = cards.first { it.kind == "approval" && it.items.any { item -> item.subagent != null } }
         val question = cards.first { it.kind == "question" }
         shoot("24-approval") { SheetOver { CardSheet(approval, onAnswer = {}) } }
+        shoot("24-approval-subagent") { SheetOver { CardSheet(fromSubagent, onAnswer = {}) } }
         shoot("24-approval", Phone.Small, fontScale = 1.5f) { SheetOver { CardSheet(approval, onAnswer = {}) } }
         shoot("25-question") { SheetOver { CardSheet(question, onAnswer = {}) } }
     }

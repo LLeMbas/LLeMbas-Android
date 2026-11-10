@@ -254,6 +254,7 @@
     <string name="tree_state_done">hotovo</string>
     <string name="tree_state_stopped">zastaveno</string>
     <string name="card_asker">%1$s se ptá:</string>
+    <string name="card_subagent_asks">Podagent %1$s (%2$s), %3$s, se ptá:</string>
     <string name="card_it_says">Model uvádí: %1$s</string>
     <string name="card_change_before">Upravit to před spuštěním</string>
     <string name="card_edit_runs">Povolením se spustí to, co je v poli. Znovu se to neporovnává s pravidly této konverzace — napsali jste to vy.</string>

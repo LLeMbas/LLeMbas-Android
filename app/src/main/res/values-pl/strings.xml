@@ -254,6 +254,7 @@
     <string name="tree_state_done">gotowe</string>
     <string name="tree_state_stopped">zatrzymane</string>
     <string name="card_asker">%1$s pyta:</string>
+    <string name="card_subagent_asks">Podagent %1$s (%2$s), %3$s, pyta:</string>
     <string name="card_it_says">Mówi: %1$s</string>
     <string name="card_change_before">Zmień to przed uruchomieniem</string>
     <string name="card_edit_runs">Zezwolenie uruchamia to, co jest w polu. Nie jest to ponownie sprawdzane z regułami tego czatu — zostało wpisane ręcznie.</string>

@@ -254,6 +254,7 @@
     <string name="tree_state_done">terminé</string>
     <string name="tree_state_stopped">arrêté</string>
     <string name="card_asker">%1$s demande :</string>
+    <string name="card_subagent_asks">Le sous-agent %1$s (%2$s), %3$s, demande :</string>
     <string name="card_it_says">Il dit : %1$s</string>
     <string name="card_change_before">Modifier ceci avant l\'exécution</string>
     <string name="card_edit_runs">Autoriser exécute ce qui se trouve dans le champ. Ce n\'est pas revérifié par rapport aux règles de cette conversation — c\'est vous qui l\'avez saisi.</string>

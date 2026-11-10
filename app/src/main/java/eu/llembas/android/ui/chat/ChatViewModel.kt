@@ -25,6 +25,7 @@ import eu.llembas.android.api.LiveReply
 import eu.llembas.android.api.Message
 import eu.llembas.android.api.ModelInfo
 import eu.llembas.android.api.StreamClient
+import eu.llembas.android.api.SubagentTree
 import eu.llembas.android.api.Turn
 import eu.llembas.android.lembas
 import eu.llembas.android.ui.explain
@@ -73,6 +74,8 @@ data class ChatState(
     val compacting: Boolean = false,
     /** What a chat not made yet will be made with: chosen in the top bar and the tune sheet. */
     val draft: Draft = Draft(),
+    /** The subagent tree (spec 3.4.0) from this chat's last `tree` frame; null until one came. */
+    val tree: SubagentTree? = null,
 )
 
 /**
@@ -190,7 +193,7 @@ class ChatViewModel(app: Application) :
         viewModelScope.launch {
             try {
                 val client = api()
-                _state.update { it.copy(loading = chatId != null || agent, error = null) }
+                _state.update { it.copy(loading = chatId != null || agent, error = null, tree = null) }
                 val list = runCatching { client.modelList(chatId) }.getOrNull()
                 val models = list?.models.orEmpty()
                 _state.update { it.copy(modelsCap = list?.subagentsCap) }
@@ -246,7 +249,11 @@ class ChatViewModel(app: Application) :
             _state.update { it.copy(live = LiveReply(messageId)) }
             try {
                 StreamClient(api()).follow(chat.id, messageId).collect { frame ->
-                    _state.update { s -> s.copy(live = (s.live ?: LiveReply(messageId)).apply(frame.event, frame.data)) }
+                    _state.update { s ->
+                        val live = (s.live ?: LiveReply(messageId)).apply(frame.event, frame.data)
+                        // The tree outlives the reply: kept for the activity sheet once it ends.
+                        s.copy(live = live, tree = live.tree ?: s.tree)
+                    }
                 }
             } catch (e: CancellationException) {
                 throw e
