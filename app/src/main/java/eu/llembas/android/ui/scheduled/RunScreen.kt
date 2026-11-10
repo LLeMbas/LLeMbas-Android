@@ -119,7 +119,7 @@ fun RunContent(state: RunState, onBack: () -> Unit = {}, onOpenChat: (String) ->
                 Surface(shape = RoundedCornerShape(20.dp), color = palette.surfaceRaised, contentColor = palette.ink, modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            StatusChip(run.status, run.missed)
+                            StatusChip(run.status, run.missed, run.waitingFor)
                             Spacer(Modifier.width(8.dp))
                             Text(
                                 ScheduleLogic.moment(run.finishedAt ?: run.startedAt ?: run.dueAt) ?: "—",

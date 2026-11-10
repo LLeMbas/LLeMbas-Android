@@ -222,10 +222,12 @@
     <string name="schedule_computer">Ordinateur</string>
     <string name="schedule_computer_away">non relié pour l’instant</string>
     <string name="schedule_watching">Seulement quand cette page change</string>
+    <string name="schedule_watching_command">Seulement quand la sortie de cette commande change</string>
     <string name="run_failed">Échecs</string>
     <string name="run_missed">Manquée ×%1$s</string>
     <string name="run_skipped">Sautée</string>
     <string name="run_waiting">En attente d’un modèle</string>
+    <string name="run_waiting_computer">En attente de l’ordinateur</string>
     <string name="run_running">En cours</string>
     <string name="run_model_instead">%1$s, au lieu de %2$s</string>
     <string name="run_retry_at">Nouvel essai à %1$s</string>

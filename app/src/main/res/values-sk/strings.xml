@@ -222,10 +222,12 @@
     <string name="schedule_computer">Počítač</string>
     <string name="schedule_computer_away">teraz nie je prepojený</string>
     <string name="schedule_watching">Len keď sa táto stránka zmení</string>
+    <string name="schedule_watching_command">Len keď sa zmení výstup tohto príkazu</string>
     <string name="run_failed">Zlyhalo</string>
     <string name="run_missed">Zmeškané ×%1$s</string>
     <string name="run_skipped">Vynechané</string>
     <string name="run_waiting">Čaká na model</string>
+    <string name="run_waiting_computer">Čaká na počítač</string>
     <string name="run_running">Beží</string>
     <string name="run_model_instead">%1$s, namiesto %2$s</string>
     <string name="run_retry_at">Skúsi to znova o %1$s</string>

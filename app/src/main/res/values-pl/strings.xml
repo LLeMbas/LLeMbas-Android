@@ -222,10 +222,12 @@
     <string name="schedule_computer">Komputer</string>
     <string name="schedule_computer_away">teraz niepołączony</string>
     <string name="schedule_watching">Tylko gdy ta strona się zmieni</string>
+    <string name="schedule_watching_command">Tylko gdy zmieni się wynik tego polecenia</string>
     <string name="run_failed">Nieudane</string>
     <string name="run_missed">Pominięto ×%1$s</string>
     <string name="run_skipped">Pominięto</string>
     <string name="run_waiting">Czeka na model</string>
+    <string name="run_waiting_computer">Czeka na komputer</string>
     <string name="run_running">Działa</string>
     <string name="run_model_instead">%1$s zamiast %2$s</string>
     <string name="run_retry_at">Ponowi próbę o %1$s</string>

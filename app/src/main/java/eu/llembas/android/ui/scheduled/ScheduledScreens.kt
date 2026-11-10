@@ -273,7 +273,7 @@ private fun ScheduleCard(schedule: Schedule, onOpen: () -> Unit, onPause: (Boole
                 }
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
                     val shown = if (schedule.running) "running" else schedule.lastRun?.status
-                    shown?.let { StatusChip(it, schedule.lastRun?.missed ?: 0) }
+                    shown?.let { StatusChip(it, schedule.lastRun?.missed ?: 0, schedule.lastRun?.waitingFor) }
                     val next = when {
                         schedule.paused -> stringResource(R.string.schedule_paused)
                         else -> ScheduleLogic.moment(schedule.nextRun)?.let { stringResource(R.string.schedule_next, it) }
@@ -298,7 +298,7 @@ private fun ScheduleCard(schedule: Schedule, onOpen: () -> Unit, onPause: (Boole
 
 /** A run's status in words, on its tone's soft colour. */
 @Composable
-fun StatusChip(status: String, missed: Int = 0) {
+fun StatusChip(status: String, missed: Int = 0, waitingFor: String? = null) {
     val palette = LocalPalette.current
     val (ink, soft) = toneColours(palette, ScheduleLogic.tone(status))
     val words = when (status) {
@@ -308,12 +308,12 @@ fun StatusChip(status: String, missed: Int = 0) {
         "failed" -> stringResource(R.string.run_failed)
         "missed" -> stringResource(R.string.run_missed, maxOf(missed, 1).toString())
         "skipped" -> stringResource(R.string.run_skipped)
-        "waiting" -> stringResource(R.string.run_waiting)
+        "waiting" -> stringResource(if (waitingFor == "device") R.string.run_waiting_computer else R.string.run_waiting)
         "running" -> stringResource(R.string.run_running)
         else -> status
     }
     Box(Modifier.background(soft, RoundedCornerShape(8.dp)).padding(horizontal = 8.dp, vertical = 3.dp)) {
-        Text(words, style = MaterialTheme.typography.labelMedium, color = ink, maxLines = 1)
+        Text(words, style = MaterialTheme.typography.labelMedium, color = ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
@@ -542,7 +542,8 @@ private fun ScheduleBody(
                     schedule.runsOn?.let { on -> ComputerLine(on, away = schedule.lastRun?.computerAway == true) }
                     schedule.watch?.target?.takeIf { it.isNotBlank() }?.let { url ->
                         Text(
-                            stringResource(R.string.schedule_watching) + ": " + url,
+                            stringResource(if (schedule.watch?.kind == "command") R.string.schedule_watching_command else R.string.schedule_watching) + ": " +
+                                url,
                             style = MaterialTheme.typography.bodySmall,
                             color = palette.inkFaint,
                             maxLines = 2,
@@ -705,7 +706,7 @@ private fun RunRow(run: ScheduleRun, runsOn: RunsOn?, onOpen: () -> Unit) {
         modifier = Modifier.fillMaxWidth(),
     ) {
         Row(Modifier.heightIn(min = 64.dp).padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.Top) {
-            Box(Modifier.width(112.dp)) { StatusChip(run.status, run.missed) }
+            Box(Modifier.width(112.dp)) { StatusChip(run.status, run.missed, run.waitingFor) }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(ScheduleLogic.moment(run.startedAt ?: run.dueAt) ?: "—", style = MaterialTheme.typography.bodyMedium)
                 // Which computer the run was for, and whether it was away.
