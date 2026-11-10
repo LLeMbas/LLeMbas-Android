@@ -427,6 +427,15 @@
     <string name="notification_access_on">Accordé. L’interrupteur d’Android est dans les paramètres du système.</string>
     <string name="notification_access_off">Pas encore accordé. Touchez pour ouvrir l’interrupteur d’Android pour LLeMbas.</string>
     <string name="notification_summaries_privacy">Désactivé par défaut. Quand vous le demandez, le texte des notifications présentes sur votre téléphone (app, titre, texte) part avec cette seule question vers votre instance et son modèle. Rien n’est lu avant, l’app n’en garde rien, et rien n’est lu téléphone verrouillé. L’accès aux notifications d’Android permet à une app de voir toutes les notifications : c’est à vous de l’accorder et de le retirer.</string>
+    <string name="nav_app">App de navigation</string>
+    <string name="nav_app_auto">Celle qui est installée</string>
+    <string name="nav_app_google">Google Maps</string>
+    <string name="nav_app_osmand">OsmAnd</string>
+    <string name="nav_app_ask">Demander à chaque fois</string>
+    <string name="nav_app_not_installed">Non installée</string>
+    <string name="osmand_info">Demander l’itinéraire à OsmAnd</string>
+    <string name="osmand_info_line">Permet « ajouter un arrêt » et la recherche à proximité avec un itinéraire créé dans OsmAnd même : LLeMbas demande à OsmAnd où vous êtes et où va l’itinéraire. Autorisez d’abord LLeMbas dans OsmAnd (apps connectées, avec la position) ; OsmAnd vous prévient sinon.</string>
+    <string name="phone_actions_line">Un modèle peut proposer de faire des choses sur ce téléphone : régler une alarme, ajouter un événement, rédiger un message, lancer un itinéraire. Rien ne se passe tant que vous ne touchez pas Le faire sur sa carte, et jamais téléphone verrouillé. Google Maps lance un itinéraire avec quelques arrêts mais ne peut ni en ajouter à un itinéraire en cours ni être arrêté ; OsmAnd le peut.</string>
     <string name="assist_recogniser_failed">La reconnaissance vocale du téléphone s’est arrêtée. Réessayez, ou choisissez LLeMbas dans Réglages › Saisie vocale.</string>
     <string name="assistant_listens">Écouter dès l’ouverture de l’assistant</string>
     <string name="voice_input">Saisie vocale</string>

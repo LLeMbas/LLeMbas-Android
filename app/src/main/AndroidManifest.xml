@@ -12,6 +12,8 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- Phone actions: an alarm or a timer, set through the clock app once the person confirms. -->
+    <uses-permission android:name="com.android.alarm.permission.SET_ALARM" />
 
     <queries>
         <!-- UnifiedPush distributors (ntfy and others) are found by this action. -->
@@ -22,6 +24,15 @@
         <intent>
             <action android:name="android.speech.RecognitionService" />
         </intent>
+        <!-- Phone actions: "open an app" by its name, and the navigation apps a route goes to. -->
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+        <package android:name="com.google.android.apps.maps" />
+        <package android:name="net.osmand.plus" />
+        <package android:name="net.osmand" />
+        <package android:name="net.osmand.dev" />
     </queries>
 
     <application
@@ -95,6 +106,14 @@
                 <data android:mimeType="application/*" />
             </intent-filter>
         </activity>
+
+        <!-- Phone actions: asks another app for a result (OsmAnd's get_info) and goes. -->
+        <activity
+            android:name=".actions.ActionRunner$ResultActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:taskAffinity=""
+            android:theme="@style/Theme.Lembas.Sheet" />
 
         <!-- The home-screen widget: Ask, the microphone, the last assistant chat. -->
         <receiver

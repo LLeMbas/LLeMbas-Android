@@ -427,6 +427,15 @@
     <string name="notification_access_on">Udelený. Prepínač Androidu je v systémových nastaveniach.</string>
     <string name="notification_access_off">Zatiaľ neudelený. Ťuknutím otvoríte prepínač Androidu pre LLeMbas.</string>
     <string name="notification_summaries_privacy">Predvolene vypnuté. Keď požiadate, text oznámení, ktoré sú v telefóne práve teraz (aplikácia, názov, text), pôjde s touto jedinou otázkou na vašu inštanciu a jej model. Predtým sa nič nečíta, aplikácia si nič neponechá a pri zamknutom telefóne sa nečíta nič. Prístup k oznámeniam v Androide dovolí aplikácii vidieť každé oznámenie, preto je na vás, či ho dáte a znova vezmete.</string>
+    <string name="nav_app">Navigačná aplikácia</string>
+    <string name="nav_app_auto">Tá, ktorá je nainštalovaná</string>
+    <string name="nav_app_google">Mapy Google</string>
+    <string name="nav_app_osmand">OsmAnd</string>
+    <string name="nav_app_ask">Zakaždým sa opýtať</string>
+    <string name="nav_app_not_installed">Nie je nainštalovaná</string>
+    <string name="osmand_info">Pýtať sa OsmAnd na trasu</string>
+    <string name="osmand_info_line">Umožní „pridať zastávku“ a hľadanie v okolí aj pri trase nastavenej priamo v OsmAnd: LLeMbas sa OsmAnd opýta, kde ste a kam trasa vedie. Najprv LLeMbas povoľte v OsmAnd (pripojené aplikácie, s polohou); OsmAnd dá vedieť, ak povolené nie je.</string>
+    <string name="phone_actions_line">Model môže ponúknuť, že v telefóne niečo urobí — nastaví budík, pridá udalosť, pripraví správu, spustí trasu. Nič sa nestane, kým neťuknete na Urobiť na jeho karte, a nikdy pri zamknutom telefóne. Mapy Google spustia trasu s niekoľkými zastávkami, ale do bežiacej trasy zastávku nepridajú ani sa nedajú zastaviť; OsmAnd to vie.</string>
     <string name="assist_recogniser_failed">Rozpoznávanie reči v telefóne sa zastavilo. Skúste to znova alebo zvoľte LLeMbas v Nastaveniach › Hlasový vstup.</string>
     <string name="assistant_listens">Začať počúvať, keď sa asistent otvorí</string>
     <string name="voice_input">Hlasový vstup</string>

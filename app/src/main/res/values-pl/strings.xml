@@ -427,6 +427,15 @@
     <string name="notification_access_on">Przyznany. Przełącznik Androida jest w ustawieniach systemu.</string>
     <string name="notification_access_off">Jeszcze nie przyznany. Dotknij, aby otworzyć przełącznik Androida dla LLeMbas.</string>
     <string name="notification_summaries_privacy">Domyślnie wyłączone. Gdy poprosisz, tekst powiadomień, które są teraz na telefonie (aplikacja, tytuł, treść), trafi z tym jednym pytaniem do Twojej instancji i jej modelu. Wcześniej nic nie jest czytane, aplikacja niczego nie zachowuje i nic nie jest czytane przy zablokowanym telefonie. Dostęp do powiadomień w Androidzie pozwala aplikacji widzieć każde powiadomienie, więc to Ty decydujesz, czy go dać i odebrać.</string>
+    <string name="nav_app">Aplikacja nawigacyjna</string>
+    <string name="nav_app_auto">Ta, która jest zainstalowana</string>
+    <string name="nav_app_google">Mapy Google</string>
+    <string name="nav_app_osmand">OsmAnd</string>
+    <string name="nav_app_ask">Pytaj za każdym razem</string>
+    <string name="nav_app_not_installed">Nie zainstalowano</string>
+    <string name="osmand_info">Pytaj OsmAnd o trasę</string>
+    <string name="osmand_info_line">Pozwala „dodać przystanek” i szukać w pobliżu także przy trasie ustawionej w samym OsmAnd: LLeMbas pyta OsmAnd, gdzie jesteś i dokąd prowadzi trasa. Najpierw zezwól LLeMbas w OsmAnd (połączone aplikacje, z lokalizacją); OsmAnd poinformuje, jeśli nie ma zgody.</string>
+    <string name="phone_actions_line">Model może zaproponować zrobienie czegoś na tym telefonie — ustawienie budzika, dodanie wydarzenia, szkic wiadomości, start trasy. Nic się nie dzieje, dopóki nie dotkniesz Zrób to na jego karcie, i nigdy przy zablokowanym telefonie. Mapy Google uruchomią trasę z kilkoma przystankami, ale nie dodadzą przystanku do trwającej trasy ani nie dadzą się zatrzymać; OsmAnd potrafi.</string>
     <string name="assist_recogniser_failed">Rozpoznawanie mowy w telefonie przestało działać. Spróbuj ponownie albo wybierz LLeMbas w Ustawienia › Wprowadzanie głosowe.</string>
     <string name="assistant_listens">Zacznij słuchać po otwarciu asystenta</string>
     <string name="voice_input">Wprowadzanie głosowe</string>

@@ -429,6 +429,15 @@
     <string name="notification_access_on">Given. Android\'s switch for it is in the system\'s settings.</string>
     <string name="notification_access_off">Not given yet. Tap to open Android\'s switch for LLeMbas.</string>
     <string name="notification_summaries_privacy">Off by default. When you ask, the text of the notifications on your phone right now (app, title, text) goes with that one question to your instance and its model. Nothing is read before you ask, the app keeps none of it, and none is read while the phone is locked. Android\'s notification access lets an app see every notification, so it is yours to give and to take back.</string>
+    <string name="nav_app">Navigation app</string>
+    <string name="nav_app_auto">Whichever is installed</string>
+    <string name="nav_app_google">Google Maps</string>
+    <string name="nav_app_osmand">OsmAnd</string>
+    <string name="nav_app_ask">Ask each time</string>
+    <string name="nav_app_not_installed">Not installed</string>
+    <string name="osmand_info">Ask OsmAnd about the route</string>
+    <string name="osmand_info_line">Lets “add a stop” and searches near you work with a route you set up in OsmAnd itself: LLeMbas asks OsmAnd where you are and where the route goes. Allow LLeMbas in OsmAnd first (its connected apps, with Location); OsmAnd tells you if it is not allowed.</string>
+    <string name="phone_actions_line">A model may offer to do things on this phone — set an alarm, add an event, draft a message, start a route. Nothing happens until you tap Do it on its card, and never while the phone is locked. Google Maps starts a route with a few stops but cannot add one to a route already running or be told to stop; OsmAnd can.</string>
     <string name="assist_recogniser_failed">The phone\'s speech recogniser stopped. Try again, or choose LLeMbas under Settings › Voice input.</string>
     <string name="assistant_listens">Start listening when the assistant opens</string>
     <string name="voice_input">Voice input</string>

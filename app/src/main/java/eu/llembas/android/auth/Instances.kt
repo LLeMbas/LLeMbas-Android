@@ -95,6 +95,10 @@ data class Prefs(
     val wakeScreenOnly: Boolean = true,
     /** The assistant may read the notifications when asked (with Android's notification access). */
     val notificationSummaries: Boolean = false,
+    /** Phone actions' navigation app: "" whichever is installed, "google", "osmand", or "ask". */
+    val navApp: String = "",
+    /** Ask OsmAnd for the phone's position and the route's destination (allowed inside OsmAnd first). */
+    val osmandInfo: Boolean = false,
     val assistantModel: String = "",
     val lastAssistChat: String = "",
     val lastAssistTitle: String = "",

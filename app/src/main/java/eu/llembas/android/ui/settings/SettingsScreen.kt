@@ -38,6 +38,8 @@ import androidx.compose.material.icons.filled.Forum
 import androidx.compose.material.icons.filled.Hearing
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.MyLocation
+import androidx.compose.material.icons.filled.Navigation
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Palette
@@ -84,6 +86,7 @@ import androidx.core.content.ContextCompat
 import eu.llembas.android.AppLanguage
 import eu.llembas.android.BuildConfig
 import eu.llembas.android.R
+import eu.llembas.android.actions.NavApp
 import eu.llembas.android.assist.PhoneRecognizer
 import eu.llembas.android.auth.Instance
 import eu.llembas.android.auth.Prefs
@@ -123,6 +126,8 @@ interface SettingsActions {
     fun batterySettings() {}
     fun notificationSummaries(on: Boolean) {}
     fun notificationAccess() {}
+    fun navApp(id: String) {}
+    fun osmandInfo(on: Boolean) {}
     fun readAloud(on: Boolean) {}
     fun checkUpdate() {}
     fun openRelease() {}
@@ -151,6 +156,8 @@ data class SettingsState(
     val wakeAvailable: Boolean = false,
     /** Whether Android's notification access is given to LLeMbas. */
     val notificationAccess: Boolean = false,
+    /** The navigation apps installed: NavApp ids. */
+    val navApps: List<String> = emptyList(),
 )
 
 @Composable
@@ -274,6 +281,14 @@ fun SettingsScreen(onBack: () -> Unit, onAddInstance: () -> Unit) {
                 runCatching { context.startActivity(NotificationReader.settingsIntent(context)) }
             }
 
+            override fun navApp(id: String) {
+                scope.launch { store.savePrefs { it.copy(navApp = id) } }
+            }
+
+            override fun osmandInfo(on: Boolean) {
+                scope.launch { store.savePrefs { it.copy(osmandInfo = on) } }
+            }
+
             override fun readAloud(on: Boolean) {
                 scope.launch { store.savePrefs { it.copy(readAloudSpoken = on) } }
             }
@@ -331,6 +346,7 @@ fun SettingsScreen(onBack: () -> Unit, onAddInstance: () -> Unit) {
             wakeAvailable = WakeEngine.AVAILABLE,
             // Read again each time Settings is composed: the person comes back from the system's page.
             notificationAccess = NotificationReader.granted(context),
+            navApps = remember { NavApp.installedApps(context).map { it.id } },
         ),
         actions,
         onBack,
@@ -514,6 +530,7 @@ fun SettingsContent(state: SettingsState, actions: SettingsActions, onBack: () -
             }
             item { WakeWordGroup(state, actions) }
             item { NotificationSummaryGroup(state, actions) }
+            item { PhoneActionsGroup(state, actions) }
             item {
                 // Which recogniser turns speech into words: the instance's or the phone's -- what
                 // each one is, and where the recording goes, said in the row itself.
@@ -642,6 +659,53 @@ private fun WakeWordGroup(state: SettingsState, actions: SettingsActions) {
     }
     Text(
         stringResource(R.string.wake_word_privacy) + "\n\n" + stringResource(R.string.wake_word_cost),
+        style = MaterialTheme.typography.bodySmall,
+        color = palette.inkFaint,
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+    )
+}
+
+/**
+ * Phone actions: which navigation app a route goes to (whichever is installed by default; with
+ * both, the card asks), and whether OsmAnd may be asked where the phone is and where the running
+ * route goes -- which the person allows inside OsmAnd first.
+ */
+@Composable
+private fun PhoneActionsGroup(state: SettingsState, actions: SettingsActions) {
+    val palette = LocalPalette.current
+    val choices = listOf(
+        "" to stringResource(R.string.nav_app_auto),
+        NavApp.GoogleMaps.id to stringResource(R.string.nav_app_google),
+        NavApp.OsmAnd.id to stringResource(R.string.nav_app_osmand),
+        NavApp.PREF_ASK to stringResource(R.string.nav_app_ask),
+    )
+    Group(stringResource(R.string.nav_app)) {
+        choices.forEachIndexed { i, (id, label) ->
+            if (i > 0) Rule()
+            val installed = id == "" || id == NavApp.PREF_ASK || id in state.navApps
+            SettingRow(
+                Icons.Filled.Navigation,
+                label,
+                subtitle = if (installed) null else stringResource(R.string.nav_app_not_installed),
+                showIcon = i == 0,
+                enabled = installed,
+                onClick = { actions.navApp(id) },
+                trailing = { RadioButton(selected = state.prefs.navApp == id, enabled = installed, onClick = { actions.navApp(id) }) },
+            )
+        }
+        if (NavApp.OsmAnd.id in state.navApps) {
+            Rule()
+            SettingRow(
+                Icons.Filled.MyLocation,
+                stringResource(R.string.osmand_info),
+                subtitle = stringResource(R.string.osmand_info_line),
+                onClick = { actions.osmandInfo(!state.prefs.osmandInfo) },
+                trailing = { Switch(checked = state.prefs.osmandInfo, onCheckedChange = actions::osmandInfo) },
+            )
+        }
+    }
+    Text(
+        stringResource(R.string.phone_actions_line),
         style = MaterialTheme.typography.bodySmall,
         color = palette.inkFaint,
         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),

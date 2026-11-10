@@ -363,6 +363,7 @@ object Fakes {
         selfUpdate = true,
         phoneRecognizer = true,
         wakeAvailable = true,
+        navApps = listOf("google", "osmand"),
     )
 
     // The assistant's sheet, as it opens and as it answers.

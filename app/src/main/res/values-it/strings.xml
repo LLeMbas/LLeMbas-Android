@@ -427,6 +427,15 @@
     <string name="notification_access_on">Concesso. L’interruttore di Android è nelle impostazioni di sistema.</string>
     <string name="notification_access_off">Non ancora concesso. Tocca per aprire l’interruttore di Android per LLeMbas.</string>
     <string name="notification_summaries_privacy">Disattivato per impostazione predefinita. Quando lo chiedi, il testo delle notifiche presenti ora sul telefono (app, titolo, testo) va con quella sola domanda alla tua istanza e al suo modello. Prima non si legge nulla, l’app non conserva nulla e a telefono bloccato non si legge nulla. L’accesso alle notifiche di Android permette a un’app di vedere ogni notifica: concederlo e revocarlo spetta a te.</string>
+    <string name="nav_app">App di navigazione</string>
+    <string name="nav_app_auto">Quella installata</string>
+    <string name="nav_app_google">Google Maps</string>
+    <string name="nav_app_osmand">OsmAnd</string>
+    <string name="nav_app_ask">Chiedi ogni volta</string>
+    <string name="nav_app_not_installed">Non installata</string>
+    <string name="osmand_info">Chiedi il percorso a OsmAnd</string>
+    <string name="osmand_info_line">Permette «aggiungi una tappa» e la ricerca nelle vicinanze anche con un percorso impostato in OsmAnd: LLeMbas chiede a OsmAnd dove sei e dove va il percorso. Prima consenti LLeMbas in OsmAnd (app collegate, con posizione); OsmAnd ti avvisa se non è consentito.</string>
+    <string name="phone_actions_line">Un modello può offrirsi di fare cose su questo telefono: impostare una sveglia, aggiungere un evento, preparare un messaggio, avviare un percorso. Non succede nulla finché non tocchi Fallo sulla sua scheda, e mai a telefono bloccato. Google Maps avvia un percorso con alcune tappe ma non può aggiungerne a un percorso in corso né essere fermato; OsmAnd sì.</string>
     <string name="assist_recogniser_failed">Il riconoscimento vocale del telefono si è fermato. Riprovi, oppure scelga LLeMbas in Impostazioni › Input vocale.</string>
     <string name="assistant_listens">Inizia ad ascoltare all’apertura dell’assistente</string>
     <string name="voice_input">Input vocale</string>

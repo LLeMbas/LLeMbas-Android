@@ -427,6 +427,15 @@
     <string name="notification_access_on">Megadva. Az Android kapcsolója a rendszerbeállításokban van.</string>
     <string name="notification_access_off">Még nincs megadva. Koppints az Android LLeMbas-kapcsolójának megnyitásához.</string>
     <string name="notification_summaries_privacy">Alapból ki van kapcsolva. Ha kéred, a telefonon éppen látható értesítések szövege (alkalmazás, cím, szöveg) ezzel az egy kérdéssel együtt a példányodhoz és a modelljéhez kerül. Előtte semmit nem olvas, az alkalmazás semmit nem tart meg, és zárolt telefonnál semmit nem olvas. Az Android értesítés-hozzáférése minden értesítést láthatóvá tesz egy alkalmazásnak, ezért rajtad múlik, megadod-e, és visszavonod-e.</string>
+    <string name="nav_app">Navigációs alkalmazás</string>
+    <string name="nav_app_auto">Amelyik telepítve van</string>
+    <string name="nav_app_google">Google Térkép</string>
+    <string name="nav_app_osmand">OsmAnd</string>
+    <string name="nav_app_ask">Mindig kérdezzen</string>
+    <string name="nav_app_not_installed">Nincs telepítve</string>
+    <string name="osmand_info">Útvonal lekérdezése az OsmAndtól</string>
+    <string name="osmand_info_line">Így a „megálló hozzáadása” és a közeli keresés az OsmAndban beállított útvonallal is működik: a LLeMbas megkérdezi az OsmAndot, hol vagy és hová tart az útvonal. Előbb engedélyezd a LLeMbast az OsmAndban (csatlakoztatott alkalmazások, helyadattal); az OsmAnd szól, ha nincs engedélyezve.</string>
+    <string name="phone_actions_line">Egy modell felajánlhatja, hogy tesz valamit ezen a telefonon — ébresztőt állít, eseményt vesz fel, üzenetet fogalmaz, útvonalat indít. Semmi sem történik, amíg a kártyáján nem koppintasz a Mehet gombra, és zárolt telefonnál soha. A Google Térkép néhány megállós útvonalat indít, de futó útvonalhoz nem ad megállót és nem állítható le; az OsmAnd igen.</string>
     <string name="assist_recogniser_failed">A telefon beszédfelismerője leállt. Próbálja újra, vagy válassza a LLeMbast a Beállítások › Hangbevitel alatt.</string>
     <string name="assistant_listens">Hallgatás indítása az asszisztens megnyitásakor</string>
     <string name="voice_input">Hangbevitel</string>

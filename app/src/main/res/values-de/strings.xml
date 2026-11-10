@@ -427,6 +427,15 @@
     <string name="notification_access_on">Erteilt. Der Schalter dafür ist in den Android-Einstellungen.</string>
     <string name="notification_access_off">Noch nicht erteilt. Tippe, um den Android-Schalter für LLeMbas zu öffnen.</string>
     <string name="notification_summaries_privacy">Standardmäßig aus. Wenn du fragst, geht der Text der Benachrichtigungen, die gerade auf deinem Telefon sind (App, Titel, Text), mit dieser einen Frage an deine Instanz und ihr Modell. Vorher wird nichts gelesen, die App behält nichts davon, und bei gesperrtem Telefon wird nichts gelesen. Der Benachrichtigungszugriff von Android lässt eine App jede Benachrichtigung sehen; ihn zu erteilen und zu entziehen liegt bei dir.</string>
+    <string name="nav_app">Navigations-App</string>
+    <string name="nav_app_auto">Die installierte</string>
+    <string name="nav_app_google">Google Maps</string>
+    <string name="nav_app_osmand">OsmAnd</string>
+    <string name="nav_app_ask">Jedes Mal fragen</string>
+    <string name="nav_app_not_installed">Nicht installiert</string>
+    <string name="osmand_info">OsmAnd nach der Route fragen</string>
+    <string name="osmand_info_line">Damit „Zwischenstopp hinzufügen“ und die Suche in der Nähe auch mit einer in OsmAnd geplanten Route gehen: LLeMbas fragt OsmAnd, wo du bist und wohin die Route führt. Erlaube LLeMbas zuerst in OsmAnd (verbundene Apps, mit Standort); OsmAnd sagt Bescheid, wenn es nicht erlaubt ist.</string>
+    <string name="phone_actions_line">Ein Modell kann anbieten, etwas auf diesem Telefon zu tun — einen Wecker stellen, einen Termin eintragen, eine Nachricht entwerfen, eine Route starten. Nichts passiert, bevor du auf seiner Karte auf Ausführen tippst, und nie bei gesperrtem Telefon. Google Maps startet eine Route mit ein paar Stopps, kann aber keinen in eine laufende Route einfügen und nicht angehalten werden; OsmAnd kann das.</string>
     <string name="assist_recogniser_failed">Die Spracherkennung des Telefons hat angehalten. Versuchen Sie es erneut oder wählen Sie LLeMbas unter Einstellungen › Spracheingabe.</string>
     <string name="assistant_listens">Beim Öffnen des Assistenten zuhören</string>
     <string name="voice_input">Spracheingabe</string>
