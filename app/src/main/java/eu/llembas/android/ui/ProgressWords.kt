@@ -1,18 +1,26 @@
 package eu.llembas.android.ui
 
 import android.content.res.Resources
+import androidx.compose.foundation.layout.Row
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextOverflow
 import eu.llembas.android.R
 import eu.llembas.android.api.Progress
 import eu.llembas.android.api.ProgressWords
+import eu.llembas.android.api.elapsed
 import eu.llembas.android.api.progressLine
 import eu.llembas.android.api.progressText
 import kotlinx.coroutines.delay
@@ -86,4 +94,28 @@ fun progressLineOf(progress: Progress?, withElapsed: Boolean = true): String? {
     // the same every time.
     val now = if (LocalInspectionMode.current) progress.since + STILL_ELAPSED else rememberTick()
     return if (withElapsed) progressLine(progress, words, now, locale) else progressText(progress, words, now, locale)
+}
+
+/**
+ * What a reply is doing, one line: the progress text, then `· elapsed` (`progress.line`) kept
+ * whole at the end while the text gives way (two lines, then an ellipsis) -- on a phone a long
+ * reason must not push the clock off. [status], the free text, when there is no progress this
+ * app can draw. Nothing at all when neither says anything.
+ */
+@Composable
+fun ProgressStatus(progress: Progress?, status: String, style: TextStyle, color: Color, modifier: Modifier = Modifier) {
+    val text = progressLineOf(progress, withElapsed = false)
+    if (text == null) {
+        if (status.isNotBlank()) Text(status, style = style, color = color, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = modifier)
+        return
+    }
+    val clock = progress?.takeUnless { it.phase in Progress.NO_ELAPSED }?.let { p ->
+        val now = if (LocalInspectionMode.current) p.since + STILL_ELAPSED else rememberTick()
+        elapsed(now - p.since)
+    }
+    Row(modifier, verticalAlignment = Alignment.Top) {
+        Text(text, style = style, color = color, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+        // The spec's separator, `progress.line`'s " · ", before the clock.
+        if (clock != null) Text(" · $clock", style = style, color = color, maxLines = 1, softWrap = false)
+    }
 }
