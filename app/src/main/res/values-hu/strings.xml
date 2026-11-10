@@ -235,6 +235,13 @@
     <string name="theme_system">A rendszer szerint</string>
     <string name="theme_moria">Moria (sötét)</string>
     <string name="theme_shire">Shire (világos)</string>
+    <string name="settings_language">Nyelv</string>
+    <string name="language_hint">Csak a felület. A modellek azon a nyelven válaszolnak, amelyen ír nekik, függetlenül ettől a beállítástól.</string>
+    <string name="language_account">Ugyanaz, mint a fiókomé</string>
+    <string name="language_account_is">Ugyanaz, mint a fiókomé: %1$s</string>
+    <string name="language_account_unknown">Még nincs beolvasva a példányáról</string>
+    <string name="language_phone">A telefon nyelve</string>
+    <string name="language_phone_is">A telefon nyelve: %1$s</string>
     <string name="settings_notifications">Értesítések</string>
     <string name="push_explained">Az értesítések a UnifiedPush-on keresztül érkeznek, Google-szolgáltatások nélkül: az Ön által választott elosztó alkalmazás szállítja őket, titkosítva, csak ehhez a telefonhoz.</string>
     <string name="push_no_distributor">Hogy értesítést kapjon, amikor egy válasz elkészül, telepítsen egy UnifiedPush-elosztót, például az ntfy-t, majd jöjjön vissza ide. Ha nincs ilyen, az alkalmazás csak akkor mutatja az új válaszokat, amikor meg van nyitva.</string>

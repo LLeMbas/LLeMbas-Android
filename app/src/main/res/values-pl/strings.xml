@@ -235,6 +235,13 @@
     <string name="theme_system">Jak system</string>
     <string name="theme_moria">Moria (ciemny)</string>
     <string name="theme_shire">Shire (jasny)</string>
+    <string name="settings_language">Język</string>
+    <string name="language_hint">Tylko interfejs. Modele odpowiadają w języku, w którym się do nich pisze, bez względu na to ustawienie.</string>
+    <string name="language_account">Tak jak moje konto</string>
+    <string name="language_account_is">Tak jak moje konto: %1$s</string>
+    <string name="language_account_unknown">Jeszcze nie odczytano z Twojej instancji</string>
+    <string name="language_phone">Język telefonu</string>
+    <string name="language_phone_is">Język telefonu: %1$s</string>
     <string name="settings_notifications">Powiadomienia</string>
     <string name="push_explained">Powiadomienia przychodzą przez UnifiedPush, bez usług Google: niesie je wybrana aplikacja dystrybucyjna, zaszyfrowane tylko dla tego telefonu.</string>
     <string name="push_no_distributor">Aby dostawać informacje, kiedy odpowiedź jest gotowa, zainstaluj dystrybutora UnifiedPush, na przykład ntfy, a potem wróć tutaj. Bez niego aplikacja pokazuje nowe odpowiedzi tylko wtedy, gdy jest otwarta.</string>

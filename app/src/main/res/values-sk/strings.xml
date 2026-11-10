@@ -235,6 +235,13 @@
     <string name="theme_system">Podľa systému</string>
     <string name="theme_moria">Moria (tmavá)</string>
     <string name="theme_shire">Shire (svetlá)</string>
+    <string name="settings_language">Jazyk</string>
+    <string name="language_hint">Len rozhranie. Modely odpovedajú v jazyku, v ktorom im píšete, bez ohľadu na toto nastavenie.</string>
+    <string name="language_account">Rovnaký ako môj účet</string>
+    <string name="language_account_is">Rovnaký ako môj účet: %1$s</string>
+    <string name="language_account_unknown">Z vašej inštancie ešte nenačítaný</string>
+    <string name="language_phone">Jazyk telefónu</string>
+    <string name="language_phone_is">Jazyk telefónu: %1$s</string>
     <string name="settings_notifications">Upozornenia</string>
     <string name="push_explained">Upozornenia chodia cez UnifiedPush, bez služieb Google: doručuje ich distribučná aplikácia, ktorú ste zvolili, zašifrované len pre tento telefón.</string>
     <string name="push_no_distributor">Aby ste sa dozvedeli, že je odpoveď hotová, nainštalujte distributora UnifiedPush, napríklad ntfy, a potom sa vráťte sem. Bez neho aplikácia nové odpovede ukáže, len keď je otvorená.</string>

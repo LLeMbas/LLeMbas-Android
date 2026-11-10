@@ -236,6 +236,13 @@
     <string name="theme_system">As the system</string>
     <string name="theme_moria">Moria (dark)</string>
     <string name="theme_shire">Shire (light)</string>
+    <string name="settings_language">Language</string>
+    <string name="language_hint">The interface only. Models answer in the language you write to them in, whatever this says.</string>
+    <string name="language_account">Same as my account</string>
+    <string name="language_account_is">Same as my account: %1$s</string>
+    <string name="language_account_unknown">Not read from your instance yet</string>
+    <string name="language_phone">Phone language</string>
+    <string name="language_phone_is">Phone language: %1$s</string>
     <string name="settings_notifications">Notifications</string>
     <string name="push_explained">Notifications come through UnifiedPush, with no Google services: the distributor app you chose carries them, encrypted for this phone only.</string>
     <string name="push_no_distributor">To be told when a reply is ready, install a UnifiedPush distributor such as ntfy, then come back here. Without one, the app shows new replies when it is open.</string>

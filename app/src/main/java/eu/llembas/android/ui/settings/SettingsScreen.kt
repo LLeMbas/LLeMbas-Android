@@ -34,10 +34,12 @@ import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.RecordVoiceOver
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -45,6 +47,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -62,6 +65,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import eu.llembas.android.AppLanguage
 import eu.llembas.android.BuildConfig
 import eu.llembas.android.R
 import eu.llembas.android.auth.Instance
@@ -78,6 +82,7 @@ interface SettingsActions {
     fun add() {}
     fun signOut(instance: Instance) {}
     fun theme(value: String) {}
+    fun language(value: String) {}
     fun enablePush(instance: Instance) {}
     fun notificationSettings() {}
     fun assistantSettings() {}
@@ -127,6 +132,11 @@ fun SettingsScreen(onBack: () -> Unit, onAddInstance: () -> Unit) {
 
             override fun theme(value: String) {
                 scope.launch { store.savePrefs { it.copy(theme = value) } }
+            }
+
+            // MainActivity follows the choice: it puts the app in the language at once.
+            override fun language(value: String) {
+                scope.launch { store.savePrefs { it.copy(language = value) } }
             }
 
             override fun enablePush(instance: Instance) {
@@ -184,6 +194,15 @@ fun SettingsScreen(onBack: () -> Unit, onAddInstance: () -> Unit) {
 @Composable
 fun SettingsContent(state: SettingsState, actions: SettingsActions, onBack: () -> Unit = {}) {
     val palette = LocalPalette.current
+    var choosingLanguage by remember { mutableStateOf(false) }
+    if (choosingLanguage) {
+        ModalBottomSheet(onDismissRequest = { choosingLanguage = false }, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+            LanguageChoices(state.prefs, onPick = {
+                choosingLanguage = false
+                actions.language(it)
+            })
+        }
+    }
     Scaffold(
         containerColor = palette.bg,
         topBar = {
@@ -246,6 +265,16 @@ fun SettingsContent(state: SettingsState, actions: SettingsActions, onBack: () -
                             actions.signOut(current)
                         })
                     }
+                }
+            }
+            item {
+                Group(stringResource(R.string.settings_language)) {
+                    SettingRow(
+                        Icons.Filled.Translate,
+                        languageLabel(state.prefs),
+                        subtitle = stringResource(R.string.language_hint),
+                        onClick = { choosingLanguage = true },
+                    )
                 }
             }
             item {
@@ -392,5 +421,72 @@ private fun Initial(name: String) {
     val palette = LocalPalette.current
     Box(Modifier.size(40.dp).clip(CircleShape).background(palette.accentSoft), contentAlignment = Alignment.Center) {
         Text(name.trim().firstOrNull()?.uppercase() ?: "?", style = MaterialTheme.typography.titleMedium, color = palette.accent)
+    }
+}
+
+/** The phone's own language, named in itself: what "Phone language" would show. */
+private fun phoneLanguage(): String {
+    val locale = android.content.res.Resources.getSystem().configuration.locales[0]
+    return locale.getDisplayName(locale).replaceFirstChar { it.titlecase(locale) }
+}
+
+/** The language row's words: what is chosen, and for the account's, which language that is. */
+@Composable
+private fun languageLabel(prefs: Prefs): String = when (prefs.language) {
+    AppLanguage.ACCOUNT -> AppLanguage.name(prefs.accountLanguage)?.let { stringResource(R.string.language_account_is, it) }
+        ?: stringResource(R.string.language_account)
+
+    AppLanguage.PHONE -> stringResource(R.string.language_phone_is, phoneLanguage())
+
+    else -> AppLanguage.name(prefs.language) ?: stringResource(R.string.language_account)
+}
+
+/**
+ * Settings › Language, as a sheet: the account's language (the default), the phone's, then every
+ * language the app has, each named in itself so a person who cannot read the current one still
+ * finds theirs.
+ */
+@Composable
+fun LanguageChoices(prefs: Prefs, onPick: (String) -> Unit) {
+    val palette = LocalPalette.current
+    val choices = buildList {
+        add(
+            Triple(
+                AppLanguage.ACCOUNT,
+                stringResource(R.string.language_account),
+                AppLanguage.name(prefs.accountLanguage) ?: stringResource(R.string.language_account_unknown),
+            ),
+        )
+        add(Triple(AppLanguage.PHONE, stringResource(R.string.language_phone), phoneLanguage()))
+        AppLanguage.LANGUAGES.forEach { (code, name) -> add(Triple(code, name, null)) }
+    }
+    LazyColumn(Modifier.fillMaxWidth(), contentPadding = PaddingValues(bottom = 24.dp)) {
+        item {
+            Text(
+                stringResource(R.string.settings_language),
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(start = 24.dp, end = 24.dp, bottom = 8.dp),
+            )
+        }
+        choices.forEachIndexed { i, (value, title, subtitle) ->
+            item(key = "lang-$value-$i") {
+                if (i == 2) HorizontalDivider(color = palette.border, modifier = Modifier.padding(vertical = 4.dp))
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable { onPick(value) }
+                        .heightIn(min = 56.dp)
+                        .padding(horizontal = 24.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(title, style = MaterialTheme.typography.bodyLarge)
+                        subtitle?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = palette.inkMuted) }
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    RadioButton(selected = prefs.language == value, onClick = { onPick(value) })
+                }
+            }
+        }
     }
 }

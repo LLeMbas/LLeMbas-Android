@@ -213,7 +213,7 @@ object Fakes {
     val settings = SettingsState(
         instances = listOf(home, work),
         active = home,
-        prefs = Prefs(theme = "", assistantTemporary = true),
+        prefs = Prefs(theme = "", assistantTemporary = true, accountLanguage = "en"),
         hasDistributor = true,
         version = "1.0.0-beta.3",
         selfUpdate = true,

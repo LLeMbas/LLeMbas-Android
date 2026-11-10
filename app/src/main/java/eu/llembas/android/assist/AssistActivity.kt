@@ -2,6 +2,7 @@ package eu.llembas.android.assist
 
 import android.Manifest
 import android.app.KeyguardManager
+import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -20,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.lifecycleScope
+import eu.llembas.android.AppLanguage
 import eu.llembas.android.auth.Prefs
 import eu.llembas.android.lembas
 import eu.llembas.android.ui.theme.LembasTheme
@@ -35,6 +37,8 @@ class AssistActivity : ComponentActivity() {
     private val mic = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (granted) controller.listen()
     }
+
+    override fun attachBaseContext(newBase: Context) = super.attachBaseContext(AppLanguage.wrap(newBase))
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()

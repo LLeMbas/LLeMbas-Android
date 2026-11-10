@@ -20,6 +20,7 @@ import androidx.savedstate.SavedStateRegistry
 import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
+import eu.llembas.android.AppLanguage
 import eu.llembas.android.lembas
 import eu.llembas.android.ui.theme.LembasTheme
 import kotlinx.coroutines.CoroutineScope
@@ -66,7 +67,8 @@ class LembasAssistSession(context: Context) :
 
     override fun onCreateContentView(): View {
         val theme = runBlocking { context.lembas.instances.prefs.first() }.theme
-        return ComposeView(context).apply {
+        // In the app's language on a phone older than Android 13, which has no per-app one.
+        return ComposeView(AppLanguage.wrap(context)).apply {
             setViewTreeLifecycleOwner(this@LembasAssistSession)
             setViewTreeSavedStateRegistryOwner(this@LembasAssistSession)
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)

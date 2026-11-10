@@ -235,6 +235,13 @@
     <string name="theme_system">Podle systému</string>
     <string name="theme_moria">Moria (temná)</string>
     <string name="theme_shire">Shire (světlý)</string>
+    <string name="settings_language">Jazyk</string>
+    <string name="language_hint">Jen rozhraní. Modely odpovídají v jazyce, ve kterém jim píšete, bez ohledu na toto nastavení.</string>
+    <string name="language_account">Stejný jako můj účet</string>
+    <string name="language_account_is">Stejný jako můj účet: %1$s</string>
+    <string name="language_account_unknown">Z vaší instance zatím nenačteno</string>
+    <string name="language_phone">Jazyk telefonu</string>
+    <string name="language_phone_is">Jazyk telefonu: %1$s</string>
     <string name="settings_notifications">Upozornění</string>
     <string name="push_explained">Upozornění chodí přes UnifiedPush, bez služeb Google: doručuje je distribuční aplikace, kterou jste zvolili; jsou zašifrované jen pro tento telefon.</string>
     <string name="push_no_distributor">Abyste se dozvěděli, že je odpověď hotová, nainstalujte distributora UnifiedPush, například ntfy, a pak se vraťte sem. Bez něj aplikace nové odpovědi ukáže, jen když je otevřená.</string>

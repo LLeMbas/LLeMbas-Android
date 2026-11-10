@@ -103,6 +103,18 @@ def write(folder: Path, entries: dict[str, str]) -> None:
     (folder / "strings.xml").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
+def write_locale_config() -> None:
+    """`res/xml/locales_config.xml`: the languages the app has, for Android 13+'s per-app language
+    (the manifest's `android:localeConfig`). Written from LANGS, so it cannot list a language
+    the app has no strings for, or miss one it has."""
+    lines = ['<?xml version="1.0" encoding="utf-8"?>', HEADER.replace("Edit scripts/strings.py or strings_own.json", "Edit LANGS there"),
+             '<locale-config xmlns:android="http://schemas.android.com/apk/res/android">',
+             '    <locale android:name="en" />']
+    lines += [f'    <locale android:name="{code}" />' for code in LANGS]
+    lines.append("</locale-config>")
+    (RES / "xml/locales_config.xml").write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
 def main() -> None:
     used = used_keys()
     missing = sorted(used - set(STRINGS))
@@ -123,6 +135,7 @@ def main() -> None:
         ).stdout.strip()
     own = json.loads((Path(__file__).parent / "strings_own.json").read_text(encoding="utf-8"))
     write(RES / "values", STRINGS)
+    write_locale_config()
     for code in LANGS:
         catalogue = server_catalogue(code, ref)
         mine = own.get(code, {})

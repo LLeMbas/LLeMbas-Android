@@ -66,9 +66,19 @@ private val INSTANCES = stringPreferencesKey("instances")
 private val ACTIVE = stringPreferencesKey("active")
 private val PREFS = stringPreferencesKey("prefs")
 
-/** What the person chose in Settings, for this phone. */
+/**
+ * What the person chose in Settings, for this phone. [language]: "" the account's language (the
+ * default), "system" the phone's, or a language's code -- see [eu.llembas.android.AppLanguage].
+ * [accountLanguage] is the account's language as the instance in use last said it.
+ */
 @Serializable
-data class Prefs(val theme: String = "", val assistantTemporary: Boolean = false, val readAloudSpoken: Boolean = true)
+data class Prefs(
+    val theme: String = "",
+    val assistantTemporary: Boolean = false,
+    val readAloudSpoken: Boolean = true,
+    val language: String = "",
+    val accountLanguage: String = "",
+)
 
 class InstanceStore(private val context: Context) {
     private val listSerializer = ListSerializer(Instance.serializer())

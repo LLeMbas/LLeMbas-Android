@@ -30,6 +30,7 @@ import eu.llembas.android.ui.scheduled.ScheduleContent
 import eu.llembas.android.ui.scheduled.ScheduleEditContent
 import eu.llembas.android.ui.scheduled.ScheduledContent
 import eu.llembas.android.ui.scheduled.SchedulingModelsContent
+import eu.llembas.android.ui.settings.LanguageChoices
 import eu.llembas.android.ui.settings.SettingsActions
 import eu.llembas.android.ui.settings.SettingsContent
 import eu.llembas.android.ui.theme.LocalPalette
@@ -117,6 +118,12 @@ class ScreenShots {
     fun settings() {
         shoot("08-settings") { SettingsContent(Fakes.settings, NoSettingsActions) }
         shoot("08-settings", Phone.Small) { SettingsContent(Fakes.settings, NoSettingsActions) }
+    }
+
+    @Test
+    fun language() {
+        shoot("17-language", Phone.Scroll) { SheetOver { LanguageChoices(Fakes.settings.prefs, onPick = {}) } }
+        shoot("17-language", Phone.Small, fontScale = 1.5f) { SheetOver { LanguageChoices(Fakes.settings.prefs, onPick = {}) } }
     }
 
     @Test

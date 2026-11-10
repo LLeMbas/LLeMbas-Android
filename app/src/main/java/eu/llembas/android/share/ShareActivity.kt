@@ -1,5 +1,6 @@
 package eu.llembas.android.share
 
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -22,6 +23,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.IntentCompat
 import androidx.lifecycle.lifecycleScope
+import eu.llembas.android.AppLanguage
 import eu.llembas.android.MainActivity
 import eu.llembas.android.R
 import eu.llembas.android.lembas
@@ -38,6 +40,8 @@ import kotlinx.coroutines.withContext
  */
 class ShareActivity : ComponentActivity() {
     private val failure = mutableStateOf<String?>(null)
+
+    override fun attachBaseContext(newBase: Context) = super.attachBaseContext(AppLanguage.wrap(newBase))
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

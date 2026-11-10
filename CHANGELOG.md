@@ -5,6 +5,15 @@ is in alpha and releases come off `main`.
 
 ## [Unreleased]
 
+### Changed
+
+- **The app speaks your account's language**, the one chosen on your instance, rather than the
+  phone's: a phone set to Slovak signed in to an English account shows the app in English.
+  **Settings › Language** chooses otherwise -- *Same as my account* (the default), *Phone
+  language*, or any language the app has, each named in itself. On Android 13 and newer the
+  system's own per-app language (Settings › Apps › LLeMbas › Language) offers the same
+  languages, and a language chosen there is kept as your choice.
+
 ## [1.0.0-beta.4] — 2026-11-09
 
 For LLeMbas server 2.0 (2.0.0-beta.7 or later for the Subagents setting and the panel's compaction).

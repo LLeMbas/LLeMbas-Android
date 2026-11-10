@@ -1,6 +1,7 @@
 package eu.llembas.android
 
 import android.Manifest
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
@@ -49,6 +50,7 @@ import eu.llembas.android.ui.scheduled.SchedulingModelsScreen
 import eu.llembas.android.ui.settings.SettingsScreen
 import eu.llembas.android.ui.signin.SignInScreen
 import eu.llembas.android.ui.theme.LembasTheme
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -62,10 +64,13 @@ class MainActivity : ComponentActivity() {
     /** A chat or a schedule a notification, the assistant or a share asked to open; consumed once. */
     private val opening = mutableStateOf<Opening?>(null)
 
+    override fun attachBaseContext(newBase: Context) = super.attachBaseContext(AppLanguage.wrap(newBase))
+
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         take(intent)
+        followLanguage()
         if (Build.VERSION.SDK_INT >= 33 &&
             ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
         ) {
@@ -76,6 +81,25 @@ class MainActivity : ComponentActivity() {
             LembasTheme(prefs.theme) {
                 Surface(Modifier.fillMaxSize()) { Root(opening.value) { opening.value = null } }
             }
+        }
+    }
+
+    /**
+     * Keep the app in the language Settings › Language says: the account's by default. A
+     * language chosen for the app in the system's own settings (Android 13+) since the app last
+     * set one is the person's choice, and is kept as such.
+     */
+    private fun followLanguage() {
+        lifecycleScope.launch {
+            val store = lembas.instances
+            val system = AppLanguage.systemChoice(this@MainActivity)
+            if (system != null && system != AppLanguage.applied(this@MainActivity).orEmpty()) {
+                store.savePrefs { it.copy(language = system.ifEmpty { AppLanguage.PHONE }) }
+            }
+            store.prefs
+                .map { AppLanguage.effective(it.language, it.accountLanguage) }
+                .distinctUntilChanged()
+                .collect { AppLanguage.apply(applicationContext, it, this@MainActivity) }
         }
     }
 
@@ -140,6 +164,13 @@ class MainActivity : ComponentActivity() {
         val over: (String) -> Unit = { target ->
             scope.launch { drawer.close() }
             nav.navigate(target)
+        }
+        // The account's language, which the app follows unless Settings › Language says
+        // otherwise. Read once per instance in use; kept, so the next start has it at once.
+        LaunchedEffect(instance.id) {
+            runCatching { lembas.instances.clientFor(instance).me() }.onSuccess { me ->
+                if (me.language.isNotBlank()) lembas.instances.savePrefs { it.copy(accountLanguage = me.language) }
+            }
         }
         // The list is read again each time the drawer opens, so a new title or a finished
         // reply's dot is there without a pull.
