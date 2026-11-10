@@ -135,6 +135,17 @@
     <string name="agent_greeting">Co ma zrobić agent?</string>
     <string name="agent_runs_on">Działa na %1$s, w %2$s</string>
     <string name="agent_directory_default">jego pierwszym folderze</string>
+    <string name="kind_chat">Czat</string>
+    <string name="kind_agent">Czat agenta</string>
+    <string name="kind_chat_line">Rozmawiaj z modelem: pytania, pisanie, pliki, które dołączysz.</string>
+    <string name="kind_agent_line">Pracuje na połączonym komputerze: czyta, zapisuje i uruchamia polecenia w folderze.</string>
+    <string name="agent_link_title">Najpierw połącz komputer</string>
+    <string name="agent_link_lede">Czaty agentów działają na maszynie z LLeMbas CLI, zalogowanym w tej instancji i połączonym. Teraz żaden nie jest połączony.</string>
+    <string name="agent_link_install">Należy zainstalować na nim LLeMbas CLI:</string>
+    <string name="agent_link_login">Zaloguj go do tej instancji i zatwierdź pokazany kod w przeglądarce, która się otworzy:</string>
+    <string name="agent_link_service">Aby uruchamiać na nim czaty agenta stąd, należy na to zezwolić w jego konfiguracji (~/.config/lembas/config.yaml) i uruchomić usługę:</string>
+    <string name="agent_link_dials_out">Sam łączy się z tą instancją; na komputerze nic nie nasłuchuje. To on decyduje, których katalogów i trybów może używać praca zdalna, bez względu na to, o co prosi się tutaj.</string>
+    <string name="agent_link_check">Sprawdź ponownie</string>
     <string name="model_choose">Wybierz model</string>
     <string name="model_in_use">W użyciu</string>
     <string name="model_sees_images">Widzi obrazy</string>

@@ -32,9 +32,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.ChatBubbleOutline
+import androidx.compose.material.icons.filled.Computer
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DriveFileRenameOutline
 import androidx.compose.material.icons.filled.EditNote
@@ -105,6 +108,7 @@ fun ChatScreen(
     onLeave: () -> Unit,
     onOpened: (String) -> Unit = {},
     agent: Boolean = false,
+    onKind: ((agent: Boolean) -> Unit)? = null,
     model: ChatViewModel = viewModel(key = chatId ?: if (agent) "new-agent" else "new"),
 ) {
     val state by model.state.collectAsStateWithLifecycle()
@@ -139,6 +143,7 @@ fun ChatScreen(
         onLeave = onLeave,
         onActivity = { activityOpen = true },
         onShow = { showing = it },
+        onKind = onKind,
     )
 
     if (activityOpen) {
@@ -165,6 +170,7 @@ fun ChatContent(
     onLeave: () -> Unit = {},
     onActivity: () -> Unit = {},
     onShow: (ShowCard) -> Unit = {},
+    onKind: ((agent: Boolean) -> Unit)? = null,
 ) {
     val palette = LocalPalette.current
     val context = LocalContext.current
@@ -297,7 +303,14 @@ fun ChatContent(
             },
         ) { padding ->
             if (rows.isEmpty() && !state.loading) {
-                Greeting(state, agent, onTune = { tuning = true }, modifier = Modifier.padding(padding))
+                Greeting(
+                    state,
+                    agent,
+                    onTune = { tuning = true },
+                    onKind = onKind.takeIf { chat == null },
+                    onRecheck = actions::recheckDevices,
+                    modifier = Modifier.padding(padding),
+                )
             } else {
                 LazyColumn(
                     state = list,
@@ -403,42 +416,144 @@ private suspend fun LazyListState.toEnd() {
 }
 
 /**
- * A new chat's empty page: the model's picture and a greeting. A new agent chat says where it
- * will run instead, and that line opens the tune sheet where the device and folder are chosen.
+ * A new chat's empty page: what kind of chat it is ([onKind], Chat or Agent, one line each), then
+ * the model's picture and a greeting. A new agent chat says where it will run instead, and that
+ * line opens the tune sheet where the device and folder are chosen -- or, with no computer
+ * linked, how to link one: an agent chat runs on a linked LLeMbas CLI and nowhere else.
  */
 @Composable
-private fun Greeting(state: ChatState, agent: Boolean, onTune: () -> Unit, modifier: Modifier = Modifier) {
+private fun Greeting(
+    state: ChatState,
+    agent: Boolean,
+    onTune: () -> Unit,
+    onKind: ((Boolean) -> Unit)?,
+    onRecheck: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val palette = LocalPalette.current
-    Column(
-        modifier.fillMaxSize().padding(horizontal = 32.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        if (agent) {
-            Box(Modifier.size(64.dp).background(palette.accentSoft, RoundedCornerShape(20.dp)), contentAlignment = Alignment.Center) {
-                Icon(Icons.Filled.Terminal, contentDescription = null, tint = palette.accent, modifier = Modifier.size(32.dp))
-            }
-            Spacer(Modifier.height(20.dp))
-            Text(stringResource(R.string.agent_greeting), style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
-            Spacer(Modifier.height(8.dp))
-            val device = state.device
-            val where = when {
-                device == null -> stringResource(R.string.agent_no_device)
+    Column(modifier.fillMaxSize()) {
+        if (onKind != null) KindChoice(agent, onKind, Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+        if (agent && state.devices.isEmpty() && !state.loading) {
+            LinkComputer(state.instanceBase, onRecheck, Modifier.weight(1f))
+            return@Column
+        }
+        Column(
+            Modifier.weight(1f).fillMaxWidth().padding(horizontal = 32.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            if (agent) {
+                Box(Modifier.size(64.dp).background(palette.accentSoft, RoundedCornerShape(20.dp)), contentAlignment = Alignment.Center) {
+                    Icon(Icons.Filled.Terminal, contentDescription = null, tint = palette.accent, modifier = Modifier.size(32.dp))
+                }
+                Spacer(Modifier.height(20.dp))
+                Text(stringResource(R.string.agent_greeting), style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
+                Spacer(Modifier.height(8.dp))
+                val device = state.device
+                val where = when {
+                    device == null -> stringResource(R.string.agent_no_device)
 
-                else -> stringResource(
-                    R.string.agent_runs_on,
-                    device.name.ifBlank { device.host },
-                    state.draft.directory.ifBlank { stringResource(R.string.agent_directory_default) },
-                )
+                    else -> stringResource(
+                        R.string.agent_runs_on,
+                        device.name.ifBlank { device.host },
+                        state.draft.directory.ifBlank { stringResource(R.string.agent_directory_default) },
+                    )
+                }
+                TextButton(onClick = onTune) { Text(where, textAlign = TextAlign.Center, color = palette.inkMuted) }
+            } else {
+                ModelAvatar(state.modelInfo, state.modelId ?: "?", size = 64.dp)
+                Spacer(Modifier.height(20.dp))
+                Text(stringResource(R.string.empty_chat), style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
             }
-            TextButton(onClick = onTune) { Text(where, textAlign = TextAlign.Center, color = palette.inkMuted) }
-        } else {
-            ModelAvatar(state.modelInfo, state.modelId ?: "?", size = 64.dp)
-            Spacer(Modifier.height(20.dp))
-            Text(stringResource(R.string.empty_chat), style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
         }
     }
 }
+
+/**
+ * Chat or Agent, for a chat not made yet: two cards side by side, one line each, on a shared
+ * track -- both as tall as the taller, whatever either says in which language.
+ */
+@Composable
+fun KindChoice(agent: Boolean, onKind: (Boolean) -> Unit, modifier: Modifier = Modifier) {
+    Row(modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        KindCard(Icons.Filled.ChatBubbleOutline, stringResource(R.string.kind_chat), stringResource(R.string.kind_chat_line), !agent, Modifier.weight(1f)) {
+            onKind(false)
+        }
+        KindCard(Icons.Filled.Terminal, stringResource(R.string.kind_agent), stringResource(R.string.kind_agent_line), agent, Modifier.weight(1f)) {
+            onKind(true)
+        }
+    }
+}
+
+@Composable
+private fun KindCard(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    line: String,
+    selected: Boolean,
+    modifier: Modifier,
+    onClick: () -> Unit,
+) {
+    val palette = LocalPalette.current
+    Surface(
+        onClick = onClick,
+        selected = selected,
+        shape = RoundedCornerShape(16.dp),
+        color = if (selected) palette.accentSoft else palette.surfaceRaised,
+        contentColor = palette.ink,
+        border = androidx.compose.foundation.BorderStroke(if (selected) 2.dp else 1.dp, if (selected) palette.accent else palette.border),
+        modifier = modifier.fillMaxHeight().heightIn(min = 48.dp),
+    ) {
+        Column(Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(icon, contentDescription = null, tint = if (selected) palette.accent else palette.inkMuted, modifier = Modifier.size(20.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(title, style = MaterialTheme.typography.titleSmall, maxLines = 2)
+            }
+            Spacer(Modifier.height(4.dp))
+            Text(line, style = MaterialTheme.typography.bodySmall, color = palette.inkMuted)
+        }
+    }
+}
+
+/**
+ * A new agent chat with no computer linked: what an agent chat needs and the three steps to
+ * link one, each command with Copy -- the web page's own steps -- and Check again.
+ */
+@Composable
+private fun LinkComputer(base: String, onRecheck: () -> Unit, modifier: Modifier = Modifier) {
+    val palette = LocalPalette.current
+    Column(modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 16.dp)) {
+        Box(Modifier.size(56.dp).background(palette.accentSoft, RoundedCornerShape(18.dp)), contentAlignment = Alignment.Center) {
+            Icon(Icons.Filled.Computer, contentDescription = null, tint = palette.accent, modifier = Modifier.size(28.dp))
+        }
+        Spacer(Modifier.height(16.dp))
+        Text(stringResource(R.string.agent_link_title), style = MaterialTheme.typography.headlineSmall)
+        Spacer(Modifier.height(8.dp))
+        Text(stringResource(R.string.agent_link_lede), style = MaterialTheme.typography.bodyMedium, color = palette.inkMuted)
+        val steps = listOf(
+            stringResource(R.string.agent_link_install) to "curl -fsSL $CLI_INSTALL | bash",
+            stringResource(R.string.agent_link_login) to "lembas login ${base.ifBlank { "https://…" }}",
+            stringResource(R.string.agent_link_service) to "remote:\n  enabled: true\n  roots: [ ~/projects ]\n\nlembas service install",
+        )
+        steps.forEachIndexed { i, (words, code) ->
+            Spacer(Modifier.height(16.dp))
+            Row {
+                Text("${i + 1}.", style = MaterialTheme.typography.bodyMedium, color = palette.accent, modifier = Modifier.width(24.dp))
+                Text(words, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+            }
+            Spacer(Modifier.height(6.dp))
+            CodeBlock("sh", code)
+        }
+        Spacer(Modifier.height(12.dp))
+        Text(stringResource(R.string.agent_link_dials_out), style = MaterialTheme.typography.bodySmall, color = palette.inkFaint)
+        Spacer(Modifier.height(8.dp))
+        TextButton(onClick = onRecheck, modifier = Modifier.heightIn(min = 48.dp)) { Text(stringResource(R.string.agent_link_check)) }
+    }
+}
+
+/** Where the LLeMbas CLI's installer is: the public release, as the web page gives it. */
+private const val CLI_INSTALL = "https://github.com/LLeMbas/LLeMbas-CLI/releases/latest/download/get.sh"
 
 /** The empty chat's suggestions: a sideways row of cards, all one height (the tallest's). */
 @OptIn(ExperimentalLayoutApi::class)

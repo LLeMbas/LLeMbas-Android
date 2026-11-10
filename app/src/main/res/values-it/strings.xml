@@ -135,6 +135,17 @@
     <string name="agent_greeting">Cosa deve fare l’agente?</string>
     <string name="agent_runs_on">Gira su %1$s, in %2$s</string>
     <string name="agent_directory_default">la sua prima cartella</string>
+    <string name="kind_chat">Chat</string>
+    <string name="kind_agent">Chat agente</string>
+    <string name="kind_chat_line">Parli con un modello: domande, scrittura, i file che allega.</string>
+    <string name="kind_agent_line">Lavora su un computer che ha collegato: legge, scrive ed esegue comandi in una cartella.</string>
+    <string name="agent_link_title">Prima colleghi un computer</string>
+    <string name="agent_link_lede">Le chat agente girano su una macchina con la LLeMbas CLI, connessa a questa istanza e collegata. Al momento non ce n\'è nessuna collegata.</string>
+    <string name="agent_link_install">Installa la LLeMbas CLI sulla macchina:</string>
+    <string name="agent_link_login">Lo colleghi a questa istanza e approvi il codice che mostra nel browser che si apre:</string>
+    <string name="agent_link_service">Per eseguirci chat agente da qui, consentilo nella sua configurazione (~/.config/lembas/config.yaml) e avvia il servizio:</string>
+    <string name="agent_link_dials_out">È lei a collegarsi a questa istanza; sulla tua macchina non resta in ascolto nulla. Decide lei quali cartelle e modalità può usare il lavoro remoto, qualunque cosa venga chiesta qui.</string>
+    <string name="agent_link_check">Controlla di nuovo</string>
     <string name="model_choose">Scegli un modello</string>
     <string name="model_in_use">In uso</string>
     <string name="model_sees_images">Vede le immagini</string>

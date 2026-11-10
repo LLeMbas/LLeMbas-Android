@@ -135,6 +135,17 @@
     <string name="agent_greeting">Čo má agent urobiť?</string>
     <string name="agent_runs_on">Beží na %1$s, v priečinku %2$s</string>
     <string name="agent_directory_default">jeho prvý priečinok</string>
+    <string name="kind_chat">Konverzácia</string>
+    <string name="kind_agent">Agentská konverzácia</string>
+    <string name="kind_chat_line">Rozprávajte sa s modelom: otázky, písanie, súbory, ktoré priložíte.</string>
+    <string name="kind_agent_line">Pracuje na počítači, ktorý ste prepojili: číta, zapisuje a spúšťa príkazy v priečinku.</string>
+    <string name="agent_link_title">Najprv prepojte počítač</string>
+    <string name="agent_link_lede">Agentské konverzácie bežia na počítači s LLeMbas CLI, ktoré je prihlásené do tejto instancie a pripojené. Teraz nie je pripojené žiadne.</string>
+    <string name="agent_link_install">Nainštalujte naň LLeMbas CLI:</string>
+    <string name="agent_link_login">Prihláste ho k tejto inštancii a kód, ktorý ukáže, schváľte v prehliadači, ktorý sa otvorí:</string>
+    <string name="agent_link_service">Aby na ňom odtiaľto bežali agentové chaty, povoľte to v jeho konfigurácii (~/.config/lembas/config.yaml) a spustite službu:</string>
+    <string name="agent_link_dials_out">Pripája sa sám k tejto inštancii; na vašom počítači nič nepočúva. O tom, ktoré adresáre a režimy môže práca na diaľku použiť, rozhoduje on, nech sa tu žiada čokoľvek.</string>
+    <string name="agent_link_check">Skontrolovať znova</string>
     <string name="model_choose">Vyberte model</string>
     <string name="model_in_use">Používa sa</string>
     <string name="model_sees_images">Vidí obrázky</string>

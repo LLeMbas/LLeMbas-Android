@@ -13,6 +13,10 @@ is in alpha and releases come off `main`.
   language*, or any language the app has, each named in itself. On Android 13 and newer the
   system's own per-app language (Settings › Apps › LLeMbas › Language) offers the same
   languages, and a language chosen there is kept as your choice.
+- **Agent chats are easy to find.** A new chat's page starts with **Chat** or **Agent chat**,
+  one line each, side by side. With no computer linked, Agent chat is still there and says how
+  to link one -- install the LLeMbas CLI, `lembas login` to this instance, allow remote work and
+  start the service, each command with Copy -- with **Check again**.
 
 ## [1.0.0-beta.4] — 2026-11-09
 

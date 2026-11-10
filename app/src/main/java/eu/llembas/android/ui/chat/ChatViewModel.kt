@@ -48,6 +48,8 @@ data class ChatState(
     val models: List<ModelInfo> = emptyList(),
     /** For a new agent chat: the devices linked right now, which it can run on. */
     val devices: List<LinkedDevice> = emptyList(),
+    /** For a new agent chat: the instance's address, which `lembas login` is given to link a computer. */
+    val instanceBase: String = "",
     val pending: List<Attachment> = emptyList(),
     val uploading: Boolean = false,
     val loading: Boolean = false,
@@ -136,6 +138,9 @@ interface ChatActions {
     fun executePlan() {}
     fun answer(card: Card, answer: CardAnswer) {}
     fun change(key: String, value: String?) {}
+
+    /** A new agent chat with no computer linked: read the linked devices again. */
+    fun recheckDevices() {}
     fun setAgents(agents: AgentsSetting) {}
     fun updateDraft(change: (Draft) -> Draft) {}
     fun attach(uris: List<Uri>) {}
@@ -191,7 +196,8 @@ class ChatViewModel(app: Application) :
                 _state.update { it.copy(modelsCap = list?.subagentsCap) }
                 if (chatId == null) {
                     val devices = if (agent) client.devices() else emptyList()
-                    _state.update { it.copy(models = models, devices = devices, loading = false) }
+                    val base = if (agent) getApplication<Application>().lembas.instances.current()?.base.orEmpty() else ""
+                    _state.update { it.copy(models = models, devices = devices, instanceBase = base, loading = false) }
                     return@launch
                 }
                 val detail = client.chat(chatId)
@@ -204,6 +210,18 @@ class ChatViewModel(app: Application) :
                 runCatching { client.activity(chatId, context = false) }.onSuccess { a ->
                     _state.update { it.copy(teamOffered = a.subagentsOffered ?: a.teamOffered, summary = a.summary) }
                 }
+            } catch (e: Exception) {
+                fail(e)
+            }
+        }
+    }
+
+    override fun recheckDevices() {
+        viewModelScope.launch {
+            _state.update { it.copy(loading = true) }
+            try {
+                val devices = api().devices()
+                _state.update { it.copy(devices = devices, loading = false) }
             } catch (e: Exception) {
                 fail(e)
             }

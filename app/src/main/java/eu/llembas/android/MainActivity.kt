@@ -224,6 +224,7 @@ class MainActivity : ComponentActivity() {
                 composable("new") {
                     ChatScreen(
                         chatId = null,
+                        onKind = { agent -> if (agent) top("new-agent") },
                         onMenu = menu,
                         onNewChat = { top("new") },
                         onLeave = { top("new") },
@@ -234,6 +235,7 @@ class MainActivity : ComponentActivity() {
                     ChatScreen(
                         chatId = null,
                         agent = true,
+                        onKind = { agent -> if (!agent) top("new") },
                         onMenu = menu,
                         onNewChat = { top("new") },
                         onLeave = { top("new") },

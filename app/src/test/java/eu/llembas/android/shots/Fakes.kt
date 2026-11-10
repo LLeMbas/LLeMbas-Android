@@ -111,6 +111,9 @@ object Fakes {
         draft = Draft(directory = "~/src/garden"),
     )
 
+    /** A new agent chat with no computer linked: the steps to link one. */
+    val newAgentChatUnlinked = ChatState(models = models, instanceBase = "https://llm.example.org")
+
     val transcript = ChatState(
         chat = chat,
         messages = listOf(question, answer, packing, packingAnswer),

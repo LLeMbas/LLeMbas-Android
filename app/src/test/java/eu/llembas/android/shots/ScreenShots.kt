@@ -60,12 +60,18 @@ private object NoSettingsActions : SettingsActions
 class ScreenShots {
     @Test
     fun newChat() {
-        shoot("01-new-chat") { ChatContent(Fakes.newChat, NoChatActions, agent = false) }
-        shoot("01-new-chat", Phone.Small) { ChatContent(Fakes.newChat, NoChatActions, agent = false) }
+        shoot("01-new-chat") { ChatContent(Fakes.newChat, NoChatActions, agent = false, onKind = {}) }
+        shoot("01-new-chat", Phone.Small) { ChatContent(Fakes.newChat, NoChatActions, agent = false, onKind = {}) }
+        shoot("01-new-chat", Phone.Small, fontScale = 1.5f) { ChatContent(Fakes.newChat, NoChatActions, agent = false, onKind = {}) }
     }
 
     @Test
-    fun newAgentChat() = shoot("02-new-agent-chat") { ChatContent(Fakes.newAgentChat, NoChatActions, agent = true) }
+    fun newAgentChat() {
+        shoot("02-new-agent-chat") { ChatContent(Fakes.newAgentChat, NoChatActions, agent = true, onKind = {}) }
+        // No computer linked: Agent stays, and says how to link one.
+        shoot("02-new-agent-chat-unlinked") { ChatContent(Fakes.newAgentChatUnlinked, NoChatActions, agent = true, onKind = {}) }
+        shoot("02-new-agent-chat-unlinked", Phone.Small) { ChatContent(Fakes.newAgentChatUnlinked, NoChatActions, agent = true, onKind = {}) }
+    }
 
     @Test
     fun transcript() {

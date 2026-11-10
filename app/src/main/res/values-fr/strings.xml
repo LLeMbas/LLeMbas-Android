@@ -135,6 +135,17 @@
     <string name="agent_greeting">Que doit faire l’agent ?</string>
     <string name="agent_runs_on">S’exécute sur %1$s, dans %2$s</string>
     <string name="agent_directory_default">son premier dossier</string>
+    <string name="kind_chat">Conversation</string>
+    <string name="kind_agent">Conversation d\'agent</string>
+    <string name="kind_chat_line">Parlez avec un modèle : questions, rédaction, les fichiers que vous joignez.</string>
+    <string name="kind_agent_line">Travaille sur un ordinateur que vous avez lié : lit, écrit et lance des commandes dans un dossier.</string>
+    <string name="agent_link_title">Liez d’abord un ordinateur</string>
+    <string name="agent_link_lede">Les conversations d\'agent s\'exécutent sur une machine dotée de la LLeMbas CLI, connectée à cette instance et reliée. Aucune n\'est reliée pour le moment.</string>
+    <string name="agent_link_install">Installez-y la LLeMbas CLI :</string>
+    <string name="agent_link_login">Connectez-le à cette instance et approuvez le code qu’il affiche dans le navigateur qui s’ouvre :</string>
+    <string name="agent_link_service">Pour y exécuter des conversations d\'agent depuis ici, autorisez-le dans sa configuration (~/.config/lembas/config.yaml) et démarrez le service :</string>
+    <string name="agent_link_dials_out">Elle se connecte d\'elle-même à cette instance ; rien n\'écoute sur votre machine. C\'est elle qui décide quels répertoires et quels modes le travail à distance peut utiliser, quoi qu\'on demande ici.</string>
+    <string name="agent_link_check">Vérifier à nouveau</string>
     <string name="model_choose">Choisir un modèle</string>
     <string name="model_in_use">Utilisé</string>
     <string name="model_sees_images">Voit les images</string>

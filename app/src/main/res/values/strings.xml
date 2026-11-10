@@ -136,6 +136,17 @@
     <string name="agent_greeting">What should the agent do?</string>
     <string name="agent_runs_on">Runs on %1$s, in %2$s</string>
     <string name="agent_directory_default">its first folder</string>
+    <string name="kind_chat">Chat</string>
+    <string name="kind_agent">Agent chat</string>
+    <string name="kind_chat_line">Talk with a model: questions, writing, the files you attach.</string>
+    <string name="kind_agent_line">Works on a computer you linked: reads, writes and runs commands in a folder.</string>
+    <string name="agent_link_title">Link a computer first</string>
+    <string name="agent_link_lede">Agent chats run on a machine with the LLeMbas CLI, signed in to this instance and linked. None is linked now.</string>
+    <string name="agent_link_install">Install the LLeMbas CLI on it:</string>
+    <string name="agent_link_login">Sign it in to this instance, and approve the code it shows in the browser that opens:</string>
+    <string name="agent_link_service">To run agent chats on it from here, allow it in its config (~/.config/lembas/config.yaml) and start the service:</string>
+    <string name="agent_link_dials_out">It dials out to this instance; nothing on your machine listens. It decides which directories and modes remote work may use, whatever is asked here.</string>
+    <string name="agent_link_check">Check again</string>
     <string name="model_choose">Choose a model</string>
     <string name="model_in_use">In use</string>
     <string name="model_sees_images">Sees images</string>

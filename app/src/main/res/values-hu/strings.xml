@@ -135,6 +135,17 @@
     <string name="agent_greeting">Mit tegyen az ügynök?</string>
     <string name="agent_runs_on">Itt fut: %1$s, ebben: %2$s</string>
     <string name="agent_directory_default">az első mappája</string>
+    <string name="kind_chat">Csevegés</string>
+    <string name="kind_agent">Ügynök-csevegés</string>
+    <string name="kind_chat_line">Beszélgessen egy modellel: kérdések, írás, a csatolt fájlok.</string>
+    <string name="kind_agent_line">Egy összekapcsolt számítógépen dolgozik: olvas, ír és parancsokat futtat egy mappában.</string>
+    <string name="agent_link_title">Előbb kapcsoljon össze egy számítógépet</string>
+    <string name="agent_link_lede">Az ügynök-csevegések olyan gépen futnak, amelyen a LLeMbas CLI be van jelentkezve ebbe a példányba, és össze van kapcsolva. Most egy sincs összekapcsolva.</string>
+    <string name="agent_link_install">Telepítse rá a LLeMbas CLI-t:</string>
+    <string name="agent_link_login">Jelentkeztesse be ebbe a példányba, és hagyja jóvá a megjelenő kódot a megnyíló böngészőben:</string>
+    <string name="agent_link_service">Ha innen szeretne ügynök-csevegéseket futtatni rajta, engedélyezze a konfigurációjában (~/.config/lembas/config.yaml), és indítsa el a szolgáltatást:</string>
+    <string name="agent_link_dials_out">Ő hívja fel ezt a példányt; az Ön gépén semmi sem figyel. Ő dönti el, mely könyvtárakat és üzemmódokat használhatja a távoli munka, bármit is kérnek itt.</string>
+    <string name="agent_link_check">Újraellenőrzés</string>
     <string name="model_choose">Modell kiválasztása</string>
     <string name="model_in_use">Használatban</string>
     <string name="model_sees_images">Látja a képeket</string>
