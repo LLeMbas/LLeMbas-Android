@@ -247,6 +247,12 @@ class ApiClient(val base: String, private val token: String, val http: OkHttpCli
     /** One background agent and its whole conversation, read-only. `kind` is `member` or `job`. */
     suspend fun agent(chatId: String, kind: String, id: String): AgentDetail = get("/chats/$chatId/agents/${segment(kind)}/${segment(id)}")
 
+    /** The chat's subagent tree and room (spec 3.4.0); a 404 from a server without it. */
+    suspend fun tree(chatId: String): TreeView = get("/chats/$chatId/tree")
+
+    /** A subagent's conversation by its id (`s1`), read-only; 409 while an agent chat's device is away. */
+    suspend fun subagentTranscript(chatId: String, id: String): SubagentTranscript = get("/chats/$chatId/subagents/${segment(id)}/transcript")
+
     /** Stop a background agent (a member leaves the team with those under it). */
     suspend fun stopAgent(chatId: String, kind: String, id: String): List<String> =
         send<Stopped>("POST", "/chats/$chatId/agents/${segment(kind)}/${segment(id)}/stop", null).stopped

@@ -458,6 +458,9 @@ class ChatViewModel(app: Application) :
                         teamOffered = read.subagentsOffered ?: read.teamOffered,
                     )
                 }
+                // The tree (spec 3.4.0), for a sheet opened when no reply streams it; an older
+                // server answers 404 and the Tasks section stands for it.
+                runCatching { api().tree(chat.id) }.getOrNull()?.tree?.let { tree -> _state.update { it.copy(tree = tree) } }
             } catch (e: Exception) {
                 fail(e)
             }

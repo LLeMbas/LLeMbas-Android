@@ -17,9 +17,11 @@ import eu.llembas.android.api.Plan
 import eu.llembas.android.api.StatusFrame
 import eu.llembas.android.api.SteeredFrame
 import eu.llembas.android.api.StepsFrame
+import eu.llembas.android.api.SubagentTranscript
 import eu.llembas.android.api.Tail
 import eu.llembas.android.api.ToolCall
 import eu.llembas.android.api.TreeFrame
+import eu.llembas.android.api.TreeView
 import eu.llembas.android.ui.chat.approvalTexts
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.builtins.ListSerializer
@@ -193,6 +195,20 @@ class ContractTest {
         assertNull(tree.ended.single().progress)
         // The stream carries it; the reply keeps it.
         assertEquals(tree, LiveReply("m").apply("tree", text("event_tree")).tree)
+    }
+
+    @Test
+    fun theTreeReadAndASubagentsConversation() {
+        val view = read("tree", TreeView.serializer())
+        assertTrue(view.live)
+        assertNotNull(view.tree)
+        assertEquals(listOf("message", "report"), view.room.map { if (it.report) "report" else "message" })
+        val read = read("subagent_transcript", SubagentTranscript.serializer())
+        assertEquals("s2", read.id)
+        assertEquals("working", read.state)
+        assertTrue(read.turns.first().machine)
+        assertEquals("src/api.py", read.turns[1].tools.single().title)
+        assertTrue(read.turns[1].running)
     }
 
     @Test

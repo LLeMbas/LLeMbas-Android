@@ -118,7 +118,7 @@ private fun TreeRowItem(row: TreeRow, onOpen: (TreeAgent) -> Unit) {
 
 /** The state's word (`loop.json` `team.read.states`), the main agent's and every subagent's. */
 @Composable
-private fun treeStateWord(state: String): String = when (state) {
+internal fun treeStateWord(state: String): String = when (state) {
     "working" -> stringResource(R.string.tree_state_working)
     "waiting" -> stringResource(R.string.tree_state_waiting)
     "finished" -> stringResource(R.string.tree_state_finished)

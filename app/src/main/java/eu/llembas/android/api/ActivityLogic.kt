@@ -104,19 +104,4 @@ object ActivityLogic {
 
     /** A percentage as the server writes it: one decimal, none when it is whole. */
     fun percent(value: Double): String = trim(String.format(Locale.ROOT, "%.1f", value))
-
-    /**
-     * A tree subagent as the agent route knows it: a team member, by its name (`GET
-     * /chats/{chat}/agents/member/{name}`), which is how the server reads a member's conversation.
-     */
-    fun ofTreeAgent(agent: TreeAgent): ActivityAgent = ActivityAgent(
-        kind = "member",
-        id = agent.name,
-        name = agent.name,
-        role = agent.position,
-        brief = agent.task,
-        state = agent.state,
-        model = agent.model,
-        transcript = true,
-    )
 }

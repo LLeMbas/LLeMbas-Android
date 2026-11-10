@@ -47,6 +47,14 @@ data class TreeAgent(
     val contextPercent: Int? get() = context?.takeIf { it.window > 0 }?.let { (it.used.toLong() * 100 / it.window).toInt() }
 }
 
+/** `GET /chats/{chat}/tree`: the tree (null: none), the room, and whether it is live (false: kept while the device is away). */
+@Serializable
+data class TreeView(val tree: SubagentTree? = null, val room: List<RoomMessage> = emptyList(), val live: Boolean = true)
+
+/** `GET /chats/{chat}/subagents/{id}/transcript`: its conversation, read-only, live or after it ended. */
+@Serializable
+data class SubagentTranscript(val id: String = "", val state: String = "", val turns: List<AgentTurn> = emptyList())
+
 @Serializable
 data class TreeContext(val used: Int = 0, val window: Int = 0)
 

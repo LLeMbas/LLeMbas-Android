@@ -77,11 +77,13 @@ import eu.llembas.android.api.ActivityAgent
 import eu.llembas.android.api.ActivityLogic
 import eu.llembas.android.api.ActivitySummary
 import eu.llembas.android.api.ActivityTeam
-import eu.llembas.android.api.AgentDetail
+import eu.llembas.android.api.AgentTurn
+import eu.llembas.android.api.ApiClient
 import eu.llembas.android.api.ContextUse
 import eu.llembas.android.api.Output
 import eu.llembas.android.api.RoomMessage
 import eu.llembas.android.api.SubagentTree
+import eu.llembas.android.api.TreeAgent
 import eu.llembas.android.api.TreeLogic
 import eu.llembas.android.lembas
 import eu.llembas.android.ui.MarkdownText
@@ -195,6 +197,7 @@ private fun categoryName(key: String): String = when (key) {
 interface ActivityActions {
     fun stop(agent: ActivityAgent) {}
     fun read(agent: ActivityAgent) {}
+    fun readSubagent(agent: TreeAgent) {}
     fun openFile(path: String) {}
     fun compact() {}
 }
@@ -212,6 +215,7 @@ fun ActivityPanel(chatId: String?, state: ChatState, model: ChatViewModel, canOp
     var now by remember { mutableLongStateOf(SystemClock.elapsedRealtime()) }
     var stopping by remember { mutableStateOf<ActivityAgent?>(null) }
     var reading by remember { mutableStateOf<ActivityAgent?>(null) }
+    var readingSubagent by remember { mutableStateOf<TreeAgent?>(null) }
     var viewing by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(chatId) {
@@ -238,6 +242,10 @@ fun ActivityPanel(chatId: String?, state: ChatState, model: ChatViewModel, canOp
 
         override fun read(agent: ActivityAgent) {
             reading = agent
+        }
+
+        override fun readSubagent(agent: TreeAgent) {
+            readingSubagent = agent
         }
 
         override fun openFile(path: String) {
@@ -283,6 +291,7 @@ fun ActivityPanel(chatId: String?, state: ChatState, model: ChatViewModel, canOp
         )
     }
     if (chatId != null) reading?.let { agent -> AgentConversation(chatId, agent, onClose = { reading = null }) }
+    if (chatId != null) readingSubagent?.let { agent -> SubagentConversation(chatId, agent, onClose = { readingSubagent = null }) }
     viewing?.let { path -> TreeFileViewer(path, onClose = { viewing = null }) }
 }
 
@@ -339,7 +348,7 @@ fun ActivityContent(
             if (shownTree != null) {
                 item {
                     Section(stringResource(R.string.team_agents), count = shownTree.agents.count { !it.isMain }.takeIf { it > 0 }) {
-                        SubagentList(shownTree) { agent -> actions.read(ActivityLogic.ofTreeAgent(agent)) }
+                        SubagentList(shownTree, actions::readSubagent)
                     }
                 }
             }
@@ -775,22 +784,57 @@ private fun RoomEntry(entry: RoomMessage) {
 /** What a background agent was told and said: `GET /chats/{chat}/agents/{kind}/{id}`, re-read while it works. */
 @Composable
 private fun AgentConversation(chatId: String, agent: ActivityAgent, onClose: () -> Unit) {
+    val state = stateWord(agent.state)
+    ConversationDialog(
+        name = agent.name,
+        facts = listOf(state, agent.model),
+        key = agent.kind + "/" + agent.id,
+        onClose = onClose,
+    ) { api ->
+        val detail = api.agent(chatId, agent.kind, agent.id)
+        Conversation(detail.transcript, detail.agent.isActive)
+    }
+}
+
+/** A tree subagent's conversation (spec 3.4.0 §11), read-only, followed while it runs. */
+@Composable
+private fun SubagentConversation(chatId: String, agent: TreeAgent, onClose: () -> Unit) {
+    ConversationDialog(
+        name = "${agent.name} (${agent.id})",
+        facts = listOf(treeStateWord(agent.state), agent.position, agent.model),
+        key = "tree/" + agent.id,
+        onClose = onClose,
+    ) { api ->
+        val read = api.subagentTranscript(chatId, agent.id)
+        Conversation(read.turns, read.state !in TreeLogic.ENDED)
+    }
+}
+
+/** What a conversation dialog draws: the turns, and whether to read them again (it still runs). */
+private class Conversation(val turns: List<AgentTurn>, val running: Boolean)
+
+/**
+ * An agent's conversation, full screen and read-only: read with [load], again every 3 s while
+ * it runs. Nobody types into it.
+ */
+@Composable
+private fun ConversationDialog(name: String, facts: List<String>, key: String, onClose: () -> Unit, load: suspend (ApiClient) -> Conversation) {
     val context = LocalContext.current
     val palette = LocalPalette.current
-    var detail by remember { mutableStateOf<AgentDetail?>(null) }
+    var detail by remember { mutableStateOf<Conversation?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
-    LaunchedEffect(agent.kind, agent.id) {
+    LaunchedEffect(key) {
         val api = context.lembas.instances.client() ?: return@LaunchedEffect
         while (true) {
             try {
-                detail = api.agent(chatId, agent.kind, agent.id)
+                detail = load(api)
                 error = null
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
             } catch (e: Exception) {
                 error = context.explain(e)
             }
-            if (detail?.agent?.isActive != true) break
+            if (detail?.running != true) break
             delay(3_000)
         }
     }
@@ -801,20 +845,20 @@ private fun AgentConversation(chatId: String, agent: ActivityAgent, onClose: () 
                     navigationIcon = { IconButton(onClick = onClose) { Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.close)) } },
                     title = {
                         Column {
-                            Text(agent.name, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            val now = detail?.agent ?: agent
+                            Text(name, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Text(
-                                listOf(stateWord(now.state), now.model).filter { it.isNotBlank() }.joinToString(" · "),
+                                facts.filter { it.isNotBlank() }.joinToString(" · "),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = palette.inkFaint,
                                 maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
                             )
                         }
                     },
                 )
             },
         ) { padding ->
-            val turns = detail?.transcript
+            val turns = detail?.turns
             when {
                 turns == null && error != null -> Box(Modifier.padding(padding).fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
                     Text(error.orEmpty(), color = palette.inkMuted, textAlign = TextAlign.Center)

@@ -1,6 +1,5 @@
 package eu.llembas.android
 
-import eu.llembas.android.api.ActivityLogic
 import eu.llembas.android.api.LembasJson
 import eu.llembas.android.api.SubagentTree
 import eu.llembas.android.api.TreeLogic
@@ -71,13 +70,5 @@ class TreeTest {
         assertFalse(TreeLogic.hasSubagents(tree.copy(agents = tree.agents.take(1), ended = emptyList(), openSlots = 0)))
         assertTrue(TreeLogic.hasSubagents(tree.copy(agents = tree.agents.take(1), ended = emptyList(), openSlots = 2)))
         assertTrue(TreeLogic.hasSubagents(tree))
-    }
-
-    @Test
-    fun aSubagentOpensAsAMember() {
-        val agent = ActivityLogic.ofTreeAgent(tree.agents[1])
-        assertEquals("member", agent.kind)
-        assertEquals("parser", agent.id)
-        assertTrue(agent.transcript)
     }
 }
