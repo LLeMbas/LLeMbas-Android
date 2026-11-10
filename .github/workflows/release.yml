@@ -43,6 +43,10 @@ jobs:
           distribution: temurin
           java-version: 17
 
+      # The wake-word engine and model for the full build, hash-pinned (never in the repository).
+      - name: Wake-word engine (hash-pinned)
+        run: python3 scripts/fetch-wakeword.py
+
       - uses: gradle/actions/wrapper-validation@v4
 
       - uses: gradle/actions/setup-gradle@v4

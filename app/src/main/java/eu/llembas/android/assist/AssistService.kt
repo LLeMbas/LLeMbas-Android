@@ -27,6 +27,7 @@ import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import eu.llembas.android.AppLanguage
 import eu.llembas.android.lembas
 import eu.llembas.android.ui.theme.LembasTheme
+import eu.llembas.android.wake.AssistPresence
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -41,7 +42,28 @@ import kotlinx.coroutines.runBlocking
  * there is no hotword here -- Android keeps always-on hotword detection for the system's own
  * preinstalled assistant (`CAPTURE_AUDIO_HOTWORD` is a privileged permission).
  */
-class LembasAssistService : VoiceInteractionService()
+class LembasAssistService : VoiceInteractionService() {
+    override fun onReady() {
+        super.onReady()
+        current = this
+    }
+
+    override fun onShutdown() {
+        if (current === this) current = null
+        super.onShutdown()
+    }
+
+    companion object {
+        /**
+         * The service while the system has it bound -- while LLeMbas is the phone's assistant. The
+         * wake word opens the sheet through it ([showSession]), which Android allows from the
+         * background, as it does for the power button.
+         */
+        @Volatile
+        var current: LembasAssistService? = null
+            private set
+    }
+}
 
 class LembasAssistSessionService : VoiceInteractionSessionService() {
     override fun onNewSession(args: Bundle?): VoiceInteractionSession = LembasAssistSession(this)
@@ -109,7 +131,9 @@ class LembasAssistSession(context: Context) :
     override fun onShow(args: Bundle?, showFlags: Int) {
         super.onShow(args, showFlags)
         registry.currentState = Lifecycle.State.RESUMED
-        controller.opened(locked())
+        AssistPresence.shown()
+        // The wake word asks for the sheet listening, whatever Settings says about opening.
+        controller.opened(locked(), listen = args?.getBoolean(AssistActivity.EXTRA_LISTEN) == true)
     }
 
     /**
@@ -119,6 +143,7 @@ class LembasAssistSession(context: Context) :
      */
     override fun onHide() {
         super.onHide()
+        AssistPresence.hidden()
         controller.close()
         scope.cancel()
         scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)

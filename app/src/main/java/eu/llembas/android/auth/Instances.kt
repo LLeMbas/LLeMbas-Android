@@ -87,6 +87,12 @@ data class Prefs(
     val assistantListens: Boolean = true,
     /** After a spoken answer is read aloud, listen again: a spoken conversation. */
     val assistantConversation: Boolean = true,
+    /** Listen for a wake word on the phone (WakeWordService). Off until the person turns it on. */
+    val wakeWord: Boolean = false,
+    /** Which of WakePhrases.all. */
+    val wakePhrase: String = "hey_lembas",
+    /** Listen only while the screen is on. */
+    val wakeScreenOnly: Boolean = true,
     val assistantModel: String = "",
     val lastAssistChat: String = "",
     val lastAssistTitle: String = "",

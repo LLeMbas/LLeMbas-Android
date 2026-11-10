@@ -2,9 +2,13 @@
 
 package eu.llembas.android.ui.settings
 
+import android.Manifest
 import android.app.Activity
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.provider.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -26,10 +30,12 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Assistant
+import androidx.compose.material.icons.filled.BatteryAlert
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Forum
+import androidx.compose.material.icons.filled.Hearing
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Notifications
@@ -38,6 +44,7 @@ import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.RecordVoiceOver
 import androidx.compose.material.icons.filled.Science
+import androidx.compose.material.icons.filled.ScreenLockPortrait
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.Translate
@@ -72,6 +79,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import eu.llembas.android.AppLanguage
 import eu.llembas.android.BuildConfig
 import eu.llembas.android.R
@@ -88,6 +96,9 @@ import eu.llembas.android.update.UpdateResult
 import eu.llembas.android.update.Updater
 import eu.llembas.android.update.checksUpdates
 import eu.llembas.android.update.offersBetas
+import eu.llembas.android.wake.WakeEngine
+import eu.llembas.android.wake.WakePhrases
+import eu.llembas.android.wake.WakeWordService
 import kotlinx.coroutines.launch
 
 /** What the settings page does; every action has a do-nothing default for the screenshots. */
@@ -104,6 +115,10 @@ interface SettingsActions {
     fun voiceInput(value: String) {}
     fun assistantListens(on: Boolean) {}
     fun assistantConversation(on: Boolean) {}
+    fun wakeWord(on: Boolean) {}
+    fun wakePhrase(id: String) {}
+    fun wakeScreenOnly(on: Boolean) {}
+    fun batterySettings() {}
     fun readAloud(on: Boolean) {}
     fun checkUpdate() {}
     fun openRelease() {}
@@ -128,6 +143,8 @@ data class SettingsState(
     val beta: Boolean = false,
     /** Whether the phone has a speech recogniser of its own (Settings › Voice input › Phone). */
     val phoneRecognizer: Boolean = false,
+    /** Whether this build has a wake-word engine (the F-Droid build has none). */
+    val wakeAvailable: Boolean = false,
 )
 
 @Composable
@@ -143,6 +160,15 @@ fun SettingsScreen(onBack: () -> Unit, onAddInstance: () -> Unit) {
     var updateFound by remember { mutableStateOf<UpdateOffer?>(null) }
     val beta = remember { AppVersion.parse(BuildConfig.VERSION_NAME)?.isBeta ?: false }
     val distributors = remember { Push.distributors(context) }
+    // The wake word needs the microphone before it can be turned on.
+    val micForWake = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) {
+            scope.launch {
+                store.savePrefs { it.copy(wakeWord = true) }
+                WakeWordService.start(context)
+            }
+        }
+    }
     val actions = remember {
         object : SettingsActions {
             override fun use(instance: Instance) {
@@ -202,6 +228,36 @@ fun SettingsScreen(onBack: () -> Unit, onAddInstance: () -> Unit) {
                 scope.launch { store.savePrefs { it.copy(assistantConversation = on) } }
             }
 
+            override fun wakeWord(on: Boolean) {
+                val mic = ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+                when {
+                    on && !mic -> micForWake.launch(Manifest.permission.RECORD_AUDIO)
+
+                    on -> scope.launch {
+                        store.savePrefs { it.copy(wakeWord = true) }
+                        WakeWordService.start(context)
+                    }
+
+                    else -> scope.launch {
+                        store.savePrefs { it.copy(wakeWord = false) }
+                        WakeWordService.stop(context)
+                    }
+                }
+            }
+
+            override fun wakePhrase(id: String) {
+                scope.launch { store.savePrefs { it.copy(wakePhrase = id) } }
+            }
+
+            override fun wakeScreenOnly(on: Boolean) {
+                scope.launch { store.savePrefs { it.copy(wakeScreenOnly = on) } }
+            }
+
+            // The list of apps the phone's battery optimisation leaves alone; no permission needed to open it.
+            override fun batterySettings() {
+                runCatching { context.startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+            }
+
             override fun readAloud(on: Boolean) {
                 scope.launch { store.savePrefs { it.copy(readAloudSpoken = on) } }
             }
@@ -256,6 +312,7 @@ fun SettingsScreen(onBack: () -> Unit, onAddInstance: () -> Unit) {
             selfUpdate = BuildConfig.SELF_UPDATE,
             beta = beta,
             phoneRecognizer = remember { PhoneRecognizer.available(context) },
+            wakeAvailable = WakeEngine.AVAILABLE,
         ),
         actions,
         onBack,
@@ -431,12 +488,13 @@ fun SettingsContent(state: SettingsState, actions: SettingsActions, onBack: () -
                     )
                 }
                 Text(
-                    stringResource(R.string.assistant_samsung) + "\n\n" + stringResource(R.string.assist_no_wake_word),
+                    stringResource(R.string.assistant_samsung),
                     style = MaterialTheme.typography.bodySmall,
                     color = palette.inkFaint,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 )
             }
+            item { WakeWordGroup(state, actions) }
             item {
                 // Which recogniser turns speech into words: the instance's or the phone's -- what
                 // each one is, and where the recording goes, said in the row itself.
@@ -516,6 +574,59 @@ fun SettingsContent(state: SettingsState, actions: SettingsActions, onBack: () -
             }
         }
     }
+}
+
+/**
+ * The wake word: off until turned on; the phrase (the engine's own, English); only while the
+ * screen is on; and what it costs and why a phone may stop it, said before it is turned on.
+ */
+@Composable
+private fun WakeWordGroup(state: SettingsState, actions: SettingsActions) {
+    val palette = LocalPalette.current
+    val on = state.prefs.wakeWord && state.wakeAvailable
+    Group(stringResource(R.string.wake_word)) {
+        SettingRow(
+            Icons.Filled.Hearing,
+            stringResource(R.string.wake_word_listen),
+            subtitle = stringResource(if (state.wakeAvailable) R.string.wake_word_line else R.string.wake_word_unavailable),
+            enabled = state.wakeAvailable,
+            onClick = { actions.wakeWord(!on) },
+            trailing = { Switch(checked = on, enabled = state.wakeAvailable, onCheckedChange = actions::wakeWord) },
+        )
+        if (state.wakeAvailable) {
+            WakePhrases.all.forEach { phrase ->
+                Rule()
+                SettingRow(
+                    Icons.Filled.RecordVoiceOver,
+                    "“${phrase.words}”",
+                    showIcon = false,
+                    onClick = { actions.wakePhrase(phrase.id) },
+                    trailing = { RadioButton(selected = state.prefs.wakePhrase == phrase.id, onClick = { actions.wakePhrase(phrase.id) }) },
+                )
+            }
+            Rule()
+            SettingRow(
+                Icons.Filled.ScreenLockPortrait,
+                stringResource(R.string.wake_screen_only),
+                subtitle = stringResource(R.string.wake_screen_only_line),
+                onClick = { actions.wakeScreenOnly(!state.prefs.wakeScreenOnly) },
+                trailing = { Switch(checked = state.prefs.wakeScreenOnly, onCheckedChange = actions::wakeScreenOnly) },
+            )
+            Rule()
+            SettingRow(
+                Icons.Filled.BatteryAlert,
+                stringResource(R.string.wake_battery),
+                subtitle = stringResource(R.string.wake_battery_line),
+                onClick = actions::batterySettings,
+            )
+        }
+    }
+    Text(
+        stringResource(R.string.wake_word_privacy) + "\n\n" + stringResource(R.string.wake_word_cost),
+        style = MaterialTheme.typography.bodySmall,
+        color = palette.inkFaint,
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+    )
 }
 
 @Composable

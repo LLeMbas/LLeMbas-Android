@@ -17,6 +17,7 @@ import eu.llembas.android.AppLanguage
 import eu.llembas.android.auth.Prefs
 import eu.llembas.android.lembas
 import eu.llembas.android.ui.theme.LembasTheme
+import eu.llembas.android.wake.AssistPresence
 
 /** What a way into the sheet asks for. */
 enum class Opening {
@@ -72,6 +73,7 @@ class AssistActivity : ComponentActivity() {
         controller = AssistController(this, lifecycleScope)
         keyguard = getSystemService(KeyguardManager::class.java)
         locked.value = keyguard.isKeyguardLocked
+        AssistPresence.shown()
         take(intent)
         setContent {
             val prefs by lembas.instances.prefs.collectAsState(initial = Prefs())
@@ -146,6 +148,7 @@ class AssistActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        AssistPresence.hidden()
         controller.close()
         super.onDestroy()
     }

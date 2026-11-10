@@ -362,6 +362,7 @@ object Fakes {
         version = "1.0.0-beta.3",
         selfUpdate = true,
         phoneRecognizer = true,
+        wakeAvailable = true,
     )
 
     // The assistant's sheet, as it opens and as it answers.

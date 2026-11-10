@@ -54,6 +54,9 @@ import eu.llembas.android.ui.settings.SettingsScreen
 import eu.llembas.android.ui.signin.SignInScreen
 import eu.llembas.android.ui.theme.LembasTheme
 import eu.llembas.android.update.ReleaseCheck
+import eu.llembas.android.wake.WakeBootReceiver
+import eu.llembas.android.wake.WakeEngine
+import eu.llembas.android.wake.WakeWordService
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -75,6 +78,10 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         take(intent)
         followLanguage()
+        // A wake word that is on, but whose service the phone stopped: it listens again.
+        lifecycleScope.launch {
+            if (WakeEngine.AVAILABLE && lembas.instances.prefs.first().wakeWord) runCatching { WakeWordService.start(this@MainActivity) }
+        }
         // At most once a day, and only while Settings › About says so (update/ReleaseCheck.kt).
         lifecycleScope.launch { runCatching { ReleaseCheck(this@MainActivity).daily() } }
         if (Build.VERSION.SDK_INT >= 33 &&
@@ -115,6 +122,11 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun take(intent: Intent?) {
+        // "Tap to listen again" after a restart: the app is on screen now, so the microphone
+        // service may start.
+        if (intent?.getBooleanExtra(WakeBootReceiver.EXTRA_RESUME, false) == true) {
+            lifecycleScope.launch { if (lembas.instances.prefs.first().wakeWord) WakeWordService.start(this@MainActivity) }
+        }
         val chat = intent?.getStringExtra(Notifications.EXTRA_CHAT)
         val schedule = intent?.getStringExtra(Notifications.EXTRA_SCHEDULE)
         val run = intent?.getStringExtra(Notifications.EXTRA_RUN)

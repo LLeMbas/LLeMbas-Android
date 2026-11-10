@@ -18,6 +18,14 @@ is in alpha and releases come off `main`.
   say nothing for a few seconds. The sheet says *In conversation* while it lasts. With a
   Bluetooth headset connected, its microphone is used, so the conversation can stay in your ear.
   Settings › Assistant › *Keep a spoken conversation going* (on; it needs voice replies).
+- **A wake word, if you want one** (off by default). Settings › Assistant › *Wake word*: say
+  "Hey Lembas" (or one of three other English phrases) and the assistant opens, listening, over
+  whatever is on screen. It listens on the phone with an open-source engine (sherpa-onnx) and a
+  small on-device model; nothing leaves the phone before the word, and a notification is up the
+  whole time it listens. It pauses in battery saver, while the assistant is open, and -- unless
+  you change it -- with the screen off. Settings explains what it costs in battery and how to
+  keep a phone's battery optimisation from stopping it. Not in the F-Droid build, which builds
+  every library from source.
 - **Code in colour.** The file viewer highlights a source file by its language (as the server
   names it), and a reply's code blocks by their fence's language: comments, strings, numbers,
   keywords, type names, and markup's tags and attributes, in the theme's own colours in Shire

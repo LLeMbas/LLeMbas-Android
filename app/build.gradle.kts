@@ -82,6 +82,8 @@ android {
         create("full") {
             dimension = "distribution"
             buildConfigField("boolean", "SELF_UPDATE", "true")
+            // The wake-word engine's native code: phones and the 64-bit emulator, not 32-bit x86.
+            ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64") }
         }
         create("fdroid") {
             dimension = "distribution"
@@ -156,6 +158,10 @@ dependencies {
     implementation(libs.markwon.tables)
     implementation(libs.markwon.strikethrough)
     implementation(libs.unifiedpush.connector)
+    // The wake-word engine, sherpa-onnx (Apache-2.0), in the `full` build only: its prebuilt Android
+    // library, fetched hash-pinned by scripts/fetch-wakeword.py (never committed). The `fdroid`
+    // build, which F-Droid builds from source, has no engine (src/fdroid/.../wake/Engine.kt).
+    add("fullImplementation", files("libs/sherpa-onnx-2.0.1.aar"))
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)

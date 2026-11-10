@@ -7,6 +7,11 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- A spoken conversation through a Bluetooth headset: its microphone made the route. -->
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <!-- The wake word (opt-in): a microphone foreground service, and "tap to listen again"
+         after a restart. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <queries>
         <!-- UnifiedPush distributors (ntfy and others) are found by this action. -->
@@ -150,6 +155,21 @@
                 <action android:name="org.unifiedpush.android.connector.PUSH_EVENT" />
             </intent-filter>
         </service>
+
+        <!-- The wake word: listens only while its notification is up (wake/WakeWordService.kt). -->
+        <service
+            android:name=".wake.WakeWordService"
+            android:exported="false"
+            android:foregroundServiceType="microphone" />
+
+        <receiver
+            android:name=".wake.WakeBootReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
 
         <receiver
             android:name=".push.CardActionReceiver"

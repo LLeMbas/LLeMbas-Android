@@ -445,7 +445,7 @@ private fun Starting(state: AssistUiState, actions: AssistActions, locked: Boole
     }
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(stringResource(R.string.assist_help), style = MaterialTheme.typography.bodySmall, color = palette.inkFaint)
-        Text(stringResource(R.string.assist_no_wake_word), style = MaterialTheme.typography.bodySmall, color = palette.inkFaint)
+        Text(stringResource(R.string.assist_wake_word_hint), style = MaterialTheme.typography.bodySmall, color = palette.inkFaint)
     }
 }
 

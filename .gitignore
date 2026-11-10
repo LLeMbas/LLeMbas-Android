@@ -16,3 +16,6 @@ local.properties
 .kotlin/
 # Python
 __pycache__/
+# The wake-word engine and model: fetched by scripts/fetch-wakeword.py, never committed
+/app/libs/
+/app/src/full/assets/wakeword/
