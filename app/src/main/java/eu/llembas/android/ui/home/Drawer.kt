@@ -3,6 +3,7 @@ package eu.llembas.android.ui.home
 import android.app.Application
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,15 +21,23 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.DriveFileMove
 import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.CreateNewFolder
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DriveFileRenameOutline
 import androidx.compose.material.icons.filled.EditNote
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Inventory2
+import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Terminal
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
@@ -36,6 +45,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -61,6 +71,7 @@ import androidx.lifecycle.viewModelScope
 import eu.llembas.android.R
 import eu.llembas.android.api.Chat
 import eu.llembas.android.api.Doorstep
+import eu.llembas.android.api.Folder
 import eu.llembas.android.api.fit
 import eu.llembas.android.lembas
 import eu.llembas.android.ui.explain
@@ -70,12 +81,20 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import java.time.LocalDate
 import java.time.ZoneId
 
-data class ChatsState(val chats: List<Chat> = emptyList(), val more: Boolean = false, val loading: Boolean = false, val error: String? = null)
+data class ChatsState(
+    val chats: List<Chat> = emptyList(),
+    val more: Boolean = false,
+    val loading: Boolean = false,
+    val error: String? = null,
+    /** The person's chat folders (`GET /folders`); empty where they have none. */
+    val folders: List<Folder> = emptyList(),
+)
 
 /** The drawer's list: every chat of the instance in use, both kinds, newest first. */
 class ChatsViewModel(app: Application) : AndroidViewModel(app) {
@@ -105,7 +124,9 @@ class ChatsViewModel(app: Application) : AndroidViewModel(app) {
                     return@launch
                 }
                 val page = api.chats()
-                _state.value = ChatsState(chats = page.chats, more = page.more)
+                // Folders are a side dish: the chats show without them if they cannot be read.
+                val folders = runCatching { api.folders() }.getOrDefault(_state.value.folders)
+                _state.value = ChatsState(chats = page.chats, more = page.more, folders = folders)
             } catch (e: Exception) {
                 _state.update { it.copy(loading = false, error = getApplication<Application>().explain(e)) }
             }
@@ -138,6 +159,60 @@ class ChatsViewModel(app: Application) : AndroidViewModel(app) {
             }
         }
     }
+
+    /** Pinned chats stay at the top of the list, wherever they are filed (the web's Pin). */
+    fun pin(chat: Chat, pinned: Boolean) = changeChat(chat.copy(pinned = pinned), buildJsonObject { put("pinned", pinned) })
+
+    /** File [chat] in [folderId], or take it out of its folder with null. */
+    fun move(chat: Chat, folderId: String?) = changeChat(chat.copy(folderId = folderId), buildJsonObject { put("folder_id", folderId) })
+
+    private fun changeChat(changed: Chat, body: JsonObject) {
+        _state.update { s -> s.copy(chats = s.chats.map { if (it.id == changed.id) changed else it }) }
+        viewModelScope.launch {
+            runCatching { getApplication<Application>().lembas.instances.client()?.updateChat(changed.id, body) }
+                .onFailure { e -> failed(e) }
+        }
+    }
+
+    /** A new folder at the top, and [then] the chat to file in it, if any. */
+    fun newFolder(name: String, then: Chat? = null) {
+        viewModelScope.launch {
+            runCatching {
+                val api = getApplication<Application>().lembas.instances.client() ?: return@launch
+                val folder = api.createFolder(name)
+                _state.update { it.copy(folders = it.folders + folder) }
+                if (then != null) move(then, folder.id)
+            }.onFailure { e -> failed(e) }
+        }
+    }
+
+    fun renameFolder(folder: Folder, name: String) = changeFolder(folder.copy(name = name), buildJsonObject { put("name", name) })
+
+    /** Open or fold a folder; the server keeps it, so the web's sidebar folds the same. */
+    fun toggleFolder(folder: Folder) = changeFolder(folder.copy(collapsed = !folder.collapsed), buildJsonObject { put("collapsed", !folder.collapsed) })
+
+    private fun changeFolder(changed: Folder, body: JsonObject) {
+        _state.update { s -> s.copy(folders = s.folders.map { if (it.id == changed.id) changed else it }) }
+        viewModelScope.launch {
+            runCatching { getApplication<Application>().lembas.instances.client()?.updateFolder(changed.id, body) }
+                .onFailure { e -> failed(e) }
+        }
+    }
+
+    /** The folder and those inside it go; their chats stay, in no folder (the server's rule). */
+    fun deleteFolder(folder: Folder) {
+        viewModelScope.launch {
+            runCatching { getApplication<Application>().lembas.instances.client()?.deleteFolder(folder.id) }
+                .onSuccess { load() }
+                .onFailure { e -> failed(e) }
+        }
+    }
+
+    /** A refusal is the server's sentence; the list is read again so it shows what is true. */
+    private fun failed(e: Throwable) {
+        _state.update { it.copy(error = getApplication<Application>().explain(e)) }
+        load()
+    }
 }
 
 /** Where the drawer can go, besides a chat. */
@@ -146,6 +221,12 @@ interface DrawerActions {
     fun newAgentChat() {}
     fun open(chatId: String) {}
     fun archive(chat: Chat) {}
+    fun pin(chat: Chat, pinned: Boolean) {}
+    fun move(chat: Chat, folderId: String?) {}
+    fun newFolder(name: String, then: Chat?) {}
+    fun renameFolder(folder: Folder, name: String) {}
+    fun toggleFolder(folder: Folder) {}
+    fun deleteFolder(folder: Folder) {}
     fun files() {}
     fun scheduled() {}
     fun archived() {}
@@ -155,9 +236,10 @@ interface DrawerActions {
 }
 
 /**
- * The navigation drawer: New chat at the top, search, Files, Scheduled and Archived, then the chats --
- * today's, the earlier ones, and the agent chats -- and Settings with the account at the foot.
- * A long press on a chat offers Archive.
+ * The navigation drawer: New chat (and New folder) at the top, search, Files, Scheduled and
+ * Archived, then the chats -- the pinned ones, the folders as a tree with theirs, then today's,
+ * the earlier ones and the agent chats -- and Settings with the account at the foot. A long press
+ * on a chat offers Pin, Move to folder and Archive; on a folder, Rename and Delete.
  */
 @Composable
 fun DrawerContent(
@@ -171,11 +253,21 @@ fun DrawerContent(
 ) {
     val palette = LocalPalette.current
     var query by rememberSaveable { mutableStateOf("") }
-    val groups = remember(state.chats, query, today) { groupChats(state.chats, query, today, zone) }
+    val groups = remember(state.chats, state.folders, query, today) { groupChats(state.chats, query, today, zone, state.folders) }
+    // The one dialog open at a time: a chat to file, a folder to name (new or renamed), one to delete.
+    var moving by remember { mutableStateOf<Chat?>(null) }
+    var naming by remember { mutableStateOf<FolderNaming?>(null) }
+    var deleting by remember { mutableStateOf<Folder?>(null) }
+    val chatActions = remember(actions) {
+        ChatRowActions(open = actions::open, archive = actions::archive, pin = actions::pin, move = { moving = it })
+    }
     ModalDrawerSheet(modifier = modifier, drawerContainerColor = palette.surface, drawerShape = RoundedCornerShape(topEnd = 24.dp, bottomEnd = 24.dp)) {
         Column(Modifier.fillMaxHeight()) {
             Row(Modifier.fillMaxWidth().padding(start = 24.dp, end = 8.dp, top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+                IconButton(onClick = { naming = FolderNaming() }) {
+                    Icon(Icons.Filled.CreateNewFolder, contentDescription = stringResource(R.string.folder_new))
+                }
                 IconButton(onClick = actions::newChat) { Icon(Icons.Filled.EditNote, contentDescription = stringResource(R.string.new_chat)) }
             }
             TextField(
@@ -213,9 +305,24 @@ fun DrawerContent(
                         }
                     }
                 }
-                section(R.string.chats_today, groups.today, current, actions)
-                section(R.string.chats_earlier, groups.earlier, current, actions)
-                section(R.string.chats_agents, groups.agents, current, actions)
+                section(R.string.chats_pinned, groups.pinned, current, chatActions, key = "pinned")
+                groups.folders.forEach { group ->
+                    item(key = "f${group.folder.id}") {
+                        FolderItem(
+                            group.folder,
+                            group.depth,
+                            onToggle = { actions.toggleFolder(group.folder) },
+                            onRename = { naming = FolderNaming(group.folder) },
+                            onDelete = { deleting = group.folder },
+                        )
+                    }
+                    items(group.chats, key = { "f${group.folder.id}/${it.id}" }) { chat ->
+                        ChatItem(chat, chat.id == current, chatActions, indent = 16 * (group.depth + 1))
+                    }
+                }
+                section(R.string.chats_today, groups.today, current, chatActions)
+                section(R.string.chats_earlier, groups.earlier, current, chatActions)
+                section(R.string.chats_agents, groups.agents, current, chatActions)
                 if (groups.isEmpty && !state.loading && state.error == null) {
                     item {
                         Text(
@@ -235,9 +342,54 @@ fun DrawerContent(
             Spacer(Modifier.size(8.dp))
         }
     }
+    moving?.let { chat ->
+        MoveDialog(
+            chat,
+            state.folders,
+            onPick = { folder ->
+                moving = null
+                actions.move(chat, folder)
+            },
+            onNewFolder = {
+                moving = null
+                naming = FolderNaming(then = chat)
+            },
+            onDismiss = { moving = null },
+        )
+    }
+    naming?.let { asked ->
+        FolderNameDialog(
+            asked.folder?.name.orEmpty(),
+            title = if (asked.folder != null) R.string.folder_rename else R.string.folder_new,
+            onSave = { name ->
+                naming = null
+                if (asked.folder != null) actions.renameFolder(asked.folder, name) else actions.newFolder(name, asked.then)
+            },
+            onDismiss = { naming = null },
+        )
+    }
+    deleting?.let { folder ->
+        AlertDialog(
+            onDismissRequest = { deleting = null },
+            text = { Text(stringResource(R.string.folder_delete_confirm, folder.name)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    deleting = null
+                    actions.deleteFolder(folder)
+                }) { Text(stringResource(R.string.folder_delete), color = LocalPalette.current.danger) }
+            },
+            dismissButton = { TextButton(onClick = { deleting = null }) { Text(stringResource(R.string.cancel)) } },
+        )
+    }
 }
 
-private fun LazyListScope.section(title: Int, chats: List<Chat>, current: String?, actions: DrawerActions) {
+/** A folder to name: [folder] to rename, or a new one (into which [then] is filed, if given). */
+private data class FolderNaming(val folder: Folder? = null, val then: Chat? = null)
+
+/** What a chat's row can do: open it, and from its long-press menu Pin, Move to folder, Archive. */
+private class ChatRowActions(val open: (String) -> Unit, val archive: (Chat) -> Unit, val pin: (Chat, Boolean) -> Unit, val move: (Chat) -> Unit)
+
+private fun LazyListScope.section(title: Int, chats: List<Chat>, current: String?, actions: ChatRowActions, key: String = "c") {
     if (chats.isEmpty()) return
     item(key = "h$title") {
         Text(
@@ -247,7 +399,134 @@ private fun LazyListScope.section(title: Int, chats: List<Chat>, current: String
             modifier = Modifier.padding(start = 28.dp, end = 28.dp, top = 12.dp, bottom = 4.dp),
         )
     }
-    items(chats, key = { it.id }) { chat -> ChatItem(chat, chat.id == current, actions) }
+    items(chats, key = { "$key${it.id}" }) { chat -> ChatItem(chat, chat.id == current, actions) }
+}
+
+/**
+ * A folder's row: its name (which gives), indented by its depth, and a chevron that says whether
+ * it is open. A tap folds or opens it; a long press offers Rename folder and Delete folder.
+ */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun FolderItem(folder: Folder, depth: Int, onToggle: () -> Unit, onRename: () -> Unit, onDelete: () -> Unit) {
+    val palette = LocalPalette.current
+    var menu by remember { mutableStateOf(false) }
+    Box(Modifier.fillMaxWidth().padding(start = 12.dp + (16 * depth).dp, end = 12.dp)) {
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(28.dp))
+                .combinedClickable(onClick = onToggle, onLongClick = { menu = true })
+                .heightIn(min = 48.dp)
+                .padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(Icons.Filled.Folder, contentDescription = null, tint = palette.inkFaint, modifier = Modifier.size(20.dp))
+            Spacer(Modifier.width(12.dp))
+            Text(
+                folder.name,
+                style = MaterialTheme.typography.bodyLarge,
+                color = palette.inkMuted,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+            Icon(
+                if (folder.collapsed) Icons.Filled.ExpandMore else Icons.Filled.ExpandLess,
+                contentDescription = null,
+                tint = palette.inkFaint,
+                modifier = Modifier.size(20.dp),
+            )
+        }
+        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+            DropdownMenuItem(
+                leadingIcon = { Icon(Icons.Filled.DriveFileRenameOutline, contentDescription = null) },
+                text = { Text(stringResource(R.string.folder_rename)) },
+                onClick = {
+                    menu = false
+                    onRename()
+                },
+            )
+            DropdownMenuItem(
+                leadingIcon = { Icon(Icons.Filled.Delete, contentDescription = null) },
+                text = { Text(stringResource(R.string.folder_delete)) },
+                onClick = {
+                    menu = false
+                    onDelete()
+                },
+            )
+        }
+    }
+}
+
+/** Move to folder: No folder, every folder as its tree, and New folder at the foot. */
+@Composable
+private fun MoveDialog(chat: Chat, folders: List<Folder>, onPick: (String?) -> Unit, onNewFolder: () -> Unit, onDismiss: () -> Unit) {
+    val palette = LocalPalette.current
+    val tree = remember(folders) { folderTree(folders) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.folder_move)) },
+        text = {
+            LazyColumn {
+                item { PickRow(stringResource(R.string.folder_none), depth = 0, chosen = chat.folderId == null) { onPick(null) } }
+                items(tree, key = { it.first.id }) { (folder, depth) ->
+                    PickRow(folder.name, depth, chosen = chat.folderId == folder.id) { onPick(folder.id) }
+                }
+                item {
+                    TextButton(onClick = onNewFolder, modifier = Modifier.heightIn(min = 48.dp)) {
+                        Icon(Icons.Filled.CreateNewFolder, contentDescription = null, tint = palette.accent)
+                        Spacer(Modifier.width(8.dp))
+                        Text(stringResource(R.string.folder_new))
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
+    )
+}
+
+@Composable
+private fun PickRow(label: String, depth: Int, chosen: Boolean, onClick: () -> Unit) {
+    val palette = LocalPalette.current
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(if (chosen) palette.accentSoft else Color.Transparent)
+            .clickable(onClick = onClick)
+            .heightIn(min = 48.dp)
+            .padding(start = 8.dp + (16 * depth).dp, end = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(Icons.Filled.Folder, contentDescription = null, tint = palette.inkFaint, modifier = Modifier.size(20.dp))
+        Spacer(Modifier.width(12.dp))
+        Text(label, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+/** New folder / Rename folder: one line, saved only with a name. */
+@Composable
+private fun FolderNameDialog(initial: String, title: Int, onSave: (String) -> Unit, onDismiss: () -> Unit) {
+    var name by remember { mutableStateOf(initial) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(title)) },
+        text = {
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it },
+                singleLine = true,
+                label = { Text(stringResource(R.string.folder_name)) },
+                modifier = Modifier.fillMaxWidth(),
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = { onSave(name.trim()) }, enabled = name.isNotBlank()) { Text(stringResource(R.string.save)) }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
+    )
 }
 
 @Composable
@@ -273,10 +552,10 @@ private fun DrawerItem(icon: ImageVector, label: String, subtitle: String? = nul
 /** One chat: its title (which gives), and a dot for news or for a reply being written. */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun ChatItem(chat: Chat, selected: Boolean, actions: DrawerActions) {
+private fun ChatItem(chat: Chat, selected: Boolean, actions: ChatRowActions, indent: Int = 0) {
     val palette = LocalPalette.current
     var menu by remember { mutableStateOf(false) }
-    Box(Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
+    Box(Modifier.fillMaxWidth().padding(start = 12.dp + indent.dp, end = 12.dp)) {
         Row(
             Modifier
                 .fillMaxWidth()
@@ -301,6 +580,22 @@ private fun ChatItem(chat: Chat, selected: Boolean, actions: DrawerActions) {
             }
         }
         DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+            DropdownMenuItem(
+                leadingIcon = { Icon(Icons.Filled.PushPin, contentDescription = null) },
+                text = { Text(stringResource(if (chat.pinned) R.string.chat_unpin else R.string.chat_pin)) },
+                onClick = {
+                    menu = false
+                    actions.pin(chat, !chat.pinned)
+                },
+            )
+            DropdownMenuItem(
+                leadingIcon = { Icon(Icons.AutoMirrored.Filled.DriveFileMove, contentDescription = null) },
+                text = { Text(stringResource(R.string.folder_move)) },
+                onClick = {
+                    menu = false
+                    actions.move(chat)
+                },
+            )
             DropdownMenuItem(
                 leadingIcon = { Icon(Icons.Filled.Archive, contentDescription = null) },
                 text = { Text(stringResource(R.string.archive)) },

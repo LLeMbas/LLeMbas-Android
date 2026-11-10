@@ -26,6 +26,16 @@
     <string name="archived">Archiviert</string>
     <string name="archived_restore">Chat wiederherstellen</string>
     <string name="archived_none">Keine archivierten Chats.</string>
+    <string name="chats_pinned">Angeheftete Chats</string>
+    <string name="chat_pin">Chat anheften</string>
+    <string name="chat_unpin">Chat loslösen</string>
+    <string name="folder_move">In Ordner verschieben</string>
+    <string name="folder_none">Kein Ordner</string>
+    <string name="folder_new">Neuer Ordner</string>
+    <string name="folder_name">Ordnername</string>
+    <string name="folder_rename">Ordner umbenennen</string>
+    <string name="folder_delete">Ordner löschen</string>
+    <string name="folder_delete_confirm">Den Ordner „%1$s“ löschen? Die Chats darin bleiben erhalten.</string>
     <string name="delete">Löschen</string>
     <string name="edit">Bearbeiten</string>
     <string name="regenerate">Neu generieren</string>

@@ -26,6 +26,16 @@
     <string name="archived">Archivált</string>
     <string name="archived_restore">Csevegés visszaállítása</string>
     <string name="archived_none">Nincs archivált csevegés.</string>
+    <string name="chats_pinned">Kitűzött beszélgetések</string>
+    <string name="chat_pin">Beszélgetés kitűzése</string>
+    <string name="chat_unpin">Kitűzés megszüntetése</string>
+    <string name="folder_move">Áthelyezés mappába</string>
+    <string name="folder_none">Nincs mappa</string>
+    <string name="folder_new">Új mappa</string>
+    <string name="folder_name">Mappa neve</string>
+    <string name="folder_rename">Mappa átnevezése</string>
+    <string name="folder_delete">Mappa törlése</string>
+    <string name="folder_delete_confirm">Törli a(z) „%1$s” mappát? A benne lévő csevegések megmaradnak.</string>
     <string name="delete">Törlés</string>
     <string name="edit">Szerkesztés</string>
     <string name="regenerate">Újragenerálás</string>

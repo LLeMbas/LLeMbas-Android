@@ -155,6 +155,22 @@ class ApiClient(val base: String, private val token: String, val http: OkHttpCli
 
     suspend fun folders(): List<Folder> = get<FolderList>("/folders").folders
 
+    /** A new folder, at the top or inside [parentId] (`folder.manage`; nesting is capped). */
+    suspend fun createFolder(name: String, parentId: String? = null): Folder = send<FolderEnvelope>(
+        "POST",
+        "/folders",
+        buildJsonObject {
+            put("name", name)
+            if (parentId != null) put("parent_id", parentId)
+        },
+    ).folder
+
+    /** Any of `name`, `parent_id`, `collapsed`. */
+    suspend fun updateFolder(id: String, changes: JsonObject): Folder = send<FolderEnvelope>("PATCH", "/folders/${segment(id)}", changes).folder
+
+    /** The folder and the folders inside it; their chats fall back to no folder. */
+    suspend fun deleteFolder(id: String) = empty(authed("$v2/folders/${segment(id)}").delete().build())
+
     suspend fun devices(): List<LinkedDevice> = get<DeviceList>("/devices").devices
 
     /** The token revokes itself (`lembas logout`'s route). */

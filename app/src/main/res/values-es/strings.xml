@@ -26,6 +26,16 @@
     <string name="archived">Archivados</string>
     <string name="archived_restore">Restaurar chat</string>
     <string name="archived_none">No hay chats archivados.</string>
+    <string name="chats_pinned">Chats fijados</string>
+    <string name="chat_pin">Fijar chat</string>
+    <string name="chat_unpin">Dejar de fijar el chat</string>
+    <string name="folder_move">Mover a carpeta</string>
+    <string name="folder_none">Sin carpeta</string>
+    <string name="folder_new">Nueva carpeta</string>
+    <string name="folder_name">Nombre de la carpeta</string>
+    <string name="folder_rename">Renombrar carpeta</string>
+    <string name="folder_delete">Eliminar carpeta</string>
+    <string name="folder_delete_confirm">¿Eliminar la carpeta «%1$s»? Los chats que contiene se conservan.</string>
     <string name="delete">Eliminar</string>
     <string name="edit">Editar</string>
     <string name="regenerate">Regenerar</string>

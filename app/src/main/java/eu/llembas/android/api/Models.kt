@@ -176,7 +176,17 @@ data class AgentSubagents(val offered: Boolean = false, @SerialName("device_runs
 data class SubagentsOffer(val offered: Boolean = false, @SerialName("named_only") val namedOnly: Boolean = false, val cap: Int? = null)
 
 @Serializable
-data class Folder(val id: String, val name: String = "", @SerialName("parent_id") val parentId: String? = null, val kind: String = "", val position: Int = 0)
+data class Folder(
+    val id: String,
+    val name: String = "",
+    @SerialName("parent_id") val parentId: String? = null,
+    val kind: String = "",
+    val position: Int = 0,
+    val collapsed: Boolean = false,
+)
+
+@Serializable
+data class FolderEnvelope(val folder: Folder)
 
 @Serializable
 data class FolderList(val folders: List<Folder> = emptyList())

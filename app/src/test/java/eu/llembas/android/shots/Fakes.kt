@@ -8,6 +8,7 @@ import eu.llembas.android.api.AgentsSetting
 import eu.llembas.android.api.Attachment
 import eu.llembas.android.api.Chat
 import eu.llembas.android.api.ContextPart
+import eu.llembas.android.api.Folder
 import eu.llembas.android.api.LembasJson
 import eu.llembas.android.api.LinkedDevice
 import eu.llembas.android.api.LiveReply
@@ -264,6 +265,14 @@ object Fakes {
             Chat(id = "c5", title = "Translate the recipe into Slovak", updatedAt = "2026-03-08T10:00:00+00:00"),
             Chat(id = "c6", title = "Why do leaves keep bread fresh, and does it work with any leaf or only some?", updatedAt = "2026-03-01T10:00:00+00:00"),
             Chat(id = "c7", title = "Clean up the build scripts", kind = "agent", updatedAt = "2026-03-02T10:00:00+00:00"),
+            Chat(id = "c8", title = "The cram recipe, for the long road", folderId = "f2", pinned = true, updatedAt = "2026-02-20T10:00:00+00:00"),
+            Chat(id = "c9", title = "Honey cakes for the party", folderId = "f2", updatedAt = "2026-02-21T10:00:00+00:00"),
+            Chat(id = "c10", title = "Which leaves to wrap it in", folderId = "f1", updatedAt = "2026-02-22T10:00:00+00:00"),
+        ),
+        folders = listOf(
+            Folder(id = "f1", name = "Baking", position = 0),
+            Folder(id = "f2", name = "Recipes from the Shire, the long list", parentId = "f1", position = 0),
+            Folder(id = "f3", name = "Letters", position = 1, collapsed = true),
         ),
     )
 

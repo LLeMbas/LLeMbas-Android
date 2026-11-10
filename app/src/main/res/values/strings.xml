@@ -27,6 +27,16 @@
     <string name="archived">Archived</string>
     <string name="archived_restore">Restore chat</string>
     <string name="archived_none">No archived chats.</string>
+    <string name="chats_pinned">Pinned chats</string>
+    <string name="chat_pin">Pin chat</string>
+    <string name="chat_unpin">Unpin chat</string>
+    <string name="folder_move">Move to folder</string>
+    <string name="folder_none">No folder</string>
+    <string name="folder_new">New folder</string>
+    <string name="folder_name">Folder name</string>
+    <string name="folder_rename">Rename folder</string>
+    <string name="folder_delete">Delete folder</string>
+    <string name="folder_delete_confirm">Delete the folder “%1$s”? Chats inside it are kept.</string>
     <string name="delete">Delete</string>
     <string name="edit">Edit</string>
     <string name="regenerate">Regenerate</string>

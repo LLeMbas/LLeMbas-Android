@@ -9,6 +9,8 @@ import eu.llembas.android.api.ChatPage
 import eu.llembas.android.api.DoneFrame
 import eu.llembas.android.api.FileContent
 import eu.llembas.android.api.FileListing
+import eu.llembas.android.api.FolderEnvelope
+import eu.llembas.android.api.FolderList
 import eu.llembas.android.api.JobsFrame
 import eu.llembas.android.api.LembasJson
 import eu.llembas.android.api.LiveReply
@@ -46,6 +48,15 @@ class ContractTest {
     private fun text(name: String): String = requireNotNull(javaClass.classLoader!!.getResource("$name.json")) { "contract/$name.json is missing" }.readText()
 
     private fun <T> read(name: String, serializer: KSerializer<T>): T = LembasJson.decodeFromString(serializer, text(name))
+
+    @Test
+    fun theFoldersAndOne() {
+        val folders = read("folders", FolderList.serializer()).folders
+        assertEquals(listOf("fold1", "fold2"), folders.map { it.id })
+        assertEquals("fold1", folders[1].parentId)
+        assertTrue(folders[1].collapsed)
+        assertEquals("Waybread", read("folder", FolderEnvelope.serializer()).folder.name)
+    }
 
     @Test
     fun theVersionIsOneThisAppReads() {

@@ -33,6 +33,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import eu.llembas.android.api.Chat
+import eu.llembas.android.api.Folder
 import eu.llembas.android.auth.Instance
 import eu.llembas.android.auth.Prefs
 import eu.llembas.android.push.Notifications
@@ -203,6 +204,18 @@ class MainActivity : ComponentActivity() {
                 override fun open(chatId: String) = top("chat/$chatId")
 
                 override fun archive(chat: Chat) = chats.archive(chat)
+
+                override fun pin(chat: Chat, pinned: Boolean) = chats.pin(chat, pinned)
+
+                override fun move(chat: Chat, folderId: String?) = chats.move(chat, folderId)
+
+                override fun newFolder(name: String, then: Chat?) = chats.newFolder(name, then)
+
+                override fun renameFolder(folder: Folder, name: String) = chats.renameFolder(folder, name)
+
+                override fun toggleFolder(folder: Folder) = chats.toggleFolder(folder)
+
+                override fun deleteFolder(folder: Folder) = chats.deleteFolder(folder)
 
                 override fun files() = over("files")
 

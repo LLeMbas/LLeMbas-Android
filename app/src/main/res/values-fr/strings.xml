@@ -26,6 +26,16 @@
     <string name="archived">Archivées</string>
     <string name="archived_restore">Restaurer la conversation</string>
     <string name="archived_none">Aucune conversation archivée.</string>
+    <string name="chats_pinned">Discussions épinglées</string>
+    <string name="chat_pin">Épingler la discussion</string>
+    <string name="chat_unpin">Désépingler la discussion</string>
+    <string name="folder_move">Déplacer vers un dossier</string>
+    <string name="folder_none">Aucun dossier</string>
+    <string name="folder_new">Nouveau dossier</string>
+    <string name="folder_name">Nom du dossier</string>
+    <string name="folder_rename">Renommer le dossier</string>
+    <string name="folder_delete">Supprimer le dossier</string>
+    <string name="folder_delete_confirm">Supprimer le dossier « %1$s » ? Les conversations qu\'il contient sont conservées.</string>
     <string name="delete">Supprimer</string>
     <string name="edit">Modifier</string>
     <string name="regenerate">Régénérer</string>

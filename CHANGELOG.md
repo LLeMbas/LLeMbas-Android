@@ -19,6 +19,11 @@ is in alpha and releases come off `main`.
 - **Read aloud on a reply** in a chat, beside Copy, when your instance has text-to-speech: the
   same voice the assistant answers in. Tap again (or another reply's) to stop; leaving the chat
   stops it too.
+- **Pinned chats and folders** in the drawer, as on the web: pinned chats at the top wherever
+  they are filed, then your folders as a tree (a tap folds or opens one, and the web folds it
+  too), then the rest. A long press on a chat offers **Pin chat** and **Move to folder**; on a
+  folder, **Rename folder** and **Delete folder** (its chats stay). **New folder** is beside New
+  chat at the top of the drawer.
 - **A scheduled task that watches a web page** says so on its page (*Only when this page
   changes*, and the address), and a run that found the page unchanged is shown as *Unchanged*.
 - **A scheduled task's notification shows its result.** Unlocked, it carries the task's name

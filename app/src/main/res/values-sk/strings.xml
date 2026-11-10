@@ -26,6 +26,16 @@
     <string name="archived">Archivované</string>
     <string name="archived_restore">Obnoviť konverzáciu</string>
     <string name="archived_none">Žiadne archivované konverzácie.</string>
+    <string name="chats_pinned">Pripnuté konverzácie</string>
+    <string name="chat_pin">Pripnúť konverzáciu</string>
+    <string name="chat_unpin">Odopnúť konverzáciu</string>
+    <string name="folder_move">Presunúť do zložky</string>
+    <string name="folder_none">Bez zložky</string>
+    <string name="folder_new">Nová zložka</string>
+    <string name="folder_name">Názov zložky</string>
+    <string name="folder_rename">Premenovať zložku</string>
+    <string name="folder_delete">Zmazať zložku</string>
+    <string name="folder_delete_confirm">Zmazať zložku „%1$s“? Konverzácie v nej zostanú.</string>
     <string name="delete">Zmazať</string>
     <string name="edit">Upraviť</string>
     <string name="regenerate">Vygenerovať znova</string>

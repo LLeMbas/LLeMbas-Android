@@ -1,8 +1,11 @@
 package eu.llembas.android
 
 import eu.llembas.android.api.Chat
+import eu.llembas.android.api.Folder
+import eu.llembas.android.ui.home.folderTree
 import eu.llembas.android.ui.home.groupChats
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.LocalDate
@@ -40,5 +43,48 @@ class ChatGroupsTest {
         val chats = listOf(chat("a", "Lembas bread", null), chat("b", "Ropes", null))
         assertEquals(listOf("a"), groupChats(chats, "  BREAD ", today, zone).earlier.map { it.id })
         assertTrue(groupChats(chats, "nothing", today, zone).isEmpty)
+    }
+
+    @Test
+    fun pinnedFirstWhereverFiledAndFoldersAsATree() {
+        val folders = listOf(
+            Folder("inner", "Recipes", parentId = "top", position = 0),
+            Folder("top", "Waybread", position = 1),
+            Folder("first", "Letters", position = 0),
+            // Its parent is not in the list: shown at the top rather than lost.
+            Folder("stray", "Stray", parentId = "gone", position = 2),
+        )
+        assertEquals(listOf("first" to 0, "top" to 0, "inner" to 1, "stray" to 0), folderTree(folders).map { it.first.id to it.second })
+
+        val chats = listOf(
+            Chat(id = "p", title = "Pinned and filed", folderId = "inner", pinned = true),
+            Chat(id = "r", title = "Rye", folderId = "inner"),
+            Chat(id = "w", title = "Wrapping", folderId = "top"),
+            Chat(id = "u", title = "Unfiled", updatedAt = "2026-03-10T08:00:00+00:00"),
+            Chat(id = "x", title = "In a folder this list does not have", folderId = "elsewhere"),
+        )
+        val groups = groupChats(chats, "", today, zone, folders)
+        assertEquals(listOf("p"), groups.pinned.map { it.id })
+        assertEquals(
+            listOf("first" to emptyList(), "top" to listOf("w"), "inner" to listOf("r"), "stray" to emptyList<String>()),
+            groups.folders.map {
+                it.folder.id to
+                    it.chats.map { c -> c.id }
+            },
+        )
+        assertEquals(listOf("u"), groups.today.map { it.id })
+        assertEquals(listOf("x"), groups.earlier.map { it.id })
+    }
+
+    @Test
+    fun aCollapsedFolderHidesItsChatsAndTheFoldersInside() {
+        val folders = listOf(Folder("top", "Waybread", collapsed = true), Folder("inner", "Recipes", parentId = "top"), Folder("next", "Letters", position = 1))
+        val chats = listOf(Chat(id = "r", title = "Rye", folderId = "inner"), Chat(id = "w", title = "Wrapping", folderId = "top"))
+        val groups = groupChats(chats, "", today, zone, folders)
+        assertEquals(listOf("top" to emptyList(), "next" to emptyList<String>()), groups.folders.map { it.folder.id to it.chats.map { c -> c.id } })
+        assertFalse(groups.isEmpty)
+        // Searching opens everything, and leaves out folders without a match.
+        val found = groupChats(chats, "rye", today, zone, folders)
+        assertEquals(listOf("inner" to listOf("r")), found.folders.map { it.folder.id to it.chats.map { c -> c.id } })
     }
 }

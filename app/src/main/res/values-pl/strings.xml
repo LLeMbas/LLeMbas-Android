@@ -26,6 +26,16 @@
     <string name="archived">Zarchiwizowane</string>
     <string name="archived_restore">Przywróć czat</string>
     <string name="archived_none">Brak zarchiwizowanych czatów.</string>
+    <string name="chats_pinned">Przypięte czaty</string>
+    <string name="chat_pin">Przypnij czat</string>
+    <string name="chat_unpin">Odepnij czat</string>
+    <string name="folder_move">Przenieś do folderu</string>
+    <string name="folder_none">Bez folderu</string>
+    <string name="folder_new">Nowy folder</string>
+    <string name="folder_name">Nazwa folderu</string>
+    <string name="folder_rename">Zmień nazwę folderu</string>
+    <string name="folder_delete">Usuń folder</string>
+    <string name="folder_delete_confirm">Usunąć folder „%1$s”? Czaty w nim zostaną zachowane.</string>
     <string name="delete">Usuń</string>
     <string name="edit">Edytuj</string>
     <string name="regenerate">Wygeneruj ponownie</string>
