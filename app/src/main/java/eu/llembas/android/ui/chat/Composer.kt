@@ -323,9 +323,9 @@ fun Composer(state: ChatState, actions: ChatActions, agent: Boolean, onTune: () 
                                 pickFiles.launch("*/*")
                             },
                         )
-                        // A picture made by the instance, in a chat that exists (the server takes
-                        // `force_tool` on a turn, not on the message that makes a chat).
-                        if (state.imagesOffered && state.chat != null && !agent) {
+                        // A picture made by the instance: the next message (or the one that makes
+                        // the chat) asks for it. Not in an agent chat, which runs on a computer.
+                        if (state.imagesOffered && !agent) {
                             DropdownMenuItem(
                                 leadingIcon = { Icon(Icons.Filled.Brush, contentDescription = null) },
                                 text = { Text(stringResource(R.string.image_generate)) },

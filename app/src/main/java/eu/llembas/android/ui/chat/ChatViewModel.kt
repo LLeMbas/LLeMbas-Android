@@ -227,6 +227,7 @@ class ChatViewModel(app: Application) :
                 val list = runCatching { client.modelList(chatId) }.getOrNull()
                 val models = list?.models.orEmpty()
                 _state.update { it.copy(modelsCap = list?.subagentsCap) }
+                if (!agent) runCatching { client.me() }.onSuccess { me -> _state.update { it.copy(imagesOffered = me.hasImages) } }
                 if (chatId == null) {
                     val devices = if (agent) client.devices() else emptyList()
                     val base = if (agent) getApplication<Application>().lembas.instances.current()?.base.orEmpty() else ""
@@ -234,7 +235,6 @@ class ChatViewModel(app: Application) :
                     if (agent) readAgentFacts()
                     return@launch
                 }
-                runCatching { client.me() }.onSuccess { me -> _state.update { it.copy(imagesOffered = me.hasImages) } }
                 val detail = client.chat(chatId)
                 _state.update {
                     it.copy(chat = detail.chat, messages = detail.messages, more = detail.more, models = models, loading = false)
@@ -350,11 +350,13 @@ class ChatViewModel(app: Application) :
         val attached = _state.value.pending
         val files = attached.map { it.id }
         if (text.isBlank() && files.isEmpty()) return
+        // A picture, asked for from + (not in an agent chat, which runs on a computer).
+        val picture = draft.image && now.imagesOffered && !agentChat
         viewModelScope.launch {
             try {
                 val client = api()
                 val chat = _state.value.chat
-                _state.update { it.copy(pending = emptyList()) }
+                _state.update { it.copy(pending = emptyList(), draft = it.draft.copy(image = false)) }
                 if (chat == null) {
                     val made = client.createChat(
                         text,
@@ -365,17 +367,16 @@ class ChatViewModel(app: Application) :
                         mode = mode,
                         agent = agent,
                         agents = agents,
+                        forceTool = if (picture) IMAGE_TOOL else null,
                     )
                     _state.update { it.copy(chat = made.chat, messages = listOfNotNull(made.message, made.reply)) }
                     made.reply?.let { follow(it.id) }
                 } else {
-                    val picture = _state.value.draft.image && _state.value.imagesOffered
-                    _state.update { it.copy(draft = it.draft.copy(image = false)) }
                     took(client.sendMessage(chat.id, text, files, forceTool = if (picture) IMAGE_TOOL else null))
                 }
             } catch (e: Exception) {
                 // Nothing was sent: the words and the attachments go back to the composer.
-                _state.update { it.copy(pending = attached + it.pending, unsent = text) }
+                _state.update { it.copy(pending = attached + it.pending, unsent = text, draft = it.draft.copy(image = picture || it.draft.image)) }
                 fail(e)
             }
         }

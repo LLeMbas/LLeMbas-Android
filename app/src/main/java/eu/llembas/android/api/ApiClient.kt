@@ -226,6 +226,7 @@ class ApiClient(val base: String, private val token: String, val http: OkHttpCli
         mode: String? = null,
         agent: AgentTarget? = null,
         agents: AgentsSetting? = null,
+        forceTool: String? = null,
     ): NewChat = send(
         "POST",
         "/chats",
@@ -237,6 +238,7 @@ class ApiClient(val base: String, private val token: String, val http: OkHttpCli
             mode?.let { put("mode", it) }
             agents?.let { put("agents", agentsJson(it)) }
             put("temporary", temporary)
+            forceTool?.let { put("force_tool", it) }
             // An agent chat runs on a linked device; an empty directory is the device's first
             // allowed one. A device that is no longer linked makes it an ordinary chat on the
             // server, rather than losing the message.

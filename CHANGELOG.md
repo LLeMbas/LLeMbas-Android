@@ -28,7 +28,7 @@ is in alpha and releases come off `main`.
   the titles at once; a moment later the chats whose messages hold the words follow under *In
   the messages*, with the words marked.
 - **Generate images** in a chat, when your instance makes pictures: from **+** in the composer,
-  the next message asks for one, and the picture shows in the reply at its own size. A tap opens
+  the next message asks for one (a new chat can start with a picture too), and the picture shows in the reply at its own size. A tap opens
   it whole. Only pictures your instance made and keeps are drawn; nothing is loaded from an
   address a reply names.
 - **Memory**, in the drawer: what models remember about you, as Settings › Memory on the web.
