@@ -141,6 +141,44 @@ class WakeListenerTest {
     }
 
     @Test
+    fun aTapTriesAgainNowAndStartsTheWaitsOver() = runTest {
+        var opens = 0
+        val listener = listener(engine = { Detector() }, microphone = {
+            opens++
+            throw IllegalStateException("recording did not start")
+        })
+        val job = launch { listener.follow(MutableStateFlow(plan)) }
+        advanceTimeBy(2_001 + 5_001) // two waits gone by: the third would be fifteen seconds
+        assertEquals(3, opens)
+        listener.retryNow()
+        runCurrent()
+        assertEquals(4, opens)
+        // And the count of failures starts over: two seconds again, not a minute.
+        advanceTimeBy(2_001)
+        assertEquals(5, opens)
+        job.cancelAndJoin()
+    }
+
+    @Test
+    fun troubleAfterListeningWellIsNewTroubleNotTheOldOneAgain() = runTest {
+        var opens = 0
+        // Each microphone works for forty seconds (a tenth of a second a chunk), then stops.
+        val listener = listener(engine = { Detector() }, microphone = {
+            opens++
+            Mic(script = List(400) { true }, after = -3)
+        })
+        val job = launch { listener.follow(MutableStateFlow(plan)) }
+        runCurrent()
+        assertEquals(1, opens)
+        // Every wait is the first, two seconds, however many times it has happened.
+        repeat(4) {
+            advanceTimeBy(2_001)
+            assertEquals(it + 2, opens)
+        }
+        job.cancelAndJoin()
+    }
+
+    @Test
     fun aMicrophoneThatStopsIsAFailureAndIsClosed() = runTest {
         val mic = Mic(script = listOf(true, true), after = -3)
         val listener = listener(engine = { Detector() }, microphone = { mic })

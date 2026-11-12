@@ -3,6 +3,10 @@ package eu.llembas.android
 import android.Manifest
 import android.app.Application
 import android.app.Notification
+import android.app.NotificationManager
+import androidx.core.app.NotificationCompat
+import eu.llembas.android.wake.AssistPresence
+import eu.llembas.android.wake.WakeBootReceiver
 import eu.llembas.android.wake.WakePause
 import eu.llembas.android.wake.WakeState
 import eu.llembas.android.wake.WakeStatus
@@ -40,15 +44,36 @@ class WakeServiceTest {
         // The first start: nothing is known yet, so it says it is starting -- no phrase.
         service.startCommand(0, 1)
         assertEquals("Starting the wake word…", title(shadowOf(service.get()).lastForegroundNotification))
-        // The app is opened again while it listens for the chosen phrase: the start says the same.
-        WakeStatus.set(WakeState.Listening("OK Google"))
-        service.startCommand(0, 2)
-        assertEquals("Listening for “OK Google”", title(shadowOf(service.get()).lastForegroundNotification))
-        // And while it is paused, a start does not turn the notification into "listening".
-        WakeStatus.set(WakeState.Paused(WakePause.BatterySaver))
-        service.startCommand(0, 3)
-        assertEquals("Wake word paused: battery saver is on", title(shadowOf(service.get()).lastForegroundNotification))
         service.destroy()
+    }
+
+    @Test
+    fun aStartClearsWhatAnEarlierInstanceLeftBehind() {
+        shadowOf(app).grantPermissions(Manifest.permission.RECORD_AUDIO)
+        val manager = app.getSystemService(NotificationManager::class.java)
+        WakeWordService.channel(app)
+        // "Tap to listen again" from a restart, and a hold of the microphone nobody ended.
+        manager.notify(WakeBootReceiver.RESUME_ID, NotificationCompat.Builder(app, WakeWordService.CHANNEL).setSmallIcon(R.drawable.ic_notification).build())
+        AssistPresence.release()
+        val before = AssistPresence.open.value
+        AssistPresence.holdFor(600_000)
+        assertEquals(before + 1, AssistPresence.open.value)
+        val service = Robolectric.buildService(WakeWordService::class.java).create()
+        service.startCommand(0, 1)
+        assertNull(shadowOf(manager).getNotification(WakeBootReceiver.RESUME_ID))
+        assertEquals(before, AssistPresence.open.value)
+        service.destroy()
+    }
+
+    @Test
+    fun stopIsTheSettingGoingOffNotTheServiceStoppedUnderAStart() {
+        shadowOf(app).grantPermissions(Manifest.permission.RECORD_AUDIO)
+        WakeStatus.set(WakeState.Listening("Hey Assistant"))
+        while (shadowOf(app).nextStoppedService != null) Unit
+        WakeWordService.stop()
+        // Nobody calls stopService: the service ends itself once it has shown its notification.
+        assertNull(shadowOf(app).nextStoppedService)
+        assertEquals(WakeState.Off, WakeStatus.state.value)
     }
 
     @Test

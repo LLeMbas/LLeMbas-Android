@@ -404,7 +404,7 @@
     <string name="wake_word_listen">Nasłuchuj słowa aktywującego</string>
     <string name="wake_word_line">Domyślnie wyłączone. Powiedz frazę, a asystent otworzy się i zacznie słuchać, nad aplikacją na ekranie.</string>
     <string name="wake_word_unavailable">Nie w tej wersji. Wersja z F-Droid nie ma silnika słowa aktywującego, bo F-Droid buduje każdą bibliotekę ze źródeł; wersja z llembas.eu go ma.</string>
-    <string name="wake_phrase_line">To, co mówisz. Po angielsku, niezależnie od języka aplikacji: silnik zna tylko mowę angielską.</string>
+    <string name="wake_phrase_line">To, co mówisz, a potem krótka pauza: liczy się, gdy zamilkniesz. Po angielsku, niezależnie od języka aplikacji: silnik zna tylko mowę angielską.</string>
     <string name="wake_greeting">Powitanie</string>
     <string name="wake_name">Imię</string>
     <string name="wake_name_google_line">Odpowie też telefon lub głośnik Google w pobliżu.</string>
@@ -417,7 +417,7 @@
     <string name="wake_sensitivity_high_line">Słyszy Cię najłatwiej, także z większej odległości. Częściej uruchamia się przez pomyłkę.</string>
     <string name="wake_test">Wypróbuj słowo aktywujące</string>
     <string name="wake_test_line">Przez dziesięć sekund pokazuje, czy Twoja fraza jest słyszana, bez otwierania asystenta.</string>
-    <string name="wake_test_say">Powiedz teraz „%1$s”…</string>
+    <string name="wake_test_say">Powiedz teraz „%1$s” i zrób pauzę…</string>
     <string name="wake_test_heard">Usłyszano</string>
     <string name="wake_test_missed">Nie usłyszano w ciągu dziesięciu sekund. Spróbuj bliżej telefonu, w cichszej chwili albo z wyższą czułością.</string>
     <string name="wake_test_off">Najpierw włącz słowo aktywujące.</string>
@@ -444,6 +444,10 @@
     <string name="wake_paused_microphone">Słowo aktywujące wstrzymane: LLeMbas nie ma zgody na używanie mikrofonu</string>
     <string name="wake_stop">Przestań słuchać</string>
     <string name="wake_heard">Słyszę. Dotknij, aby zapytać.</string>
+    <string name="channel_wake_heard">Usłyszano słowo aktywujące</string>
+    <string name="wake_heard_line">LLeMbas może sam otworzyć się nad innymi aplikacjami tylko jako aplikacja asystenta cyfrowego telefonu.</string>
+    <string name="wake_not_assistant">LLeMbas nie jest aplikacją asystenta cyfrowego</string>
+    <string name="wake_not_assistant_line">Dlatego słowo aktywujące nie może otworzyć asystenta nad innymi aplikacjami: dostajesz powiadomienie do dotknięcia. Aby otwierać głosem wszędzie, dotknij tutaj i wybierz LLeMbas jako aplikację asystenta cyfrowego.</string>
     <string name="wake_resume">Znów nasłuchuj słowa aktywującego</string>
     <string name="wake_resume_line">Telefon uruchomił się ponownie. Dotknij, aby znów słuchać.</string>
     <string name="assist_notifications">Podsumuj moje powiadomienia</string>

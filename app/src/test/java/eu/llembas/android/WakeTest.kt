@@ -2,18 +2,31 @@ package eu.llembas.android
 
 import eu.llembas.android.api.LembasJson
 import eu.llembas.android.auth.Prefs
+import eu.llembas.android.wake.AppVisibility
+import eu.llembas.android.wake.AssistPresence
 import eu.llembas.android.wake.WakeError
 import eu.llembas.android.wake.WakeFailure
+import eu.llembas.android.wake.WakeOpening
 import eu.llembas.android.wake.WakePause
 import eu.llembas.android.wake.WakePhrases
 import eu.llembas.android.wake.WakeSensitivity
+import eu.llembas.android.wake.WakeState
 import eu.llembas.android.wake.WakeStatus
 import eu.llembas.android.wake.WakeWords
 import eu.llembas.android.wake.checkKeywords
 import eu.llembas.android.wake.unpackWakeModel
 import eu.llembas.android.wake.wakeBackoff
 import eu.llembas.android.wake.wakeKeywords
+import eu.llembas.android.wake.wakeOpening
 import eu.llembas.android.wake.wakePause
+import eu.llembas.android.wake.wakeStateAtStart
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertThrows
@@ -26,6 +39,7 @@ import java.io.FileNotFoundException
 import java.io.InputStream
 import java.util.Locale
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class WakeTest {
     @get:Rule
     val folder = TemporaryFolder()
@@ -142,6 +156,82 @@ class WakeTest {
         // A new test starts its count again.
         WakeStatus.startTrial(now = 20_000)
         assertEquals(0, WakeStatus.trial.value.heard)
+    }
+
+    @Test
+    fun theAssistantIsOpenedOnlyTheWayAndroidAllows() {
+        // The phone's assistant: its own service shows the sheet, on screen or not.
+        assertEquals(WakeOpening.Session, wakeOpening(isAssistant = true, appVisible = false))
+        assertEquals(WakeOpening.Session, wakeOpening(isAssistant = true, appVisible = true))
+        // Not the assistant, but on screen: the sheet's activity may start.
+        assertEquals(WakeOpening.Activity, wakeOpening(isAssistant = false, appVisible = true))
+        // Neither: an activity start is blocked without a word, so the notification is what is relied on.
+        assertEquals(WakeOpening.Notification, wakeOpening(isAssistant = false, appVisible = false))
+        repeat(3) { AppVisibility.activityStopped() }
+        assertFalse(AppVisibility.visible)
+        AppVisibility.activityStarted()
+        AppVisibility.activityStarted()
+        AppVisibility.activityStopped()
+        assertTrue(AppVisibility.visible)
+        AppVisibility.activityStopped()
+        assertFalse(AppVisibility.visible)
+    }
+
+    @Test
+    fun theHoldAfterTheWordEndsEvenIfWhoeverStartedItIsGone() = runTest {
+        AssistPresence.release()
+        val before = AssistPresence.open.value
+        // The service that heard the word is destroyed before its three seconds are up.
+        val service = CoroutineScope(coroutineContext + Job())
+        AssistPresence.holdFor(3_000, service)
+        assertEquals(before + 1, AssistPresence.open.value)
+        runCurrent()
+        service.cancel()
+        runCurrent()
+        assertEquals(before, AssistPresence.open.value)
+        // Left to itself it ends after its time; a second word meanwhile holds on from then.
+        AssistPresence.holdFor(3_000, this)
+        advanceTimeBy(2_000)
+        AssistPresence.holdFor(3_000, this)
+        advanceTimeBy(2_000)
+        assertEquals(before + 1, AssistPresence.open.value)
+        advanceTimeBy(1_001)
+        assertEquals(before, AssistPresence.open.value)
+        // A sheet that is up is counted apart, and a starting service clears only the hold.
+        AssistPresence.shown()
+        AssistPresence.holdFor(60_000, this)
+        AssistPresence.release()
+        assertEquals(before + 1, AssistPresence.open.value)
+        AssistPresence.hidden()
+        assertEquals(before, AssistPresence.open.value)
+    }
+
+    @Test
+    fun aStartSaysWhatIsTrueAndNeverAPhraseByDefault() {
+        // A service that has only just begun knows no phrase.
+        assertEquals(WakeState.Starting, wakeStateAtStart(running = false, current = WakeState.Off))
+        // Whatever an earlier instance left behind is not this one's to repeat.
+        assertEquals(WakeState.Starting, wakeStateAtStart(running = false, current = WakeState.Listening("Hey Assistant")))
+        // The app is opened again while it runs: the start says the same as before.
+        val listening = WakeState.Listening("OK Google")
+        assertEquals(listening, wakeStateAtStart(running = true, current = listening))
+        val paused = WakeState.Paused(WakePause.BatterySaver)
+        assertEquals(paused, wakeStateAtStart(running = true, current = paused))
+        assertEquals(WakeState.Starting, wakeStateAtStart(running = true, current = WakeState.Off))
+    }
+
+    @Test
+    fun onlyTheNewestServiceWritesTheState() {
+        val old = WakeStatus.begin()
+        WakeStatus.set(old, WakeState.Listening("Hey Assistant"))
+        assertEquals(WakeState.Listening("Hey Assistant"), WakeStatus.state.value)
+        // Turned off and on again: a new instance takes over while the old one is still ending.
+        val new = WakeStatus.begin()
+        WakeStatus.set(new, WakeState.Starting)
+        WakeStatus.set(old, WakeState.Off)
+        assertEquals(WakeState.Starting, WakeStatus.state.value)
+        WakeStatus.set(new, WakeState.Off)
+        assertEquals(WakeState.Off, WakeStatus.state.value)
     }
 
     @Test

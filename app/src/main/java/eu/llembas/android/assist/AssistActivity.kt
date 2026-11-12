@@ -2,6 +2,7 @@ package eu.llembas.android.assist
 
 import android.Manifest
 import android.app.KeyguardManager
+import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
@@ -18,6 +19,7 @@ import eu.llembas.android.auth.Prefs
 import eu.llembas.android.lembas
 import eu.llembas.android.ui.theme.LembasTheme
 import eu.llembas.android.wake.AssistPresence
+import eu.llembas.android.wake.WakeWordService
 
 /** What a way into the sheet asks for. */
 enum class Opening {
@@ -74,6 +76,8 @@ class AssistActivity : ComponentActivity() {
         keyguard = getSystemService(KeyguardManager::class.java)
         locked.value = keyguard.isKeyguardLocked
         AssistPresence.shown()
+        // The sheet is up: "Heard you. Tap to ask." has been answered, however it was opened.
+        getSystemService(NotificationManager::class.java).cancel(WakeWordService.HEARD_ID)
         take(intent)
         setContent {
             val prefs by lembas.instances.prefs.collectAsState(initial = Prefs())

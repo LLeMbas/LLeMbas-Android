@@ -406,7 +406,7 @@
     <string name="wake_word_listen">Listen for a wake word</string>
     <string name="wake_word_line">Off by default. Say the phrase and the assistant opens, listening, over whatever app is on screen.</string>
     <string name="wake_word_unavailable">Not in this build. The F-Droid build has no wake-word engine, because F-Droid builds every library from source; the build from llembas.eu has one.</string>
-    <string name="wake_phrase_line">What you say. In English, whatever language the app is in: the engine only knows English speech.</string>
+    <string name="wake_phrase_line">What you say, then a short pause: it counts once you stop. In English, whatever language the app is in: the engine only knows English speech.</string>
     <string name="wake_greeting">Greeting</string>
     <string name="wake_name">Name</string>
     <string name="wake_name_google_line">A Google phone or speaker nearby will answer too.</string>
@@ -419,7 +419,7 @@
     <string name="wake_sensitivity_high_line">Hears you most easily, also from further away. Starts by mistake more often.</string>
     <string name="wake_test">Test the wake word</string>
     <string name="wake_test_line">For ten seconds, shows whether your phrase is heard, without opening the assistant.</string>
-    <string name="wake_test_say">Say “%1$s” now…</string>
+    <string name="wake_test_say">Say “%1$s” now, then pause…</string>
     <string name="wake_test_heard">Heard it</string>
     <string name="wake_test_missed">Not heard in ten seconds. Try closer to the phone, in a quieter moment, or a higher sensitivity.</string>
     <string name="wake_test_off">Turn the wake word on first.</string>
@@ -446,6 +446,10 @@
     <string name="wake_paused_microphone">Wake word paused: LLeMbas is not allowed to use the microphone</string>
     <string name="wake_stop">Stop listening</string>
     <string name="wake_heard">Heard you. Tap to ask.</string>
+    <string name="channel_wake_heard">Wake word heard</string>
+    <string name="wake_heard_line">LLeMbas can open by itself over other apps only as the phone\'s digital assistant app.</string>
+    <string name="wake_not_assistant">LLeMbas is not the digital assistant app</string>
+    <string name="wake_not_assistant_line">So the wake word cannot open the assistant over other apps: you get a notification to tap. To open by voice anywhere, tap here and choose LLeMbas as the digital assistant app.</string>
     <string name="wake_resume">Listen for the wake word again</string>
     <string name="wake_resume_line">The phone restarted. Tap to start listening again.</string>
     <string name="assist_notifications">Summarise my notifications</string>

@@ -1,9 +1,12 @@
 package eu.llembas.android
 
+import android.app.Activity
 import android.app.Application
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.os.Bundle
 import eu.llembas.android.auth.InstanceStore
+import eu.llembas.android.wake.AppVisibility
 
 /** The process: one store of instances, and the notification channels, made once. */
 class LembasApp : Application() {
@@ -13,6 +16,25 @@ class LembasApp : Application() {
     override fun onCreate() {
         super.onCreate()
         instances = InstanceStore(this)
+        // Whether the app is on screen: the wake word may open the assistant's sheet as an
+        // activity only then (Android blocks one started from the background, silently).
+        registerActivityLifecycleCallbacks(
+            object : ActivityLifecycleCallbacks {
+                override fun onActivityStarted(activity: Activity) = AppVisibility.activityStarted()
+
+                override fun onActivityStopped(activity: Activity) = AppVisibility.activityStopped()
+
+                override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) = Unit
+
+                override fun onActivityResumed(activity: Activity) = Unit
+
+                override fun onActivityPaused(activity: Activity) = Unit
+
+                override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) = Unit
+
+                override fun onActivityDestroyed(activity: Activity) = Unit
+            },
+        )
         val manager = getSystemService(NotificationManager::class.java)
         manager.createNotificationChannels(
             listOf(

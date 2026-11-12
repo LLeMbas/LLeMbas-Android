@@ -404,7 +404,7 @@
     <string name="wake_word_listen">Ébresztőszó figyelése</string>
     <string name="wake_word_line">Alapból ki van kapcsolva. Mondd ki a kifejezést, és az asszisztens figyelve megnyílik a képernyőn lévő alkalmazás fölött.</string>
     <string name="wake_word_unavailable">Ebben a változatban nincs. Az F-Droid-változatban nincs ébresztőszó-motor, mert az F-Droid minden könyvtárat forrásból fordít; a llembas.eu-s változatban van.</string>
-    <string name="wake_phrase_line">Ezt mondod. Angolul, bármilyen nyelvű is az alkalmazás: a motor csak az angol beszédet ismeri.</string>
+    <string name="wake_phrase_line">Ezt mondod, utána rövid szünet: akkor számít, amikor elhallgatsz. Angolul, bármilyen nyelvű is az alkalmazás: a motor csak az angol beszédet ismeri.</string>
     <string name="wake_greeting">Megszólítás</string>
     <string name="wake_name">Név</string>
     <string name="wake_name_google_line">A közelben lévő Google-telefon vagy -hangszóró is válaszolni fog.</string>
@@ -417,7 +417,7 @@
     <string name="wake_sensitivity_high_line">A legkönnyebben hall meg, távolabbról is. Gyakrabban indul el tévedésből.</string>
     <string name="wake_test">Ébresztőszó kipróbálása</string>
     <string name="wake_test_line">Tíz másodpercig mutatja, hogy hallja-e a kifejezésedet, az asszisztens megnyitása nélkül.</string>
-    <string name="wake_test_say">Most mondd: „%1$s”…</string>
+    <string name="wake_test_say">Most mondd: „%1$s”, aztán tarts szünetet…</string>
     <string name="wake_test_heard">Hallottam</string>
     <string name="wake_test_missed">Tíz másodperc alatt nem hallottam. Próbáld közelebb a telefonhoz, csendesebb pillanatban vagy nagyobb érzékenységgel.</string>
     <string name="wake_test_off">Előbb kapcsold be az ébresztőszót.</string>
@@ -444,6 +444,10 @@
     <string name="wake_paused_microphone">Ébresztőszó szünetel: a LLeMbas nem használhatja a mikrofont</string>
     <string name="wake_stop">Figyelés leállítása</string>
     <string name="wake_heard">Hallottalak. Koppints a kérdezéshez.</string>
+    <string name="channel_wake_heard">Ébresztőszó elhangzott</string>
+    <string name="wake_heard_line">A LLeMbas csak a telefon digitális asszisztens alkalmazásaként tud magától megnyílni más alkalmazások fölött.</string>
+    <string name="wake_not_assistant">A LLeMbas nem a digitális asszisztens alkalmazás</string>
+    <string name="wake_not_assistant_line">Ezért az ébresztőszó nem tudja megnyitni az asszisztenst más alkalmazások fölött: értesítést kapsz, amelyre koppinthatsz. Ha bárhol hanggal szeretnéd megnyitni, koppints ide, és válaszd a LLeMbast digitális asszisztens alkalmazásnak.</string>
     <string name="wake_resume">Ébresztőszó figyelése újra</string>
     <string name="wake_resume_line">A telefon újraindult. Koppints a figyelés folytatásához.</string>
     <string name="assist_notifications">Értesítéseim összefoglalása</string>

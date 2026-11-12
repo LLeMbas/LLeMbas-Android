@@ -27,7 +27,12 @@ object WakeEngine {
     /**
      * The engine for [keywords] (the keywords file's text). Throws a [WakeError] that says which
      * half failed -- the model's files or the engine -- and never returns nothing.
+     *
+     * One at a time: two service instances may overlap for a moment (the wake word turned off and
+     * on again), and the unpacking and the keywords file are shared. The keywords go into a file
+     * of this call's own, which the engine reads as it is made and which is gone afterwards.
      */
+    @Synchronized
     fun create(context: Context, keywords: String): WakeDetector {
         val dir = File(context.noBackupFilesDir, "wakeword")
         try {
@@ -36,8 +41,11 @@ object WakeEngine {
             throw WakeError(WakeFailure.Model, e)
         }
         checkKeywords(keywords, File(dir, "tokens.txt").readText())
+        var file: File? = null
         try {
-            val file = File(dir, "keywords.txt").apply { writeText(keywords) }
+            val written = File.createTempFile("keywords", ".txt", dir)
+            file = written
+            written.writeText(keywords)
             val config = KeywordSpotterConfig(
                 featConfig = FeatureConfig(sampleRate = RATE, featureDim = 80),
                 modelConfig = OnlineModelConfig(
@@ -50,15 +58,19 @@ object WakeEngine {
                     modelType = "zipformer2",
                     numThreads = 1,
                 ),
-                keywordsFile = file.path,
-                // The word counts once one frame of something else follows it (the engine's own
-                // default; the Kotlin wrapper's is two), so a question may follow straight on.
+                keywordsFile = written.path,
+                // The engine's own default (the Kotlin wrapper's is 2). The phrase counts once
+                // MORE than this many blank frames follow it -- two frames, about 80 ms of
+                // anything that is not the phrase going on. So: say it, then a short pause; a
+                // question run straight into the name can be missed.
                 numTrailingBlanks = 1,
             )
             return SherpaDetector(KeywordSpotter(null, config))
         } catch (e: Throwable) {
             // UnsatisfiedLinkError included: a phone whose processor the library was not built for.
             throw WakeError(WakeFailure.Engine, e)
+        } finally {
+            file?.delete()
         }
     }
 

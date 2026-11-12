@@ -4,6 +4,7 @@ package eu.llembas.android.ui.settings
 
 import android.Manifest
 import android.app.Activity
+import android.app.role.RoleManager
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.SystemClock
@@ -138,6 +139,7 @@ interface SettingsActions {
     fun wakePhrase(id: String) {}
     fun wakeSensitivity(id: String) {}
     fun wakeTest() {}
+    fun wakeRetry() {}
     fun wakeScreenOnly(on: Boolean) {}
     fun batterySettings() {}
     fun notificationSummaries(on: Boolean) {}
@@ -177,6 +179,8 @@ data class SettingsState(
     val wakeState: WakeState = WakeState.Off,
     /** "Test the wake word": whether its ten seconds are running, and how often the phrase landed. */
     val wakeTest: WakeTestShown = WakeTestShown(),
+    /** Whether LLeMbas is the phone's digital assistant app: only then can the wake word open it over other apps. */
+    val isAssistant: Boolean = true,
     /** Whether Android's notification access is given to LLeMbas. */
     val notificationAccess: Boolean = false,
     /** Whether this build can read notifications at all (only the `notifications` build declares the listener). */
@@ -290,7 +294,7 @@ fun SettingsScreen(onBack: () -> Unit, onAddInstance: () -> Unit) {
 
                     else -> scope.launch {
                         store.savePrefs { it.copy(wakeWord = false) }
-                        WakeWordService.stop(context)
+                        WakeWordService.stop()
                     }
                 }
             }
@@ -301,6 +305,13 @@ fun SettingsScreen(onBack: () -> Unit, onAddInstance: () -> Unit) {
 
             override fun wakeSensitivity(id: String) {
                 scope.launch { store.savePrefs { it.copy(wakeSensitivity = id) } }
+            }
+
+            // A tap on the wake word's state: start it if the phone stopped it (asking for the
+            // microphone where that is missing), and if it is waiting to try again, try now.
+            override fun wakeRetry() {
+                WakeStatus.retryNow()
+                wakeWord(true)
             }
 
             override fun wakeTest() {
@@ -391,6 +402,8 @@ fun SettingsScreen(onBack: () -> Unit, onAddInstance: () -> Unit) {
             phoneRecognizer = remember { PhoneRecognizer.available(context) },
             wakeAvailable = WakeEngine.AVAILABLE,
             wakeState = wakeState,
+            // Read again each time Settings is composed: the person comes back from the system's page.
+            isAssistant = context.getSystemService(RoleManager::class.java)?.isRoleHeld(RoleManager.ROLE_ASSISTANT) ?: false,
             wakeTest = WakeTestShown(running = clock < trial.until, done = tested && clock >= trial.until, heard = if (tested) trial.heard else 0),
             // Read again each time Settings is composed: the person comes back from the system's page.
             notificationAccess = NotificationAccess.granted(context),
@@ -709,8 +722,18 @@ internal fun WakeWordGroup(state: SettingsState, actions: SettingsActions, onCho
                     else -> null
                 },
                 tint = if (trouble) palette.warning else null,
-                onClick = { actions.wakeWord(true) },
+                onClick = actions::wakeRetry,
             )
+            if (!state.isAssistant) {
+                // Said plainly: Android lets only the phone's assistant open over other apps.
+                Rule()
+                SettingRow(
+                    Icons.Filled.Assistant,
+                    stringResource(R.string.wake_not_assistant),
+                    subtitle = stringResource(R.string.wake_not_assistant_line),
+                    onClick = actions::assistantSettings,
+                )
+            }
         }
         if (state.wakeAvailable) {
             val phrase = WakePhrases.byId(state.prefs.wakePhrase)

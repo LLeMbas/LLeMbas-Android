@@ -31,9 +31,9 @@ import eu.llembas.android.lembas
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.takeWhile
@@ -58,6 +58,13 @@ class WakeWordService : LifecycleService() {
     private val batterySaver = MutableStateFlow(false)
     private val mayRecord = MutableStateFlow(true)
     private var following: Job? = null
+    private var watching: Job? = null
+
+    /** This instance's right to write the state (WakeStatus.begin). */
+    private var token = 0
+
+    /** The newest start Android has delivered: what the service stops itself by, so a start still on its way is not stopped. */
+    private var lastStart = 0
 
     /** Set when the service could not even start: the state then says why, and is not wiped on the way out. */
     private var keepState = false
@@ -97,17 +104,23 @@ class WakeWordService : LifecycleService() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
         if (intent?.action == ACTION_STOP) {
+            // Stop is the setting going off; the loop sees it and ends the service on the path
+            // that has shown its notification first (follow). The service is stopped from here
+            // only when nothing is running in it, and only if no newer start is on its way
+            // (stopSelf(startId)): stopping under a pending foreground start closes the app.
             lifecycleScope.launch {
                 lembas.instances.savePrefs { it.copy(wakeWord = false) }
-                stopSelf()
+                if (following?.isActive != true) stopSelf(startId)
             }
             return START_NOT_STICKY
         }
+        lastStart = startId
         mayRecord.value = micAllowed(this)
+        val running = following?.isActive == true
         // The notification first: Android stops a foreground service that is slow to show one.
         // It says what is true now -- "starting" for a service that just began, and on every
         // later start (the app opens) whatever the state already is; never a phrase by default.
-        val now = WakeStatus.state.value.takeUnless { following == null || it == WakeState.Off } ?: WakeState.Starting
+        val now = wakeStateAtStart(running, WakeStatus.state.value)
         try {
             ServiceCompat.startForeground(this, NOTIFICATION_ID, wakeNotification(this, now), ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE)
         } catch (e: Exception) {
@@ -124,23 +137,45 @@ class WakeWordService : LifecycleService() {
             stopSelf()
             return START_NOT_STICKY
         }
-        if (following == null) {
+        val manager = getSystemService(NotificationManager::class.java)
+        // It is listening again: "tap to listen again" (after a restart) has nothing left to say.
+        manager.cancel(WakeBootReceiver.RESUME_ID)
+        if (!running) {
             keepState = false
-            WakeStatus.set(now)
+            // This instance writes the state from here; an older one's last words count for nothing.
+            token = WakeStatus.begin()
+            // And it starts from what the sheets say: no hold of an earlier instance is left standing.
+            AssistPresence.release()
+            WakeStatus.set(token, now)
             following = lifecycleScope.launch { follow() }
+        }
+        if (watching == null) {
             // The one place the notification is written: from the state, whenever it changes.
-            val manager = getSystemService(NotificationManager::class.java)
-            lifecycleScope.launch {
+            watching = lifecycleScope.launch {
                 WakeStatus.state.collect { state ->
                     if (state != WakeState.Off) manager.notify(NOTIFICATION_ID, wakeNotification(this@WakeWordService, state))
                 }
             }
+            // A tap on the failure in Settings: try now, not when the back-off says.
+            lifecycleScope.launch { WakeStatus.retries.drop(1).collect { listener.retryNow() } }
         }
         return START_NOT_STICKY
     }
 
+    private val listener by lazy {
+        WakeListener(
+            say = { WakeStatus.set(token, it) },
+            engine = { keywords -> WakeEngine.create(this, keywords) },
+            microphone = { PhoneMicrophone() },
+            // A test in Settings takes the word; otherwise the assistant opens.
+            heard = { if (!WakeStatus.heardInTrial(SystemClock.elapsedRealtime())) wake() },
+            log = { message, cause -> Log.w(TAG, message, cause) },
+        )
+    }
+
     /** Listen, or pause, as the phone and Settings change; stop when Settings turns it off. */
     private suspend fun follow() {
+        val mine = token
         val plans = combine(lembas.instances.prefs, screenOn, batterySaver, AssistPresence.open, mayRecord) { prefs, on, saver, open, mic ->
             if (!prefs.wakeWord) {
                 null
@@ -149,50 +184,36 @@ class WakeWordService : LifecycleService() {
                 WakePlan(phrase, wakeKeywords(phrase, WakeSensitivity.byId(prefs.wakeSensitivity)), wakePause(on, prefs.wakeScreenOnly, saver, open > 0, mic))
             }
         }
-        val listener = WakeListener(
-            say = WakeStatus::set,
-            engine = { keywords -> WakeEngine.create(this, keywords) },
-            microphone = { PhoneMicrophone() },
-            // A test in Settings takes the word; otherwise the assistant opens.
-            heard = { if (!WakeStatus.heardInTrial(SystemClock.elapsedRealtime())) wake() },
-            log = { message, cause -> Log.w(TAG, message, cause) },
-        )
         try {
             listener.follow(plans.takeWhile { it != null }.filterNotNull())
         } finally {
-            // After the loop has ended, so nothing it said on its way out is left standing.
-            if (!keepState) WakeStatus.set(WakeState.Off)
+            // After the loop has ended, so nothing it said on its way out is left standing --
+            // and only if no newer writer has taken over meanwhile.
+            if (!keepState) WakeStatus.set(mine, WakeState.Off)
         }
-        stopSelf()
+        // Not if a newer start is already on its way: that one finds the loop ended and begins it again.
+        stopSelf(lastStart)
     }
 
     /**
      * The word was heard: the assistant opens listening. Through the voice-interaction service
-     * when LLeMbas is the phone's assistant (Android lets it open the sheet from the background),
-     * else as an activity; and if Android refuses that too, a notification to tap.
+     * when LLeMbas is the phone's assistant (Android lets it open the sheet from the background);
+     * as an activity while the app is on screen; and otherwise with a notification to tap,
+     * because Android blocks an activity started from the background and says nothing when it
+     * does ([wakeOpening]). The activity is still tried then -- where a phone allows it, it
+     * opens and takes the notification away.
      */
     private fun wake() {
-        AssistPresence.shown() // the microphone is the sheet's from here, until it says it is gone
-        val shownBySystem = LembasAssistService.current?.let { service ->
-            runCatching { service.showSession(Bundle().apply { putBoolean(AssistActivity.EXTRA_LISTEN, true) }, 0) }.isSuccess
-        } ?: false
-        val opened = shownBySystem || runCatching { startActivity(AssistActivity.listening(this).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }.isSuccess
-        if (!opened) {
-            getSystemService(NotificationManager::class.java).notify(
-                HEARD_ID,
-                NotificationCompat.Builder(this, CHANNEL)
-                    .setSmallIcon(R.drawable.ic_notification)
-                    .setContentTitle(getString(R.string.wake_heard))
-                    .setContentIntent(PendingIntent.getActivity(this, 1, AssistActivity.listening(this), PendingIntent.FLAG_IMMUTABLE))
-                    .setAutoCancel(true)
-                    .setPriority(NotificationCompat.PRIORITY_HIGH)
-                    .build(),
-            )
-        }
-        // Released by the sheet as it shows and hides; if nothing opened, at once.
-        lifecycleScope.launch {
-            delay(SHEET_GRACE_MS)
-            AssistPresence.hidden()
+        // The microphone is the sheet's from here: for a moment by this hold, then for as long as a sheet says it is up.
+        AssistPresence.holdFor(SHEET_GRACE_MS)
+        val session = LembasAssistService.current
+        val shownBySystem = session != null &&
+            runCatching { session.showSession(Bundle().apply { putBoolean(AssistActivity.EXTRA_LISTEN, true) }, 0) }.isSuccess
+        val opening = wakeOpening(shownBySystem, AppVisibility.visible)
+        if (opening == WakeOpening.Session) return
+        val started = runCatching { startActivity(AssistActivity.listening(this).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }.isSuccess
+        if (opening == WakeOpening.Notification || !started) {
+            getSystemService(NotificationManager::class.java).notify(HEARD_ID, wakeHeardNotification(this))
         }
     }
 
@@ -202,14 +223,15 @@ class WakeWordService : LifecycleService() {
         runCatching { unregisterReceiver(receiver) }
         // The scope ends with the service: the listener's loop is joined and its engine released
         // on the way out (WakeListener.follow), not here under a loop that may still run.
-        if (!keepState) WakeStatus.set(WakeState.Off)
+        if (!keepState) WakeStatus.set(token, WakeState.Off)
         super.onDestroy()
     }
 
     companion object {
         const val CHANNEL = "wake_word"
+        const val CHANNEL_HEARD = "wake_heard"
         private const val NOTIFICATION_ID = 7001
-        private const val HEARD_ID = 7002
+        const val HEARD_ID = 7002
         private const val SHEET_GRACE_MS = 3_000L
         private const val TAG = "LLeMbasWake"
         const val ACTION_STOP = "eu.llembas.android.action.WAKE_STOP"
@@ -230,20 +252,50 @@ class WakeWordService : LifecycleService() {
             }
         }
 
-        fun stop(context: Context) {
-            context.stopService(Intent(context, WakeWordService::class.java))
+        /**
+         * The wake word was turned off. The service is not stopped from outside: it ends itself
+         * when it sees the setting, after it has shown its notification -- stopping it under a
+         * foreground start that is still on its way closes the app. The state is "off" at once.
+         */
+        fun stop() {
             WakeStatus.set(WakeState.Off)
         }
 
         fun micAllowed(context: Context) = ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
 
         fun channel(context: Context) {
-            context.getSystemService(NotificationManager::class.java).createNotificationChannel(
-                NotificationChannel(CHANNEL, context.getString(R.string.channel_wake), NotificationManager.IMPORTANCE_LOW),
+            context.getSystemService(NotificationManager::class.java).createNotificationChannels(
+                listOf(
+                    NotificationChannel(CHANNEL, context.getString(R.string.channel_wake), NotificationManager.IMPORTANCE_LOW),
+                    // "Heard you. Tap to ask.": it must come up over what is on screen, or the word was for nothing.
+                    NotificationChannel(CHANNEL_HEARD, context.getString(R.string.channel_wake_heard), NotificationManager.IMPORTANCE_HIGH),
+                ),
             )
         }
     }
 }
+
+/**
+ * "Heard you. Tap to ask.": what the wake word posts when it cannot open the assistant itself.
+ * A fixed sentence, nothing from the account; the tap opens the assistant listening.
+ */
+fun wakeHeardNotification(context: Context): Notification {
+    val ask = PendingIntent.getActivity(context, 1, AssistActivity.listening(context), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+    return NotificationCompat.Builder(context, WakeWordService.CHANNEL_HEARD)
+        .setSmallIcon(R.drawable.ic_notification)
+        .setContentTitle(context.getString(R.string.wake_heard))
+        .setContentText(context.getString(R.string.wake_heard_line))
+        .setContentIntent(ask)
+        .setAutoCancel(true)
+        .setCategory(NotificationCompat.CATEGORY_RECOMMENDATION)
+        .setPriority(NotificationCompat.PRIORITY_HIGH)
+        .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+        .setTimeoutAfter(HEARD_TIMEOUT_MS)
+        .build()
+}
+
+/** A minute: a "tap to ask" nobody tapped is no longer an answer to anything. */
+private const val HEARD_TIMEOUT_MS = 60_000L
 
 /**
  * The persistent notification, from [state] alone: what the wake word is doing in plain words

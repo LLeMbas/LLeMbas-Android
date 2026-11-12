@@ -404,7 +404,7 @@
     <string name="wake_word_listen">Écouter un mot d’activation</string>
     <string name="wake_word_line">Désactivé par défaut. Dites la phrase et l’assistant s’ouvre en écoute, par-dessus l’app à l’écran.</string>
     <string name="wake_word_unavailable">Pas dans cette version. La version F-Droid n’a pas de moteur de mot d’activation, car F-Droid compile chaque bibliothèque depuis les sources ; celle de llembas.eu en a un.</string>
-    <string name="wake_phrase_line">Ce que vous dites. En anglais, quelle que soit la langue de l’app : le moteur ne connaît que la parole anglaise.</string>
+    <string name="wake_phrase_line">Ce que vous dites, puis une courte pause : cela compte dès que vous vous taisez. En anglais, quelle que soit la langue de l’app : le moteur ne connaît que la parole anglaise.</string>
     <string name="wake_greeting">Salutation</string>
     <string name="wake_name">Nom</string>
     <string name="wake_name_google_line">Un téléphone ou une enceinte Google à proximité répondra aussi.</string>
@@ -417,7 +417,7 @@
     <string name="wake_sensitivity_high_line">Vous entend le plus facilement, même de plus loin. Se déclenche plus souvent par erreur.</string>
     <string name="wake_test">Tester le mot d’activation</string>
     <string name="wake_test_line">Pendant dix secondes, indique si votre phrase est entendue, sans ouvrir l’assistant.</string>
-    <string name="wake_test_say">Dites « %1$s » maintenant…</string>
+    <string name="wake_test_say">Dites « %1$s » maintenant, puis faites une pause…</string>
     <string name="wake_test_heard">Entendu</string>
     <string name="wake_test_missed">Pas entendu en dix secondes. Essayez plus près du téléphone, dans un moment plus calme ou avec une sensibilité plus élevée.</string>
     <string name="wake_test_off">Activez d’abord le mot d’activation.</string>
@@ -444,6 +444,10 @@
     <string name="wake_paused_microphone">Mot d’activation en pause : LLeMbas n’est pas autorisé à utiliser le micro</string>
     <string name="wake_stop">Arrêter l’écoute</string>
     <string name="wake_heard">Entendu. Touchez pour demander.</string>
+    <string name="channel_wake_heard">Mot d’activation entendu</string>
+    <string name="wake_heard_line">LLeMbas ne peut s’ouvrir de lui-même par-dessus d’autres apps que s’il est l’assistant numérique du téléphone.</string>
+    <string name="wake_not_assistant">LLeMbas n’est pas l’application d’assistant numérique</string>
+    <string name="wake_not_assistant_line">Le mot d’activation ne peut donc pas ouvrir l’assistant par-dessus d’autres apps : vous recevez une notification à toucher. Pour ouvrir à la voix partout, touchez ici et choisissez LLeMbas comme application d’assistant numérique.</string>
     <string name="wake_resume">Écouter à nouveau le mot d’activation</string>
     <string name="wake_resume_line">Le téléphone a redémarré. Touchez pour reprendre l’écoute.</string>
     <string name="assist_notifications">Résumer mes notifications</string>

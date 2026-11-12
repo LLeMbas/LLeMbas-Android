@@ -379,7 +379,7 @@ object Fakes {
     )
 
     /** A standard build: the test heard the phrase twice, and notification summaries are in the other build. */
-    val settingsWakeTested = settings.copy(wakeTest = WakeTestShown(running = true, heard = 2), notificationsBuild = false)
+    val settingsWakeTested = settings.copy(wakeTest = WakeTestShown(running = true, heard = 2), notificationsBuild = false, isAssistant = false)
 
     // The assistant's sheet, as it opens and as it answers.
     private val assistBase = AssistUiState(

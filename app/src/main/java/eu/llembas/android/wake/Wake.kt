@@ -2,14 +2,21 @@ package eu.llembas.android.wake
 
 import android.content.Context
 import eu.llembas.android.R
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import java.io.File
 import java.io.IOException
 import java.io.InputStream
 import java.util.Locale
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
 
 /** One word of a wake phrase: its [id], how it is written for the person, and its spelling in the model's [pieces]. */
 data class WakeWord(val id: String, val words: String, val pieces: String)
@@ -88,14 +95,91 @@ interface WakeMicrophone {
  * Whether the assistant's sheet is up -- the wake-word service lets go of the microphone while
  * it is, and takes it back once the sheet is gone. Counted, since the session and the activity
  * can overlap for a moment when one hands over to the other.
+ *
+ * The wake word's own hold is apart from the count: when the word is heard the microphone is
+ * the sheet's for a few seconds ([holdFor]), whether or not a sheet then says it is up. It ends
+ * by itself on a scope that outlives the service, so a service that is destroyed in those
+ * seconds cannot leave the wake word "paused while the assistant is open" for good.
  */
 object AssistPresence {
+    private val sheets = MutableStateFlow(0)
+    private val held = MutableStateFlow(0L)
+    private val holds = AtomicLong(0)
     private val _open = MutableStateFlow(0)
     val open: StateFlow<Int> = _open.asStateFlow()
 
-    fun shown() = _open.update { it + 1 }
+    private val process = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
-    fun hidden() = _open.update { (it - 1).coerceAtLeast(0) }
+    private fun count() {
+        _open.value = sheets.value + if (held.value != 0L) 1 else 0
+    }
+
+    fun shown() {
+        sheets.update { it + 1 }
+        count()
+    }
+
+    fun hidden() {
+        sheets.update { (it - 1).coerceAtLeast(0) }
+        count()
+    }
+
+    /** The word was heard: the microphone is the sheet's for [millis], then the hold lets go by itself. */
+    fun holdFor(millis: Long, scope: CoroutineScope = process) {
+        // Each hold has a number of its own, never used twice, so an old one cannot end a newer one.
+        val mine = holds.incrementAndGet()
+        held.value = mine
+        count()
+        scope.launch {
+            try {
+                delay(millis)
+            } finally {
+                // Only the newest hold lets go; an older one that ends later changes nothing.
+                if (held.compareAndSet(mine, 0L)) count()
+            }
+        }
+    }
+
+    /** No hold is left standing: the wake-word service starts from what the sheets say alone. */
+    fun release() {
+        held.value = 0L
+        count()
+    }
+}
+
+/** How the assistant is opened when the word was heard, from what Android will allow. */
+enum class WakeOpening {
+    /** LLeMbas is the phone's assistant: its voice-interaction service shows the sheet, from anywhere. */
+    Session,
+
+    /** The app is on screen: the sheet's activity may start. */
+    Activity,
+
+    /**
+     * Neither: Android blocks an activity started from the background, and says nothing when it
+     * does -- so it is not relied on, and a notification to tap is posted.
+     */
+    Notification,
+}
+
+fun wakeOpening(isAssistant: Boolean, appVisible: Boolean): WakeOpening = when {
+    isAssistant -> WakeOpening.Session
+    appVisible -> WakeOpening.Activity
+    else -> WakeOpening.Notification
+}
+
+/** Whether the app has an activity on screen: counted from every activity's start and stop (LembasApp). */
+object AppVisibility {
+    private val started = AtomicInteger(0)
+    val visible: Boolean get() = started.get() > 0
+
+    fun activityStarted() {
+        started.incrementAndGet()
+    }
+
+    fun activityStopped() {
+        started.updateAndGet { (it - 1).coerceAtLeast(0) }
+    }
 }
 
 /**
@@ -160,7 +244,13 @@ sealed interface WakeState {
  */
 data class WakeTrial(val until: Long = 0, val heard: Int = 0)
 
-/** The wake word's state for the whole process: written by the service, read by everything else. */
+/**
+ * The wake word's state for the whole process: written by the service, read by everything else.
+ *
+ * A service instance writes with the token [begin] gave it, and only the newest token's writes
+ * count: an old instance on its way out (its loop ending after Settings turned the wake word off
+ * and on again) cannot write its "off" over the new one's state.
+ */
 object WakeStatus {
     private val _state = MutableStateFlow<WakeState>(WakeState.Off)
     val state: StateFlow<WakeState> = _state.asStateFlow()
@@ -168,9 +258,30 @@ object WakeStatus {
     private val _trial = MutableStateFlow(WakeTrial())
     val trial: StateFlow<WakeTrial> = _trial.asStateFlow()
 
-    fun set(now: WakeState) {
-        _state.value = now
+    private val _retries = MutableStateFlow(0)
+
+    /** Counts up each time somebody asks for a retry now ([retryNow]). */
+    val retries: StateFlow<Int> = _retries.asStateFlow()
+
+    private val generation = AtomicInteger(0)
+
+    /** A new writer takes over: its token, which makes every older one's writes count for nothing. */
+    fun begin(): Int = generation.incrementAndGet()
+
+    /** [now], if [token] is still the newest writer's. */
+    fun set(token: Int, now: WakeState) {
+        synchronized(generation) {
+            if (token == generation.get()) _state.value = now
+        }
     }
+
+    /** [now], said by the app itself, outside any service instance: not started and why, turned off. */
+    fun set(now: WakeState) {
+        synchronized(generation) { _state.value = now }
+    }
+
+    /** Try again now, instead of when the back-off says: the person tapped the failure. */
+    fun retryNow() = _retries.update { it + 1 }
 
     /** Start a test at [now]: the next [TRIAL_MS] of heard phrases are counted, not acted on. */
     fun startTrial(now: Long) {
@@ -189,6 +300,13 @@ object WakeStatus {
 
     const val TRIAL_MS = 10_000L
 }
+
+/**
+ * What the service's notification says the moment Android starts it (again): what is true --
+ * [current], while its loop is [running]; "starting" for a service that has only just begun.
+ * Never a phrase by default.
+ */
+fun wakeStateAtStart(running: Boolean, current: WakeState): WakeState = if (running && current != WakeState.Off) current else WakeState.Starting
 
 /**
  * [state] in plain words: the notification's title and Settings' line. A failure names what

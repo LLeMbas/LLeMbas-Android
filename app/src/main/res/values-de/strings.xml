@@ -404,7 +404,7 @@
     <string name="wake_word_listen">Auf ein Aktivierungswort hören</string>
     <string name="wake_word_line">Standardmäßig aus. Sag den Satz, und der Assistent öffnet sich zuhörend über der App auf dem Bildschirm.</string>
     <string name="wake_word_unavailable">Nicht in diesem Build. Der F-Droid-Build hat keine Aktivierungswort-Engine, weil F-Droid jede Bibliothek aus dem Quellcode baut; der Build von llembas.eu hat eine.</string>
-    <string name="wake_phrase_line">Das sagst du. Auf Englisch, egal in welcher Sprache die App ist: Die Engine kennt nur englische Sprache.</string>
+    <string name="wake_phrase_line">Das sagst du, dann eine kurze Pause: Es zählt, sobald du aufhörst. Auf Englisch, egal in welcher Sprache die App ist: Die Engine kennt nur englische Sprache.</string>
     <string name="wake_greeting">Anrede</string>
     <string name="wake_name">Name</string>
     <string name="wake_name_google_line">Ein Google-Telefon oder -Lautsprecher in der Nähe antwortet ebenfalls.</string>
@@ -417,7 +417,7 @@
     <string name="wake_sensitivity_high_line">Hört dich am leichtesten, auch aus größerer Entfernung. Startet öfter versehentlich.</string>
     <string name="wake_test">Aktivierungswort testen</string>
     <string name="wake_test_line">Zeigt zehn Sekunden lang, ob dein Satz gehört wird, ohne den Assistenten zu öffnen.</string>
-    <string name="wake_test_say">Sag jetzt „%1$s“…</string>
+    <string name="wake_test_say">Sag jetzt „%1$s“, dann eine Pause…</string>
     <string name="wake_test_heard">Gehört</string>
     <string name="wake_test_missed">In zehn Sekunden nicht gehört. Versuch es näher am Telefon, in einem ruhigeren Moment oder mit höherer Empfindlichkeit.</string>
     <string name="wake_test_off">Schalte zuerst das Aktivierungswort ein.</string>
@@ -444,6 +444,10 @@
     <string name="wake_paused_microphone">Aktivierungswort pausiert: LLeMbas darf das Mikrofon nicht verwenden</string>
     <string name="wake_stop">Nicht mehr zuhören</string>
     <string name="wake_heard">Gehört. Tippe, um zu fragen.</string>
+    <string name="channel_wake_heard">Aktivierungswort gehört</string>
+    <string name="wake_heard_line">LLeMbas kann sich nur als App für den digitalen Assistenten des Telefons selbst über anderen Apps öffnen.</string>
+    <string name="wake_not_assistant">LLeMbas ist nicht die App für den digitalen Assistenten</string>
+    <string name="wake_not_assistant_line">Deshalb kann das Aktivierungswort den Assistenten nicht über anderen Apps öffnen: Du bekommst eine Benachrichtigung zum Antippen. Um überall per Stimme zu öffnen, tippe hier und wähle LLeMbas als App für den digitalen Assistenten.</string>
     <string name="wake_resume">Wieder auf das Aktivierungswort hören</string>
     <string name="wake_resume_line">Das Telefon wurde neu gestartet. Tippe, um wieder zuzuhören.</string>
     <string name="assist_notifications">Meine Benachrichtigungen zusammenfassen</string>

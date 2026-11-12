@@ -20,6 +20,16 @@ is in alpha and releases come off `main`.
   uncompressed as well.
 - **The wake word's notification told the default phrase, not yours**, each time the app was
   opened. It is now written from one place, from what the wake word is really doing.
+- **Hearing the word when LLeMbas is not the phone's assistant and not on screen did nothing at
+  all**: Android blocks an activity started from the background without saying so, and the app
+  took the silence for success. It now posts *Heard you. Tap to ask.* on a channel of its own that
+  comes up over what is on screen, and Settings › Wake word says plainly that only the phone's
+  digital assistant app can open by voice over other apps, with a row that opens that setting.
+- The wake word could stay "paused while the assistant is open" for good if its service ended in
+  the three seconds after the word. The hold now ends by itself, whatever happens to the service.
+- Turning the wake word off and on again quickly could leave "not listening" showing over a wake
+  word that listened, or close the app (the service was stopped under a start still on its way).
+  Stop is now the setting going off, and the service ends itself.
 - A change of phrase could release the engine while the old listening loop was still using it.
   The old loop is now stopped and waited for first.
 - A microphone that failed to start, or stopped giving sound, was not noticed (and one kind of
@@ -76,6 +86,10 @@ is in alpha and releases come off `main`.
   switched off), or not working and why (its model could not be unpacked, the engine did not
   start, the microphone did not start) -- with the technical reason under it in Settings. A
   failure is tried again by itself, after 2 s, 5 s, 15 s, a minute, then every five minutes.
+- A tap on a failure in Settings tries again at once; trouble after half a minute of listening
+  well starts the waits over instead of counting on from old failures. Say the phrase and then
+  leave a short pause: the engine takes it as heard once something else follows (Settings and the
+  test row say so).
 - A microphone permission given or taken in the system's settings is noticed when the app comes
   back to the screen.
 

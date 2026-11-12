@@ -2,13 +2,17 @@ package eu.llembas.android
 
 import android.app.Application
 import android.app.Notification
+import android.app.NotificationManager
 import eu.llembas.android.wake.WakeFailure
 import eu.llembas.android.wake.WakePause
 import eu.llembas.android.wake.WakeState
+import eu.llembas.android.wake.WakeWordService
+import eu.llembas.android.wake.wakeHeardNotification
 import eu.llembas.android.wake.wakeNotification
 import eu.llembas.android.wake.wakeTitle
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -74,5 +78,21 @@ class WakeNotificationTest {
         assertEquals(Notification.VISIBILITY_PUBLIC, notification.visibility)
         assertEquals(Notification.FLAG_ONGOING_EVENT, notification.flags and Notification.FLAG_ONGOING_EVENT)
         assertEquals(1, notification.actions.size)
+    }
+
+    @Test
+    fun heardButUnableToOpenIsANotificationThatComesUp() {
+        val heard = wakeHeardNotification(app)
+        assertEquals("Heard you. Tap to ask.", heard.extras.getCharSequence(Notification.EXTRA_TITLE).toString())
+        // Its own channel, which may come up over what is on screen; the listening one is quiet.
+        assertEquals(WakeWordService.CHANNEL_HEARD, heard.channelId)
+        WakeWordService.channel(app)
+        val manager = app.getSystemService(NotificationManager::class.java)
+        assertEquals(NotificationManager.IMPORTANCE_HIGH, manager.getNotificationChannel(WakeWordService.CHANNEL_HEARD).importance)
+        assertEquals(NotificationManager.IMPORTANCE_LOW, manager.getNotificationChannel(WakeWordService.CHANNEL).importance)
+        // Fixed words, nothing from the account: it may show on the lock screen. The tap asks.
+        assertEquals(Notification.VISIBILITY_PUBLIC, heard.visibility)
+        assertEquals(Notification.FLAG_AUTO_CANCEL, heard.flags and Notification.FLAG_AUTO_CANCEL)
+        assertNotNull(heard.contentIntent)
     }
 }

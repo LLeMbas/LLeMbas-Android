@@ -404,7 +404,7 @@
     <string name="wake_word_listen">Počúvať budiace slovo</string>
     <string name="wake_word_line">Predvolene vypnuté. Povedzte frázu a asistent sa otvorí a počúva, nad akoukoľvek aplikáciou na obrazovke.</string>
     <string name="wake_word_unavailable">V tomto zostavení nie je. Zostavenie pre F-Droid nemá modul pre budiace slovo, pretože F-Droid zostavuje každú knižnicu zo zdrojov; zostavenie z llembas.eu ho má.</string>
-    <string name="wake_phrase_line">Toto hovoríte. Po anglicky, nech je aplikácia v akomkoľvek jazyku: modul pozná len anglickú reč.</string>
+    <string name="wake_phrase_line">Toto hovoríte, potom krátka pauza: platí, až keď zmĺknete. Po anglicky, nech je aplikácia v akomkoľvek jazyku: modul pozná len anglickú reč.</string>
     <string name="wake_greeting">Oslovenie</string>
     <string name="wake_name">Meno</string>
     <string name="wake_name_google_line">Ozve sa aj telefón alebo reproduktor Google nablízku.</string>
@@ -417,7 +417,7 @@
     <string name="wake_sensitivity_high_line">Počuje vás najľahšie, aj z väčšej diaľky. Omylom sa spustí častejšie.</string>
     <string name="wake_test">Vyskúšať budiace slovo</string>
     <string name="wake_test_line">Desať sekúnd ukazuje, či vašu frázu počuť, bez otvorenia asistenta.</string>
-    <string name="wake_test_say">Teraz povedzte „%1$s“…</string>
+    <string name="wake_test_say">Teraz povedzte „%1$s“ a urobte pauzu…</string>
     <string name="wake_test_heard">Počul som ju</string>
     <string name="wake_test_missed">Za desať sekúnd som ju nepočul. Skúste to bližšie k telefónu, v tichšej chvíli alebo s vyššou citlivosťou.</string>
     <string name="wake_test_off">Najprv zapnite budiace slovo.</string>
@@ -444,6 +444,10 @@
     <string name="wake_paused_microphone">Budiace slovo pozastavené: LLeMbas nemá povolený mikrofón</string>
     <string name="wake_stop">Prestať počúvať</string>
     <string name="wake_heard">Počul som vás. Ťuknite a pýtajte sa.</string>
+    <string name="channel_wake_heard">Budiace slovo zaznelo</string>
+    <string name="wake_heard_line">LLeMbas sa dokáže sám otvoriť nad inými aplikáciami len ako aplikácia digitálneho asistenta v telefóne.</string>
+    <string name="wake_not_assistant">LLeMbas nie je aplikáciou digitálneho asistenta</string>
+    <string name="wake_not_assistant_line">Budiace slovo preto nemôže otvoriť asistenta nad inými aplikáciami: dostanete oznámenie, na ktoré ťuknete. Ak chcete otvárať hlasom kdekoľvek, ťuknite sem a vyberte LLeMbas ako aplikáciu digitálneho asistenta.</string>
     <string name="wake_resume">Znova počúvať budiace slovo</string>
     <string name="wake_resume_line">Telefón sa reštartoval. Ťuknutím znova spustíte počúvanie.</string>
     <string name="assist_notifications">Zhrnúť moje oznámenia</string>
