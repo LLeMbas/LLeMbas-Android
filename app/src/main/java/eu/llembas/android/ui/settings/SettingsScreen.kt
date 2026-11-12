@@ -679,7 +679,7 @@ enum class WakeChoice { Greeting, Name, Sensitivity }
  * it costs and why a phone may stop it, said before it is turned on.
  */
 @Composable
-private fun WakeWordGroup(state: SettingsState, actions: SettingsActions, onChoose: (WakeChoice) -> Unit) {
+internal fun WakeWordGroup(state: SettingsState, actions: SettingsActions, onChoose: (WakeChoice) -> Unit) {
     val palette = LocalPalette.current
     val on = state.prefs.wakeWord && state.wakeAvailable
     Group(stringResource(R.string.wake_word)) {
@@ -823,7 +823,7 @@ private fun PhoneActionsGroup(state: SettingsState, actions: SettingsActions) {
  * explains. In a build without the listener the group says which build has it, and why.
  */
 @Composable
-private fun NotificationSummaryGroup(state: SettingsState, actions: SettingsActions) {
+internal fun NotificationSummaryGroup(state: SettingsState, actions: SettingsActions) {
     val palette = LocalPalette.current
     val on = state.prefs.notificationSummaries
     Group(stringResource(R.string.notification_summaries)) {

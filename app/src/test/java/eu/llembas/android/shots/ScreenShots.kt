@@ -60,10 +60,13 @@ import eu.llembas.android.ui.scheduled.ScheduleEditContent
 import eu.llembas.android.ui.scheduled.ScheduledContent
 import eu.llembas.android.ui.scheduled.SchedulingModelsContent
 import eu.llembas.android.ui.settings.LanguageChoices
+import eu.llembas.android.ui.settings.NotificationSummaryGroup
 import eu.llembas.android.ui.settings.SettingsActions
 import eu.llembas.android.ui.settings.SettingsContent
+import eu.llembas.android.ui.settings.SettingsState
 import eu.llembas.android.ui.settings.WakeChoice
 import eu.llembas.android.ui.settings.WakeChoices
+import eu.llembas.android.ui.settings.WakeWordGroup
 import eu.llembas.android.ui.theme.LocalPalette
 import eu.llembas.android.ui.viewer.FileBody
 import org.junit.Test
@@ -190,12 +193,26 @@ class ScreenShots {
         shoot("08-settings", Phone.Small) { SettingsContent(Fakes.settings, NoSettingsActions) }
         // The whole page: Language, the assistant's switches and Voice input.
         shoot("08-settings", Phone.Scroll) { SettingsContent(Fakes.settings, NoSettingsActions) }
-        // The wake word's rows: failed with its reason and a test that heard nothing; a test that heard it twice.
-        shoot("08-settings-wake-failed", Phone.Scroll) { SettingsContent(Fakes.settingsWakeFailed, NoSettingsActions) }
-        shoot("08-settings-wake-failed", Phone.SmallScroll, fontScale = 1.5f) { SettingsContent(Fakes.settingsWakeFailed, NoSettingsActions) }
-        // ...and, as a standard build has it, notification summaries explained instead of offered.
-        shoot("08-settings-wake-tested", Phone.Scroll) { SettingsContent(Fakes.settingsWakeTested, NoSettingsActions) }
-        shoot("08-settings-wake-tested", Phone.SmallScroll, fontScale = 1.5f) { SettingsContent(Fakes.settingsWakeTested, NoSettingsActions) }
+    }
+
+    /**
+     * The wake word's group and notification summaries on their own, since the whole page is
+     * longer than a shot: listening; failed with its reason and a test that heard nothing; a test
+     * that heard the phrase twice, in a standard build (which explains where summaries went).
+     */
+    @Test
+    fun wakeWord() {
+        val groups: @Composable (SettingsState) -> Unit = { state ->
+            Column(Modifier.padding(horizontal = 16.dp)) {
+                WakeWordGroup(state, NoSettingsActions, onChoose = {})
+                NotificationSummaryGroup(state, NoSettingsActions)
+            }
+        }
+        shoot("08-wake-listening", Phone.Scroll) { groups(Fakes.settings) }
+        shoot("08-wake-failed", Phone.Scroll) { groups(Fakes.settingsWakeFailed) }
+        shoot("08-wake-failed", Phone.SmallScroll, fontScale = 1.5f) { groups(Fakes.settingsWakeFailed) }
+        shoot("08-wake-tested", Phone.Scroll) { groups(Fakes.settingsWakeTested) }
+        shoot("08-wake-tested", Phone.SmallScroll, fontScale = 1.5f) { groups(Fakes.settingsWakeTested) }
     }
 
     @Test
