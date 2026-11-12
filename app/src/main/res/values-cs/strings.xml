@@ -449,6 +449,8 @@
     <string name="notification_summaries">Shrnutí oznámení</string>
     <string name="notification_summaries_switch">Dovolit asistentovi číst má oznámení, když o to požádám</string>
     <string name="notification_summaries_line">Řekněte „shrň moje oznámení“, nebo klepněte na tlačítko v asistentovi.</string>
+    <string name="notification_summaries_unavailable">V tomto sestavení není. Čtení oznámení vyžaduje sestavení LLeMbas „notifications“, protože Google Play Protect blokuje instalaci aplikace mimo Obchod Play, která je umí číst. Je to stejná aplikace se stejným podpisem: na stránce vydání se soubor končící na -notifications.apk nainstaluje přes tuto.</string>
+    <string name="update_notifications_manual">Toto je sestavení „notifications“: aktualizaci nainstalujte ze stránky vydání, soubor končící na -notifications.apk.</string>
     <string name="notification_access">Přístup k oznámením</string>
     <string name="notification_access_on">Uděleno. Přepínač Androidu je v systémovém nastavení.</string>
     <string name="notification_access_off">Zatím neuděleno. Klepnutím otevřete přepínač Androidu pro LLeMbas.</string>

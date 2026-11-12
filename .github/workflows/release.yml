@@ -1,7 +1,8 @@
 name: Release
 
-# A signed tag `vX.Y.Z` builds both flavours, signed with the release key from the secrets,
-# and publishes them with SHA256SUMS as the GitHub Release. The release notes are the tag's
+# A signed tag `vX.Y.Z` builds the three APKs, signed with the release key from the secrets,
+# and publishes them with SHA256SUMS as the GitHub Release: the standard one, `-notifications`
+# (the same app, id and key, plus the notification listener) and `-fdroid`. The release notes are the tag's
 # message. The key never touches the repository: it is written to a temporary file here and
 # deleted with the runner.
 on:
@@ -61,14 +62,20 @@ jobs:
           [ -n "$KEYSTORE_B64" ] || { echo "no release key in the secrets" >&2; exit 1; }
           export LEMBAS_KEYSTORE="$RUNNER_TEMP/release.jks"
           echo "$KEYSTORE_B64" | base64 -d > "$LEMBAS_KEYSTORE"
-          ./gradlew --no-daemon testFullReleaseUnitTest assembleFullRelease assembleFdroidRelease
+          ./gradlew --no-daemon testFullStandardReleaseUnitTest assembleFullStandardRelease assembleFullNotificationsRelease assembleFdroidStandardRelease
           rm -f "$LEMBAS_KEYSTORE"
 
       - name: Name the files and sum them
         run: |
           mkdir dist
-          cp app/build/outputs/apk/full/release/app-full-release.apk "dist/llembas-android-$VERSION.apk"
-          cp app/build/outputs/apk/fdroid/release/app-fdroid-release.apk "dist/llembas-android-$VERSION-fdroid.apk"
+          cp app/build/outputs/apk/fullStandard/release/app-full-standard-release.apk "dist/llembas-android-$VERSION.apk"
+          cp app/build/outputs/apk/fullNotifications/release/app-full-notifications-release.apk "dist/llembas-android-$VERSION-notifications.apk"
+          cp app/build/outputs/apk/fdroidStandard/release/app-fdroid-standard-release.apk "dist/llembas-android-$VERSION-fdroid.apk"
+          # What is about to be published, checked on the files: the listener only in
+          # -notifications, the model stored, no x86_64 library.
+          scripts/check-apk.sh "dist/llembas-android-$VERSION.apk" standard release
+          scripts/check-apk.sh "dist/llembas-android-$VERSION-notifications.apk" notifications release
+          scripts/check-apk.sh "dist/llembas-android-$VERSION-fdroid.apk" fdroid release
           { echo "# llembas-android $VERSION"; (cd dist && sha256sum *.apk); } > SHA256SUMS
           mv SHA256SUMS dist/
 

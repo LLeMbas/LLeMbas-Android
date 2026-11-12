@@ -53,22 +53,41 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
-      - name: Unit tests and both builds
-        run: ./gradlew --no-daemon testFullDebugUnitTest assembleFullDebug assembleFdroidDebug
+      - name: Unit tests and the three builds
+        run: >
+          ./gradlew --no-daemon testFullStandardDebugUnitTest
+          assembleFullStandardDebug assembleFullNotificationsDebug assembleFdroidStandardDebug
+
+      # The files themselves: only the notifications build declares a notification listener, the
+      # wake-word model is stored uncompressed, the F-Droid build has no engine.
+      - name: What the APKs declare
+        run: |
+          scripts/check-apk.sh app/build/outputs/apk/fullStandard/debug/app-full-standard-debug.apk standard
+          scripts/check-apk.sh app/build/outputs/apk/fullNotifications/debug/app-full-notifications-debug.apk notifications
+          scripts/check-apk.sh app/build/outputs/apk/fdroidStandard/debug/app-fdroid-standard-debug.apk fdroid
+
+      # A release as the release workflow builds it, unsigned: shrunk by R8, and without the
+      # emulator's x86_64 libraries. Found here rather than at a tag.
+      - name: The release build's shape
+        run: |
+          ./gradlew --no-daemon assembleFullStandardRelease
+          scripts/check-apk.sh "$(ls app/build/outputs/apk/fullStandard/release/*.apk)" standard release
 
       - name: Android lint (report only, for now)
-        run: ./gradlew --no-daemon lintFullDebug
+        run: ./gradlew --no-daemon lintFullStandardDebug
         continue-on-error: true
 
       # The test build a tester installs (Actions › this run › Artifacts): debug-signed with the
-      # repository's public test key, so each one installs over the last. `full` is the one to
-      # use; `fdroid` is the same app without the updater.
+      # repository's public test key, so each one installs over the last. The plain one is the
+      # one to use; `-notifications` is the same app with the notification listener (it installs
+      # over the plain one and back); `-fdroid` is the app without the updater and the wake word.
       - name: Name the test builds
         run: |
           mkdir test-builds
           short="${GITHUB_SHA::7}"
-          cp app/build/outputs/apk/full/debug/app-full-debug.apk "test-builds/llembas-android-debug-$GITHUB_RUN_NUMBER-$short.apk"
-          cp app/build/outputs/apk/fdroid/debug/app-fdroid-debug.apk "test-builds/llembas-android-debug-$GITHUB_RUN_NUMBER-$short-fdroid.apk"
+          cp app/build/outputs/apk/fullStandard/debug/app-full-standard-debug.apk "test-builds/llembas-android-debug-$GITHUB_RUN_NUMBER-$short.apk"
+          cp app/build/outputs/apk/fullNotifications/debug/app-full-notifications-debug.apk "test-builds/llembas-android-debug-$GITHUB_RUN_NUMBER-$short-notifications.apk"
+          cp app/build/outputs/apk/fdroidStandard/debug/app-fdroid-standard-debug.apk "test-builds/llembas-android-debug-$GITHUB_RUN_NUMBER-$short-fdroid.apk"
           (cd test-builds && sha256sum *.apk > SHA256SUMS)
 
       - uses: actions/upload-artifact@v4

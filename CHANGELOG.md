@@ -45,6 +45,15 @@ is in alpha and releases come off `main`.
 - The phrases' spelling in the model's token pieces is generated from the model's own tokenizer
   (`scripts/gen-wake-phrases.py`) and checked against its token table in CI, instead of written by
   hand. Elizabeth and Benjamin are left out: the tokenizer can only spell them letter by letter.
+- **Notification summaries moved to a build of their own**, `llembas-android-<version>-notifications.apk`:
+  the same app with the same signature, plus the notification listener. Google Play Protect
+  blocked installing beta.7, most likely because an app from outside the Play Store that can read
+  notifications is what it looks for; the standard and F-Droid APKs now declare no notification
+  listener at all, and Settings says where notification summaries went and why. The
+  notifications build installs over the standard one as an ordinary update, and back; it updates
+  itself only to its own kind.
+- **A smaller download.** Release APKs no longer carry the emulator's x86_64 libraries (about
+  36 MB of beta.7's 98 MB) nor two libraries of the wake-word engine the app never calls.
 - **The wake word says what it is doing**, in its notification and under its switch in Settings:
   *Starting*, *Listening for "…"*, paused and why (screen off, battery saver, assistant open, no
   microphone permission, or the microphone gives no sound because another app has it or it is

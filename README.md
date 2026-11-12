@@ -48,8 +48,19 @@ the phone before the word. Not in the F-Droid build.
 
 ## Build
 
-Builds run on GitHub Actions (`.github/workflows/ci.yml`); locally it is the usual
-`./gradlew assembleFullDebug` with JDK 17 and the Android SDK.
+Builds run on GitHub Actions (`.github/workflows/ci.yml`); locally it is
+`scripts/fetch-wakeword.py` (the wake-word engine and model, hash-pinned, never committed) and
+then the usual `./gradlew assembleFullStandardDebug` with JDK 17 and the Android SDK.
+
+A release is three APKs of one app, signed with one key:
+
+| File | Build | What it is |
+|---|---|---|
+| `llembas-android-<version>.apk` | `fullStandard` | The app: updates itself, has the wake word. The one to install. |
+| `llembas-android-<version>-notifications.apk` | `fullNotifications` | The same, plus a notification listener for *notification summaries*. Separate because Google Play Protect blocks installing an app from outside the Play Store that can read notifications; it installs over the standard one, and back. |
+| `llembas-android-<version>-fdroid.apk` | `fdroidStandard` | No updater and no wake-word engine: only what F-Droid can build from source. |
+
+`scripts/check-apk.sh` checks each built file for what it must and must not declare.
 
 Three things are generated from the server at one ref; the first two are pinned with a lock
 file CI checks, and CI checks the strings against the code:

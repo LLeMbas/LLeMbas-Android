@@ -193,7 +193,9 @@ class ScreenShots {
         // The wake word's rows: failed with its reason and a test that heard nothing; a test that heard it twice.
         shoot("08-settings-wake-failed", Phone.Scroll) { SettingsContent(Fakes.settingsWakeFailed, NoSettingsActions) }
         shoot("08-settings-wake-failed", Phone.SmallScroll, fontScale = 1.5f) { SettingsContent(Fakes.settingsWakeFailed, NoSettingsActions) }
+        // ...and, as a standard build has it, notification summaries explained instead of offered.
         shoot("08-settings-wake-tested", Phone.Scroll) { SettingsContent(Fakes.settingsWakeTested, NoSettingsActions) }
+        shoot("08-settings-wake-tested", Phone.SmallScroll, fontScale = 1.5f) { SettingsContent(Fakes.settingsWakeTested, NoSettingsActions) }
     }
 
     @Test

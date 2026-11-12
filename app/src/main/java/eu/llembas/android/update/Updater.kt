@@ -13,6 +13,7 @@ import eu.llembas.android.R
 import eu.llembas.android.api.LembasJson
 import eu.llembas.android.api.SharedHttp
 import eu.llembas.android.api.await
+import eu.llembas.android.notify.NotificationAccess
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
@@ -20,9 +21,24 @@ import okhttp3.Request
 import java.io.File
 import java.security.MessageDigest
 
-/** What llembas.eu says the newest release is (`site/android/latest.json`, written at release). */
+/** One APK of a release: where it is and its SHA-256. */
 @Serializable
-data class Latest(val version: String, val url: String, val sha256: String, val notes: String = "")
+data class LatestFile(val url: String, val sha256: String)
+
+/**
+ * What llembas.eu says the newest release is (`site/android/latest.json`, written at release):
+ * the standard APK as [url] and [sha256], and the `notifications` build's (the same app with the
+ * notification listener) as [notifications] when the release has one.
+ */
+@Serializable
+data class Latest(val version: String, val url: String, val sha256: String, val notes: String = "", val notifications: LatestFile? = null) {
+    /**
+     * The file this build updates itself to: its own kind, never the other. A `notifications`
+     * build that installed the standard APK would lose its listener without a word (same id,
+     * same key: Android takes it), so without its own file it installs nothing.
+     */
+    fun fileFor(notificationsBuild: Boolean): LatestFile? = if (notificationsBuild) notifications else LatestFile(url, sha256)
+}
 
 /**
  * The `full` build updates itself, as LLeMbas Desktop does: the manifest on the website names
@@ -47,12 +63,13 @@ class Updater(private val context: Context) {
                 )
                 return@withContext context.getString(R.string.update_allow_installs)
             }
+            val file = latest.fileFor(NotificationAccess.AVAILABLE) ?: return@withContext context.getString(R.string.update_notifications_manual)
             val apk = File(context.cacheDir, "update.apk")
-            SharedHttp.newCall(Request.Builder().url(latest.url).build()).await().use { response ->
+            SharedHttp.newCall(Request.Builder().url(file.url).build()).await().use { response ->
                 if (!response.isSuccessful) return@withContext context.getString(R.string.update_unreachable)
                 apk.outputStream().use { out -> response.body!!.byteStream().copyTo(out) }
             }
-            if (sha256(apk) != latest.sha256.lowercase()) {
+            if (sha256(apk) != file.sha256.lowercase()) {
                 apk.delete()
                 return@withContext context.getString(R.string.update_bad_file)
             }

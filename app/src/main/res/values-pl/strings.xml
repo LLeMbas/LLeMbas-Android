@@ -449,6 +449,8 @@
     <string name="notification_summaries">Podsumowania powiadomień</string>
     <string name="notification_summaries_switch">Pozwól asystentowi czytać moje powiadomienia, gdy poproszę</string>
     <string name="notification_summaries_line">Poproś „podsumuj moje powiadomienia” albo dotknij przycisku w asystencie.</string>
+    <string name="notification_summaries_unavailable">Nie w tej wersji. Czytanie powiadomień wymaga wersji „notifications” LLeMbas, bo Google Play Protect blokuje instalację aplikacji spoza Sklepu Play, która potrafi je czytać. To ta sama aplikacja z tym samym podpisem: na stronie wydania plik kończący się na -notifications.apk instaluje się na tę.</string>
+    <string name="update_notifications_manual">To jest wersja „notifications”: zainstaluj aktualizację ze strony wydania, plik kończący się na -notifications.apk.</string>
     <string name="notification_access">Dostęp do powiadomień</string>
     <string name="notification_access_on">Przyznany. Przełącznik Androida jest w ustawieniach systemu.</string>
     <string name="notification_access_off">Jeszcze nie przyznany. Dotknij, aby otworzyć przełącznik Androida dla LLeMbas.</string>

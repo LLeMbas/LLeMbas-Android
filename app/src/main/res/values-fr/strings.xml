@@ -449,6 +449,8 @@
     <string name="notification_summaries">Résumés des notifications</string>
     <string name="notification_summaries_switch">Laisser l’assistant lire mes notifications quand je le demande</string>
     <string name="notification_summaries_line">Demandez « résume mes notifications », ou touchez la puce dans l’assistant.</string>
+    <string name="notification_summaries_unavailable">Pas dans cette version. Lire les notifications demande la version « notifications » de LLeMbas, car Google Play Protect bloque l’installation d’une app hors du Play Store capable de les lire. C’est la même app avec la même signature : sur la page de la version, le fichier se terminant par -notifications.apk s’installe par-dessus celle-ci.</string>
+    <string name="update_notifications_manual">Ceci est la version « notifications » : installez la mise à jour depuis sa page, le fichier se terminant par -notifications.apk.</string>
     <string name="notification_access">Accès aux notifications</string>
     <string name="notification_access_on">Accordé. L’interrupteur d’Android est dans les paramètres du système.</string>
     <string name="notification_access_off">Pas encore accordé. Touchez pour ouvrir l’interrupteur d’Android pour LLeMbas.</string>

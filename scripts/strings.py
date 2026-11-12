@@ -476,6 +476,8 @@ STRINGS: dict[str, str] = {
     "notification_summaries": "Notification summaries",
     "notification_summaries_switch": "Let the assistant read my notifications when I ask",
     "notification_summaries_line": "Ask “summarise my notifications”, or tap the chip in the assistant.",
+    "notification_summaries_unavailable": "Not in this build. Reading notifications needs the “notifications” build of LLeMbas, because Google Play Protect blocks installing an app from outside the Play Store that can read them. It is the same app with the same signature: on the release page, the file ending in -notifications.apk installs over this one.",
+    "update_notifications_manual": "This is the “notifications” build: install the update from its release page, the file ending in -notifications.apk.",
     "notification_access": "Notification access",
     "notification_access_on": "Given. Android's switch for it is in the system's settings.",
     "notification_access_off": "Not given yet. Tap to open Android's switch for LLeMbas.",

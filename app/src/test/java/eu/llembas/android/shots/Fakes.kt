@@ -367,6 +367,7 @@ object Fakes {
         phoneRecognizer = true,
         wakeAvailable = true,
         wakeState = WakeState.Listening("OK Google"),
+        notificationsBuild = true,
         navApps = listOf("google", "osmand"),
     )
 
@@ -376,7 +377,9 @@ object Fakes {
         wakeState = WakeState.Failed(WakeFailure.Microphone, "IllegalStateException: recording did not start; another app may have the microphone"),
         wakeTest = WakeTestShown(done = true),
     )
-    val settingsWakeTested = settings.copy(wakeTest = WakeTestShown(running = true, heard = 2))
+
+    /** A standard build: the test heard the phrase twice, and notification summaries are in the other build. */
+    val settingsWakeTested = settings.copy(wakeTest = WakeTestShown(running = true, heard = 2), notificationsBuild = false)
 
     // The assistant's sheet, as it opens and as it answers.
     private val assistBase = AssistUiState(

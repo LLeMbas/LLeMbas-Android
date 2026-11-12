@@ -17,6 +17,7 @@ import eu.llembas.android.api.ModelInfo
 import eu.llembas.android.api.Step
 import eu.llembas.android.api.StreamClient
 import eu.llembas.android.lembas
+import eu.llembas.android.notify.NotificationAccess
 import eu.llembas.android.notify.NotificationReader
 import eu.llembas.android.push.Notifications
 import eu.llembas.android.ui.explain
@@ -152,7 +153,7 @@ class AssistController(private val context: Context, private val scope: Coroutin
                 signedIn = instance != null,
                 instanceName = instance?.name?.ifBlank { instance.base }.orEmpty(),
                 voiceReply = prefs.readAloudSpoken,
-                canReadNotifications = prefs.notificationSummaries && NotificationReader.granted(context),
+                canReadNotifications = prefs.notificationSummaries && NotificationAccess.granted(context),
                 last = prefs.lastAssistChat.takeIf { id -> id.isNotBlank() && !prefs.assistantTemporary }
                     ?.let { id -> LastAssist(id, prefs.lastAssistTitle, prefs.lastAssistAt) },
             )
@@ -398,10 +399,10 @@ class AssistController(private val context: Context, private val scope: Coroutin
                     if (withScreen) now.screenshot?.let { shot -> add(api.upload("screen.png", "image/png", png(shot), now.chatId).id) }
                 }
                 // The notifications, when asked for by the chip or by name ("my notifications") --
-                // read now, only while unlocked (NotificationReader.read), and for this question only.
+                // read now, only while unlocked (NotificationAccess.read), and for this question only.
                 val phrases = context.getString(R.string.assist_notifications_phrases).split("|")
                 val notices = if (now.canReadNotifications && (notifications || NotificationReader.asksAbout(question, phrases))) {
-                    NotificationReader.asText(NotificationReader.read(context)).ifBlank { NO_NOTIFICATIONS }
+                    NotificationReader.asText(NotificationAccess.read(context)).ifBlank { NO_NOTIFICATIONS }
                 } else {
                     null
                 }

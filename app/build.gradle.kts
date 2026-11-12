@@ -67,27 +67,45 @@ android {
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             signingConfig = signingConfigs.findByName("release")
+            // The wake-word engine's native code, for phones only: a release carries no x86_64
+            // library (36 MB that only an emulator would load).
+            ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
         }
         debug {
             applicationIdSuffix = ".debug"
             // CI's run number, so a tester can tell two test builds apart in Settings › About.
             versionNameSuffix = "-debug" + (System.getenv("GITHUB_RUN_NUMBER")?.let { ".$it" } ?: "")
             signingConfig = signingConfigs.getByName("debug")
+            // A test build also runs on the 64-bit emulator (not 32-bit x86).
+            ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64") }
         }
     }
 
-    // `full` updates itself from llembas.eu; `fdroid` has no updater, because F-Droid updates it.
-    flavorDimensions += "distribution"
+    // Two questions, three APKs.
+    //
+    // `distribution`: `full` updates itself from llembas.eu and has the wake-word engine; `fdroid`
+    // has neither, because F-Droid updates it and builds every library from source.
+    //
+    // `reading`: whether the app declares a notification listener (notification summaries).
+    // `standard` does not -- no listener, no permission, nothing of it in the manifest -- because
+    // Google Play Protect blocks installing an app from outside the Play Store that can read
+    // notifications. `notifications` is the full build plus the listener: the same application
+    // id and the same key, so it installs over the standard one as an ordinary update.
+    flavorDimensions += listOf("distribution", "reading")
     productFlavors {
         create("full") {
             dimension = "distribution"
             buildConfigField("boolean", "SELF_UPDATE", "true")
-            // The wake-word engine's native code: phones and the 64-bit emulator, not 32-bit x86.
-            ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64") }
         }
         create("fdroid") {
             dimension = "distribution"
             buildConfigField("boolean", "SELF_UPDATE", "false")
+        }
+        create("standard") {
+            dimension = "reading"
+        }
+        create("notifications") {
+            dimension = "reading"
         }
     }
 
@@ -95,6 +113,14 @@ android {
         // The wake-word model is read as files the engine opens itself: stored as it is, never
         // deflated a second time (it does not shrink, and nothing has to inflate it on the phone).
         noCompress += "onnx"
+    }
+
+    packaging {
+        jniLibs {
+            // The engine is called through its JNI library alone, which needs only onnxruntime;
+            // the C and C++ API libraries its AAR also carries are for other kinds of caller.
+            excludes += listOf("**/libsherpa-onnx-c-api.so", "**/libsherpa-onnx-cxx-api.so")
+        }
     }
 
     buildFeatures {
@@ -135,6 +161,14 @@ android {
     sourceSets {
         // The server's contract, pinned by scripts/fetch-contract.py, read by the unit tests.
         getByName("test").resources.srcDir(rootProject.file("contract"))
+    }
+}
+
+// fullStandard, fullNotifications and fdroidStandard: there is no F-Droid build with the listener.
+androidComponents {
+    beforeVariants { variant ->
+        val flavors = variant.productFlavors.toMap()
+        if (flavors["distribution"] == "fdroid" && flavors["reading"] == "notifications") variant.enable = false
     }
 }
 

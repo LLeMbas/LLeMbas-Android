@@ -96,7 +96,7 @@ import eu.llembas.android.assist.PhoneRecognizer
 import eu.llembas.android.auth.Instance
 import eu.llembas.android.auth.Prefs
 import eu.llembas.android.lembas
-import eu.llembas.android.notify.NotificationReader
+import eu.llembas.android.notify.NotificationAccess
 import eu.llembas.android.push.Push
 import eu.llembas.android.ui.theme.LocalPalette
 import eu.llembas.android.update.AppVersion
@@ -179,6 +179,8 @@ data class SettingsState(
     val wakeTest: WakeTestShown = WakeTestShown(),
     /** Whether Android's notification access is given to LLeMbas. */
     val notificationAccess: Boolean = false,
+    /** Whether this build can read notifications at all (only the `notifications` build declares the listener). */
+    val notificationsBuild: Boolean = false,
     /** The navigation apps installed: NavApp ids. */
     val navApps: List<String> = emptyList(),
 )
@@ -318,11 +320,11 @@ fun SettingsScreen(onBack: () -> Unit, onAddInstance: () -> Unit) {
             // On: Android's own switch is the person's to flip, so its page opens if it is off.
             override fun notificationSummaries(on: Boolean) {
                 scope.launch { store.savePrefs { it.copy(notificationSummaries = on) } }
-                if (on && !NotificationReader.granted(context)) notificationAccess()
+                if (on && !NotificationAccess.granted(context)) notificationAccess()
             }
 
             override fun notificationAccess() {
-                runCatching { context.startActivity(NotificationReader.settingsIntent(context)) }
+                NotificationAccess.settingsIntent(context)?.let { page -> runCatching { context.startActivity(page) } }
             }
 
             override fun navApp(id: String) {
@@ -391,7 +393,8 @@ fun SettingsScreen(onBack: () -> Unit, onAddInstance: () -> Unit) {
             wakeState = wakeState,
             wakeTest = WakeTestShown(running = clock < trial.until, done = tested && clock >= trial.until, heard = if (tested) trial.heard else 0),
             // Read again each time Settings is composed: the person comes back from the system's page.
-            notificationAccess = NotificationReader.granted(context),
+            notificationAccess = NotificationAccess.granted(context),
+            notificationsBuild = NotificationAccess.AVAILABLE,
             navApps = remember { NavApp.installedApps(context).map { it.id } },
         ),
         actions,
@@ -815,36 +818,51 @@ private fun PhoneActionsGroup(state: SettingsState, actions: SettingsActions) {
     )
 }
 
-/** Notification summaries: off by default; on needs Android's notification access too, which this explains. */
+/**
+ * Notification summaries: off by default; on needs Android's notification access too, which this
+ * explains. In a build without the listener the group says which build has it, and why.
+ */
 @Composable
 private fun NotificationSummaryGroup(state: SettingsState, actions: SettingsActions) {
     val palette = LocalPalette.current
     val on = state.prefs.notificationSummaries
     Group(stringResource(R.string.notification_summaries)) {
-        SettingRow(
-            Icons.Filled.Notifications,
-            stringResource(R.string.notification_summaries_switch),
-            subtitle = stringResource(R.string.notification_summaries_line),
-            onClick = { actions.notificationSummaries(!on) },
-            trailing = { Switch(checked = on, onCheckedChange = actions::notificationSummaries) },
-        )
-        if (on) {
-            Rule()
+        if (!state.notificationsBuild) {
             SettingRow(
-                Icons.Filled.Security,
-                stringResource(R.string.notification_access),
-                subtitle = stringResource(if (state.notificationAccess) R.string.notification_access_on else R.string.notification_access_off),
-                tint = if (state.notificationAccess) null else palette.warning,
-                onClick = actions::notificationAccess,
+                Icons.Filled.Notifications,
+                stringResource(R.string.notification_summaries_switch),
+                subtitle = stringResource(R.string.notification_summaries_unavailable),
+                enabled = false,
+                onClick = {},
             )
+        } else {
+            SettingRow(
+                Icons.Filled.Notifications,
+                stringResource(R.string.notification_summaries_switch),
+                subtitle = stringResource(R.string.notification_summaries_line),
+                onClick = { actions.notificationSummaries(!on) },
+                trailing = { Switch(checked = on, onCheckedChange = actions::notificationSummaries) },
+            )
+            if (on) {
+                Rule()
+                SettingRow(
+                    Icons.Filled.Security,
+                    stringResource(R.string.notification_access),
+                    subtitle = stringResource(if (state.notificationAccess) R.string.notification_access_on else R.string.notification_access_off),
+                    tint = if (state.notificationAccess) null else palette.warning,
+                    onClick = actions::notificationAccess,
+                )
+            }
         }
     }
-    Text(
-        stringResource(R.string.notification_summaries_privacy),
-        style = MaterialTheme.typography.bodySmall,
-        color = palette.inkFaint,
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-    )
+    if (state.notificationsBuild) {
+        Text(
+            stringResource(R.string.notification_summaries_privacy),
+            style = MaterialTheme.typography.bodySmall,
+            color = palette.inkFaint,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+        )
+    }
 }
 
 @Composable

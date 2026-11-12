@@ -449,6 +449,8 @@
     <string name="notification_summaries">Értesítések összefoglalása</string>
     <string name="notification_summaries_switch">Az asszisztens kérésemre elolvashatja az értesítéseimet</string>
     <string name="notification_summaries_line">Kérd, hogy „foglald össze az értesítéseimet”, vagy koppints a gombra az asszisztensben.</string>
+    <string name="notification_summaries_unavailable">Ebben a változatban nincs. Az értesítések olvasásához a LLeMbas „notifications” változata kell, mert a Google Play Protect letiltja az olyan, Play Áruházon kívüli alkalmazás telepítését, amely olvasni tudja őket. Ugyanaz az alkalmazás ugyanazzal az aláírással: a kiadás oldalán a -notifications.apk végű fájl erre telepíthető rá.</string>
+    <string name="update_notifications_manual">Ez a „notifications” változat: a frissítést a kiadás oldaláról telepítsd, a -notifications.apk végű fájlt.</string>
     <string name="notification_access">Hozzáférés az értesítésekhez</string>
     <string name="notification_access_on">Megadva. Az Android kapcsolója a rendszerbeállításokban van.</string>
     <string name="notification_access_off">Még nincs megadva. Koppints az Android LLeMbas-kapcsolójának megnyitásához.</string>

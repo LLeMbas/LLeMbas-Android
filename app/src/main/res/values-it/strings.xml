@@ -449,6 +449,8 @@
     <string name="notification_summaries">Riepiloghi delle notifiche</string>
     <string name="notification_summaries_switch">Lascia che l’assistente legga le mie notifiche quando lo chiedo</string>
     <string name="notification_summaries_line">Chiedi «riassumi le mie notifiche» o tocca il pulsante nell’assistente.</string>
+    <string name="notification_summaries_unavailable">Non in questa build. Leggere le notifiche richiede la build «notifications» di LLeMbas, perché Google Play Protect blocca l’installazione di un’app esterna al Play Store in grado di leggerle. È la stessa app con la stessa firma: nella pagina della release, il file che termina in -notifications.apk si installa sopra questa.</string>
+    <string name="update_notifications_manual">Questa è la build «notifications»: installa l’aggiornamento dalla pagina della release, il file che termina in -notifications.apk.</string>
     <string name="notification_access">Accesso alle notifiche</string>
     <string name="notification_access_on">Concesso. L’interruttore di Android è nelle impostazioni di sistema.</string>
     <string name="notification_access_off">Non ancora concesso. Tocca per aprire l’interruttore di Android per LLeMbas.</string>

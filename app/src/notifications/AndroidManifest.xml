@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The `notifications` build: the full build plus the notification listener (notification
+     summaries, opt-in). Only this build declares it; the standard builds do not, because
+     Google Play Protect blocks installing an app from outside the Play Store that does. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <!-- Read only when a question asks for them (notify/NotificationAccess.kt). -->
+        <service
+            android:name="eu.llembas.android.notify.LembasNotificationListener"
+            android:exported="true"
+            android:label="@string/notification_summaries"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
+    </application>
+</manifest>
