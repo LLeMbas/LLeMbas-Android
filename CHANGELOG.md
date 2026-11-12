@@ -3,7 +3,9 @@
 What changed in each release of LLeMbas for Android. Versions follow SemVer; until 1.0.0 the app
 is in alpha and releases come off `main`.
 
-## [Unreleased] — for 1.0.0-beta.8
+## [1.0.0-beta.8] — 2026-11-12
+
+For LLeMbas server 2.0.0-beta.11 or later. Three files now: the standard app, `-notifications` (the same app with notification summaries) and `-fdroid`.
 
 ### Added
 
