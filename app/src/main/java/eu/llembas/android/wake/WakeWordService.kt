@@ -103,6 +103,8 @@ class WakeWordService : LifecycleService() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
+        // Every start counts, Stop's too: the service stops itself by the newest one it was given.
+        lastStart = startId
         if (intent?.action == ACTION_STOP) {
             // Stop is the setting going off; the loop sees it and ends the service on the path
             // that has shown its notification first (follow). The service is stopped from here
@@ -114,7 +116,6 @@ class WakeWordService : LifecycleService() {
             }
             return START_NOT_STICKY
         }
-        lastStart = startId
         mayRecord.value = micAllowed(this)
         val running = following?.isActive == true
         // The notification first: Android stops a foreground service that is slow to show one.
