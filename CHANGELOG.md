@@ -51,6 +51,11 @@ is in alpha and releases come off `main`.
   - The approval card offers the spec's four actions: *Allow once*, *Always allow*, *Deny*, and
     *Deny, and say why*. The plan card approves together with the mode to continue in --
     *Approve, continue in Edit* or *Approve, continue in Manual* -- and *Revise*.
+- With LLeMbas 2.0.0-beta.11: a reply that was stopped or failed says so with its reason after a
+  reload too (the instance stores how it ended); *Always allow* is offered only where the request
+  offers it; a tool call's time is the instance's own; a call without a title is named as the
+  instance names its tool. The notifications build can take its own file from the instance's
+  recommendation of the same release when the website's manifest names none.
 - **A reply ends when it is saved, and the chat's name follows** (with a server that sends `done`
   first: LLeMbas 2.0.0-beta.11). The app treats `done` as the end -- the transcript, a spoken
   answer and a queued prompt no longer wait for a model to name a new chat -- and takes the name

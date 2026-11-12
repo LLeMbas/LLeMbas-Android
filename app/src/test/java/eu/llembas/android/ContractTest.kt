@@ -3,6 +3,8 @@ package eu.llembas.android
 import eu.llembas.android.api.APP_API
 import eu.llembas.android.api.AgentSubagents
 import eu.llembas.android.api.AskFrame
+import eu.llembas.android.api.AttachmentEnvelope
+import eu.llembas.android.api.CardItem
 import eu.llembas.android.api.CardSubagent
 import eu.llembas.android.api.Chat
 import eu.llembas.android.api.ChatPage
@@ -17,10 +19,12 @@ import eu.llembas.android.api.LiveReply
 import eu.llembas.android.api.Me
 import eu.llembas.android.api.MemoryEnvelope
 import eu.llembas.android.api.MemoryList
+import eu.llembas.android.api.Mentions
 import eu.llembas.android.api.Message
 import eu.llembas.android.api.Metrics
 import eu.llembas.android.api.ModelList
 import eu.llembas.android.api.Plan
+import eu.llembas.android.api.ProgressWords
 import eu.llembas.android.api.SearchResults
 import eu.llembas.android.api.StatusFrame
 import eu.llembas.android.api.SteeredFrame
@@ -31,8 +35,14 @@ import eu.llembas.android.api.TitleFrame
 import eu.llembas.android.api.ToolCall
 import eu.llembas.android.api.TreeFrame
 import eu.llembas.android.api.TreeView
+import eu.llembas.android.api.callDuration
+import eu.llembas.android.api.ending
+import eu.llembas.android.api.progressText
+import eu.llembas.android.api.state
+import eu.llembas.android.api.took
 import eu.llembas.android.ui.chat.ChatState
 import eu.llembas.android.ui.chat.approvalTexts
+import eu.llembas.android.ui.chat.offersAlways
 import eu.llembas.android.ui.chat.offersTeam
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.builtins.ListSerializer
@@ -43,6 +53,7 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.util.Locale
 
 /**
  * The server's contract, as pinned in `contract/` by `scripts/fetch-contract.py`: every shape
@@ -190,7 +201,18 @@ class ContractTest {
         val call = reply.steps[2].calls.single()
         assertEquals("shell", call.block.kind)
         assertEquals("bake --slow", call.block.title)
-        assertEquals(listOf("exit 0"), call.block.chips)
+        // Spec 3.7.0: an exit code is a fact only when it is not 0; the call says its state, how
+        // long it took and what its tool is called.
+        assertTrue(call.block.chips.isEmpty())
+        assertEquals("done", call.block.state)
+        assertEquals("done", call.state())
+        assertEquals(2412L, call.ms)
+        assertEquals("2.4s", call.block.duration)
+        assertEquals("2.4s", call.took())
+        assertEquals("2.4s", callDuration("done", call.ms))
+        assertEquals("Bash", call.block.label)
+        assertNull(reply.end)
+        assertNull(reply.ending())
         assertEquals("and add honey", reply.steps[3].messages.single().text)
         assertEquals(40, reply.metrics!!.completionTokens)
     }
@@ -314,6 +336,47 @@ class ContractTest {
         assertEquals("explore", read("event_jobs", JobsFrame.serializer()).jobs.single().agent)
         assertEquals(2, read("event_metrics", Metrics.serializer()).percent)
         assertEquals("Waybread", read("event_done", DoneFrame.serializer()).chat.title)
+    }
+
+    @Test
+    fun aStoredReplySaysHowItEnded() {
+        val words = ProgressWords { key, args ->
+            mapOf("stopped_reason" to "Stopped: %s", "stopped_reason_person" to "by you", "failed" to "Failed: %s")[key]?.format(*args)
+        }
+        val stopped = read("message_stopped", Message.serializer())
+        assertEquals("person", stopped.end!!.reason)
+        // The app's own words, from the phase and the reason, say what the server's line says.
+        assertEquals(stopped.end!!.text, progressText(stopped.ending()!!, words, 0, Locale.ROOT))
+        val failed = read("message_failed", Message.serializer())
+        assertEquals("failed", failed.ending()!!.phase)
+        assertEquals(failed.end!!.text, progressText(failed.ending()!!, words, 0, Locale.ROOT))
+    }
+
+    @Test
+    fun alwaysAllowIsOfferedOnlyWhereTheRequestOffersIt() {
+        val cards = read("event_ask", AskFrame.serializer()).cards
+        val approvals = cards.filter { it.kind == "approval" }
+        assertEquals(listOf(true, true), approvals.map { offersAlways(it) })
+        val once = approvals[0].copy(items = approvals[0].items.map { it.copy(always = false) })
+        assertFalse(offersAlways(once))
+        // An older server says nothing of it, and offered it always.
+        assertTrue(LembasJson.decodeFromString(CardItem.serializer(), """{"key":"0","kind":"approval"}""").always)
+    }
+
+    @Test
+    fun whatAtOffersAndWhatAttachingItGives() {
+        val items = read("mentions", Mentions.serializer()).items
+        assertEquals(listOf("file", "attachment"), items.map { it.kind })
+        assertEquals("/home/frodo/bread.md", items[0].path)
+        assertEquals("att1", items[1].id)
+        assertEquals("https://example.org/waybread", read("mentions_url", Mentions.serializer()).items.single().url)
+        assertEquals("bread.md", read("attachment_from", AttachmentEnvelope.serializer()).attachment.name)
+    }
+
+    @Test
+    fun aRunningCallComesWithTheTail() {
+        // The tail's `calls` are not drawn yet (the steps are); the frame must still parse.
+        assertEquals("Done. *Wrap", read("event_tail", Tail.serializer()).text)
     }
 
     @Test

@@ -222,7 +222,26 @@ data class SearchResults(
 
 /** One app release the server recommends (`GET /api/v2/apps`), with the page its files are on. */
 @Serializable
-data class AppRelease(val version: String = "", val tag: String = "", val channel: String = "", val page: String = "")
+data class AppRelease(
+    val version: String = "",
+    val tag: String = "",
+    val channel: String = "",
+    val page: String = "",
+    /** The release's other builds, for an updater that installs its own kind: `{url, sha256}` each, where the server knows them. */
+    val notifications: AppBuild? = null,
+    val fdroid: AppBuild? = null,
+)
+
+/** One APK of a release: where it is and its SHA-256. */
+@Serializable
+data class AppBuild(val url: String = "", val sha256: String = "")
+
+/** What `@` offers from the server (`GET /api/v2/mentions`): an earlier `attachment` by [id], a `file` of the tree by [path], or a `url`. */
+@Serializable
+data class Mention(val kind: String = "", val id: String = "", val path: String = "", val url: String = "", val name: String = "", val detail: String = "")
+
+@Serializable
+data class Mentions(val items: List<Mention> = emptyList())
 
 @Serializable
 data class ServerChannel(val version: String = "", val channel: String = "")
@@ -355,8 +374,23 @@ data class Metrics(
     @SerialName("tok_s") val tokPerSecond: Double = 0.0,
 )
 
+/**
+ * How a call is drawn (`display.md`): its [kind], the one short [title], the facts after it as
+ * [chips] (an edit's `+N −M`, a non-zero `exit N`, the hits), and from spec 3.7.0 its [state]
+ * (running, done, failed, denied), the [duration] of a finished call as the spec writes it, and
+ * the tool's name as a person reads it ([label]). The last three are empty from an older server.
+ */
 @Serializable
-data class ToolBlock(val kind: String = "tool", val title: String = "", val chips: List<String> = emptyList(), val added: Int = 0, val removed: Int = 0)
+data class ToolBlock(
+    val kind: String = "tool",
+    val title: String = "",
+    val chips: List<String> = emptyList(),
+    val added: Int = 0,
+    val removed: Int = 0,
+    val state: String = "",
+    val duration: String = "",
+    val label: String = "",
+)
 
 /** One tool call. What the tool wrote varies by tool, so the free-form parts stay JSON. */
 @Serializable
@@ -491,6 +525,14 @@ data class Step(
     val messages: List<SteerNote> = emptyList(),
 )
 
+/**
+ * A reply's end when it did not finish: `stopped` with `person`, `steps`, `budget` or no reason,
+ * or `failed` with the error's first line. [text] is the line in the account's language; the app
+ * writes its own from [phase] and [reason], in the app's language.
+ */
+@Serializable
+data class MessageEnd(val phase: String = "", val reason: String = "", val text: String = "")
+
 @Serializable
 data class Message(
     val id: String,
@@ -499,6 +541,8 @@ data class Message(
     val complete: Boolean = true,
     val stopped: Boolean = false,
     val error: String? = null,
+    /** How a reply that did not finish ended (spec 3.7.0); null for one that finished, or from an older server. */
+    val end: MessageEnd? = null,
     val queued: Boolean = false,
     val machine: Boolean = false,
     val origin: String = "",
@@ -540,6 +584,8 @@ data class CardItem(
     val options: List<Option> = emptyList(),
     val multiple: Boolean = false,
     @SerialName("free_text") val freeText: Boolean = true,
+    /** An approval: whether "Always allow" is offered beside "Allow once" (spec 3.7.0). An older server says nothing, and offered it always. */
+    val always: Boolean = true,
     val editable: Boolean = false,
     val plan: JsonObject? = null,
     @SerialName("mode_choice") val modeChoice: Boolean = false,

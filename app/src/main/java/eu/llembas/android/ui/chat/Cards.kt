@@ -121,8 +121,11 @@ private fun Approval(card: Card, onAnswer: (CardAnswer) -> Unit) {
     } else {
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(onClick = { onAnswer(CardAnswer(verdict = "allow", texts = texts)) }) { Text(stringResource(R.string.card_allow_once)) }
-            OutlinedButton(onClick = { onAnswer(CardAnswer(verdict = "allow_always", texts = texts)) }) {
-                Text(stringResource(R.string.card_allow_always))
+            // Only where the request offers it: a call that may only ever be allowed once has none.
+            if (offersAlways(card)) {
+                OutlinedButton(onClick = { onAnswer(CardAnswer(verdict = "allow_always", texts = texts)) }) {
+                    Text(stringResource(R.string.card_allow_always))
+                }
             }
             // The spec's four actions (display.md §5): Deny at once, or with the person's words to the model.
             TextButton(onClick = { onAnswer(CardAnswer(verdict = "deny")) }) { Text(stringResource(R.string.card_deny)) }
@@ -233,6 +236,9 @@ private fun PlanCard(card: Card, onAnswer: (CardAnswer) -> Unit) {
         }
     }
 }
+
+/** Whether an approval card offers "Always allow": only when every call on it may be remembered (`always`). */
+internal fun offersAlways(card: Card): Boolean = card.items.isNotEmpty() && card.items.all { it.always }
 
 /** A plan's approval as the server reads it: allow, and the mode to continue in where one was chosen. */
 internal fun planApproval(item: CardItem, mode: String?): CardAnswer =

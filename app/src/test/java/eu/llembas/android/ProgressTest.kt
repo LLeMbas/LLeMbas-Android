@@ -46,7 +46,7 @@ class ProgressTest {
 
     @Test
     fun everyConformanceCase() {
-        assertEquals(25, cases.size)
+        assertEquals(26, cases.size)
         for (case in cases) {
             val progress = LembasJson.decodeFromJsonElement(Progress.serializer(), case.getValue("progress"))
             val now = case.getValue("now").jsonPrimitive.long

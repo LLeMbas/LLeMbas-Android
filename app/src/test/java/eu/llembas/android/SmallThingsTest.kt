@@ -1,5 +1,8 @@
 package eu.llembas.android
 
+import eu.llembas.android.api.AppBuild
+import eu.llembas.android.api.AppRelease
+import eu.llembas.android.api.AppsInfo
 import eu.llembas.android.api.LembasJson
 import eu.llembas.android.assist.AssistController
 import eu.llembas.android.assist.Recorder
@@ -33,6 +36,26 @@ class SmallThingsTest {
         )
         assertEquals(LatestFile("https://example.org/a-notifications.apk", "bb"), both.fileFor(notificationsBuild = true))
         assertEquals(LatestFile("https://example.org/a.apk", "aa"), both.fileFor(notificationsBuild = false))
+    }
+
+    @Test
+    fun theInstanceMayNameTheNotificationsBuildOfTheSameRelease() {
+        val plain = Latest(version = "1.0.0", url = "https://example.org/a.apk", sha256 = "aa")
+        val build = AppBuild("https://example.org/a-notifications.apk", "bb")
+        val same = AppRelease(version = "1.0.0", notifications = build)
+        assertEquals(LatestFile(build.url, build.sha256), plain.fileFor(notificationsBuild = true, recommended = same))
+        // Another version, no address worth trusting, or nothing known: it installs nothing itself.
+        assertNull(plain.fileFor(notificationsBuild = true, recommended = same.copy(version = "1.0.1")))
+        assertNull(plain.fileFor(notificationsBuild = true, recommended = same.copy(notifications = build.copy(url = "http://example.org/a.apk"))))
+        assertNull(plain.fileFor(notificationsBuild = true, recommended = null))
+        // The standard build never takes it.
+        assertEquals(LatestFile("https://example.org/a.apk", "aa"), plain.fileFor(notificationsBuild = false, recommended = same))
+        val apps = LembasJson.decodeFromString(
+            AppsInfo.serializer(),
+            """{"apps":{"android":{"version":"1.0.0","notifications":{"url":"https://example.org/n.apk","sha256":"cc"},"fdroid":{"url":"https://example.org/f.apk","sha256":"dd"}}}}""",
+        )
+        assertEquals("cc", apps.android!!.notifications!!.sha256)
+        assertEquals("dd", apps.android!!.fdroid!!.sha256)
     }
 
     @Test

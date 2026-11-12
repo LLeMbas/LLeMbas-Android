@@ -10,9 +10,11 @@ import android.net.Uri
 import android.provider.Settings
 import eu.llembas.android.BuildConfig
 import eu.llembas.android.R
+import eu.llembas.android.api.AppRelease
 import eu.llembas.android.api.LembasJson
 import eu.llembas.android.api.SharedHttp
 import eu.llembas.android.api.await
+import eu.llembas.android.lembas
 import eu.llembas.android.notify.NotificationAccess
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -38,6 +40,16 @@ data class Latest(val version: String, val url: String, val sha256: String, val 
      * same key: Android takes it), so without its own file it installs nothing.
      */
     fun fileFor(notificationsBuild: Boolean): LatestFile? = if (notificationsBuild) notifications else LatestFile(url, sha256)
+
+    /**
+     * The same, with what the instance says of the release it recommends (`GET /api/v2/apps`,
+     * its entry's `notifications` build) for a manifest that names no notifications file -- but
+     * only when both speak of the same version, and the address is https.
+     */
+    fun fileFor(notificationsBuild: Boolean, recommended: AppRelease?): LatestFile? = fileFor(notificationsBuild)
+        ?: recommended?.takeIf { notificationsBuild && it.version == version }?.notifications
+            ?.takeIf { it.url.startsWith("https://") && it.sha256.isNotBlank() }
+            ?.let { LatestFile(it.url, it.sha256) }
 }
 
 /**
@@ -63,7 +75,14 @@ class Updater(private val context: Context) {
                 )
                 return@withContext context.getString(R.string.update_allow_installs)
             }
-            val file = latest.fileFor(NotificationAccess.AVAILABLE) ?: return@withContext context.getString(R.string.update_notifications_manual)
+            // Its own kind: from the manifest, else from the instance's recommendation of the same release.
+            val recommended = if (NotificationAccess.AVAILABLE && latest.notifications == null) {
+                runCatching { context.lembas.instances.client()?.apps()?.android }.getOrNull()
+            } else {
+                null
+            }
+            val file = latest.fileFor(NotificationAccess.AVAILABLE, recommended)
+                ?: return@withContext context.getString(R.string.update_notifications_manual)
             val apk = File(context.cacheDir, "update.apk")
             SharedHttp.newCall(Request.Builder().url(file.url).build()).await().use { response ->
                 if (!response.isSuccessful) return@withContext context.getString(R.string.update_unreachable)

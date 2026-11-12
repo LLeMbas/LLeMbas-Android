@@ -8,7 +8,7 @@ import eu.llembas.android.api.Progress
 import eu.llembas.android.api.ProgressWords
 import eu.llembas.android.api.ToolCall
 import eu.llembas.android.api.callDuration
-import eu.llembas.android.api.end
+import eu.llembas.android.api.ending
 import eu.llembas.android.api.localeNumber
 import eu.llembas.android.api.progressLine
 import eu.llembas.android.api.progressText
@@ -84,7 +84,7 @@ class DisplayTest {
     private fun reply(stopped: Boolean = false, error: String? = null, progress: Progress? = null) =
         Message(id = "m", role = "assistant", stopped = stopped, error = error, progress = progress)
 
-    private fun line(message: Message): String? = message.end()?.let { progressText(it, english, 0, Locale.ROOT) }
+    private fun line(message: Message): String? = message.ending()?.let { progressText(it, english, 0, Locale.ROOT) }
 
     @Test
     fun aReplyThatDidNotFinishKeepsItsLine() {
@@ -96,9 +96,9 @@ class DisplayTest {
         // An error: its first line is the reason, and the line is the spec's, not the raw text.
         assertEquals("Failed: 502 Bad Gateway", line(reply(error = "502 Bad Gateway\n  at upstream")))
         // A reply that finished shows nothing; nor does a user's message, or one that is only queued.
-        assertNull(reply().end())
-        assertNull(Message(id = "u", role = "user", stopped = true).end())
-        assertNull(reply(progress = Progress(phase = "queued", ahead = 1)).end())
+        assertNull(reply().ending())
+        assertNull(Message(id = "u", role = "user", stopped = true).ending())
+        assertNull(reply(progress = Progress(phase = "queued", ahead = 1)).ending())
     }
 
     @Test
@@ -115,7 +115,7 @@ class DisplayTest {
         assertNull(ended.progress)
         assertEquals("Stopped: by you", line(ended.finished!!))
         // A reply that finished after all keeps nothing of an earlier stop.
-        assertNull(live.apply("done", doneWith { }).finished!!.end())
+        assertNull(live.apply("done", doneWith { }).finished!!.ending())
         // The phase moved on before the end (a retry that then worked): no end is remembered.
         val moved = live.apply("status", """{"text": "Writing", "progress": {"phase": "writing", "since": 1}}""")
         assertNull(moved.end)
@@ -176,7 +176,7 @@ class DisplayTest {
                     val progress = case.getValue("progress").let { if (it is JsonNull) null else LembasJson.decodeFromJsonElement(Progress.serializer(), it) }
                     val want = expect.getValue("line").let { if (it is JsonNull) null else it.jsonPrimitive.content }
                     val message = Message(id = "m", role = "assistant", progress = progress)
-                    assertEquals(about, want, message.end()?.let { progressLine(it, english, case.getValue("now").jsonPrimitive.long, Locale.ROOT) })
+                    assertEquals(about, want, message.ending()?.let { progressLine(it, english, case.getValue("now").jsonPrimitive.long, Locale.ROOT) })
                 }
             }
         }

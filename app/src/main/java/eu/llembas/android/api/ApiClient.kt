@@ -174,6 +174,27 @@ class ApiClient(val base: String, private val token: String, val http: OkHttpCli
     /** The app releases this server recommends; 404 from a server older than the route. */
     suspend fun apps(): AppsInfo = get("/apps")
 
+    /** What `@` offers from the server for [q]: the chat's earlier attachments, files of the tree, a web address. */
+    suspend fun mentions(q: String, chatId: String? = null): Mentions = get("/mentions?q=${segment(q)}" + (chatId?.let { "&chat=${segment(it)}" } ?: ""))
+
+    /**
+     * Attach without uploading: a copy of an earlier attachment, a file of the tree as it is now,
+     * or a web page's text -- whichever [mention] is. 404 for what cannot be reached, 400 for a
+     * page that cannot be fetched.
+     */
+    suspend fun attachFrom(mention: Mention, chatId: String? = null): Attachment = send<AttachmentEnvelope>(
+        "POST",
+        "/attachments/from",
+        buildJsonObject {
+            when (mention.kind) {
+                "attachment" -> put("attachment", mention.id)
+                "url" -> put("url", mention.url)
+                else -> put("path", mention.path)
+            }
+            chatId?.let { put("chat", it) }
+        },
+    ).attachment
+
     /** The web's search in JSON: chats by their words (and meaning, where indexed), files, memories. */
     suspend fun search(q: String, within: String = "all", limit: Int = 20): SearchResults = get("/search?q=${segment(q)}&in=${segment(within)}&limit=$limit")
 

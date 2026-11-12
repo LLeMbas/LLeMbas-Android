@@ -32,10 +32,29 @@ const val TITLE_MAX = 80
  * what `/api/v2` says of it.
  */
 fun ToolCall.state(): String = when {
+    // The server's own word, from spec 3.7.0; an older one leaves it to what the call carries.
+    block.state in CALL_STATES -> block.state
+
     status == "denied" -> "denied"
+
     status == "error" || !error.isNullOrEmpty() -> "failed"
+
     status == "running" || status == "pending" -> "running"
+
     else -> "done"
+}
+
+private val CALL_STATES = setOf("running", "done", "failed", "denied")
+
+/**
+ * What is written after a call's title for its time: the server's own [ToolBlock.duration] where
+ * it sends one (it measured the call), else made from the call's `ms`; nothing for a call that is
+ * running or was denied.
+ */
+fun ToolCall.took(): String? {
+    val state = state()
+    if (state == "running" || state == "denied") return null
+    return block.duration.ifBlank { null } ?: callDuration(state, ms)
 }
 
 /**
@@ -59,16 +78,24 @@ fun callDuration(state: String, ms: Long?): String? {
 
 /**
  * How a reply ended, when it did not finish (`display.md` §4): the `stopped` or `failed` progress
- * whose line stays on it. From the end the stream said (kept on the message as its `progress`,
- * with the reason: by you, step limit, budget), else from what the stored row knows -- that it
- * was stopped, or its error, of which the first line is the reason. Null for a reply that
+ * whose line stays on it. From the row's own `end` (spec 3.7.0: the phase and the reason, stored
+ * with the reply); from an older server, the end the stream said (kept on the message as its
+ * `progress`), else what the row knows -- that it was stopped, or its error, of which the first
+ * line is the reason. Null for a reply that
  * finished, a user's message, or one still queued.
  */
-fun Message.end(): Progress? = when {
+fun Message.ending(): Progress? = when {
     role != "assistant" -> null
+
+    // What the server stored with the reply (spec 3.7.0): it stays true after a reload.
+    end?.phase in END_PHASES -> Progress(phase = end?.phase.orEmpty(), reason = end?.reason?.ifBlank { null })
+
     progress?.phase in END_PHASES -> progress
+
     !error.isNullOrBlank() -> Progress(phase = "failed", reason = error.lineSequence().firstOrNull { it.isNotBlank() }?.trim())
+
     stopped -> Progress(phase = "stopped")
+
     else -> null
 }
 
