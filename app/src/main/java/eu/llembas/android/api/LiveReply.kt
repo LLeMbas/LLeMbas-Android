@@ -32,6 +32,8 @@ data class LiveReply(
      */
     val finished: Message? = null,
     val title: String? = null,
+    /** From `done`: a model is still naming the chat, so [title] is the one made from the prompt. */
+    val titlePending: Boolean = false,
     /** A queued prompt the server started when this reply ended: the next stream to follow. */
     val next: String? = null,
     val closed: Boolean = false,
@@ -76,6 +78,7 @@ data class LiveReply(
             copy(
                 finished = if (ended && row.progress == null && end != null) row.copy(progress = end) else row,
                 title = done.chat.title.ifEmpty { null },
+                titlePending = done.chat.titlePending,
                 next = done.next,
                 cards = emptyList(),
                 status = "",
@@ -84,7 +87,7 @@ data class LiveReply(
         } ?: this
 
         // After `done`, when a model has named the chat: the name, and nothing else changes.
-        "title" -> decode(TitleFrame.serializer(), data)?.let { named -> copy(title = named.chat.title.ifEmpty { title }) } ?: this
+        "title" -> decode(TitleFrame.serializer(), data)?.let { named -> copy(title = named.chat.title.ifEmpty { title }, titlePending = false) } ?: this
 
         "close" -> copy(closed = true)
 

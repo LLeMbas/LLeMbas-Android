@@ -9,6 +9,7 @@ import android.speech.SpeechRecognizer
 import androidx.core.content.ContextCompat
 import eu.llembas.android.MainActivity
 import eu.llembas.android.R
+import eu.llembas.android.api.ApiClient
 import eu.llembas.android.api.ApiException
 import eu.llembas.android.api.Card
 import eu.llembas.android.api.CardAnswer
@@ -33,6 +34,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import java.io.ByteArrayOutputStream
@@ -442,6 +444,10 @@ class AssistController(private val context: Context, private val scope: Coroutin
                     live = live.apply(frame.event, frame.data)
                     _state.update { s -> s.copy(turns = s.turns.dropLast(1) + turn.copy(reply = live), busy = live.finished == null) }
                 }
+                // A new chat is named by a model after `done`. The name the sheet offers the chat
+                // under next time is fetched in the background, for a bounded while -- never by
+                // holding the reply's stream open, and never before the answer is spoken.
+                if (live.titlePending && !prefs.assistantTemporary) nameLater(api, inChat, live.title.orEmpty())
                 val heardAll = if (spoken && _state.value.voiceReply && _state.value.canSpeak && live.finished != null && live.cards.isEmpty()) {
                     speak(spokenWords(live.finished?.steps.orEmpty()))
                 } else {
@@ -454,6 +460,26 @@ class AssistController(private val context: Context, private val scope: Coroutin
                 _state.update { it.copy(error = context.explain(e), conversation = false) }
             } finally {
                 _state.update { it.copy(busy = false) }
+            }
+        }
+    }
+
+    /**
+     * The chat's name once a model has given it: asked for a few times over [TITLE_WAIT_MS], then
+     * left -- the name made from the prompt stands, and the app's list has the real one anyway.
+     */
+    private fun nameLater(api: ApiClient, chatId: String, provisional: String) {
+        scope.launch {
+            withTimeoutOrNull(TITLE_WAIT_MS) {
+                while (true) {
+                    delay(TITLE_ASK_MS)
+                    val title = runCatching { api.chat(chatId).chat.title }.getOrNull().orEmpty()
+                    if (title.isNotBlank() && title != provisional) {
+                        context.lembas.instances.savePrefs { if (it.lastAssistChat == chatId) it.copy(lastAssistTitle = title.take(120)) else it }
+                        _state.update { s -> s.copy(last = s.last?.let { l -> if (l.chatId == chatId) l.copy(title = title.take(120)) else l }) }
+                        break
+                    }
+                }
             }
         }
     }
@@ -569,6 +595,10 @@ class AssistController(private val context: Context, private val scope: Coroutin
     companion object {
         const val MAX_SCREEN_CHARS = 8_000
         private const val NO_NOTIFICATIONS = "(none)"
+
+        /** How long, and how often, a new chat's name is asked for after its first reply. */
+        private const val TITLE_WAIT_MS = 20_000L
+        private const val TITLE_ASK_MS = 4_000L
 
         // Listening, for the instance's speech-to-text (the phone's recogniser finds the end of
         // speech itself). Levels are the RMS of 16-bit samples, 0..1: a room is under 0.01,
