@@ -279,17 +279,47 @@ class ChatViewModel(app: Application) :
         following?.cancel()
         following = viewModelScope.launch {
             _state.update { it.copy(live = LiveReply(messageId)) }
+            // Set at `done`, which is the end of the reply: from then on the stream is followed
+            // only for the name a model may still give the chat (the `title` frame).
+            var ended: LiveReply? = null
             try {
                 StreamClient(api()).follow(chat.id, messageId).collect { frame ->
-                    _state.update { s ->
-                        val live = (s.live ?: LiveReply(messageId)).apply(frame.event, frame.data)
+                    val before = ended
+                    if (before != null) {
+                        val named = before.apply(frame.event, frame.data)
+                        ended = named
+                        if (named.title != before.title) _state.update { s -> s.copy(chat = s.chat?.let { c -> named.title?.let { c.copy(title = it) } ?: c }) }
+                        return@collect
+                    }
+                    val live = (_state.value.live ?: LiveReply(messageId)).apply(frame.event, frame.data)
+                    val finished = live.finished
+                    if (finished == null) {
                         // The tree outlives the reply: kept for the activity sheet once it ends.
-                        s.copy(live = live, tree = live.tree ?: s.tree)
+                        _state.update { s -> s.copy(live = live, tree = live.tree ?: s.tree) }
+                        return@collect
+                    }
+                    ended = live
+                    _state.update { s ->
+                        s.copy(
+                            live = null,
+                            tree = live.tree ?: s.tree,
+                            messages = s.messages.map { if (it.id == finished.id) finished else it },
+                            chat = s.chat?.let { c -> live.title?.let { c.copy(title = it) } ?: c },
+                        )
+                    }
+                    // The queue handed a waiting prompt to a fresh reply: the transcript has moved
+                    // on the server, so it is read again rather than patched -- and that reply is
+                    // followed instead of this stream's tail.
+                    live.next?.let { next ->
+                        refresh()
+                        follow(next)
                     }
                 }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                // After `done` only the name was still to come: nothing to say, nothing to redo.
+                if (ended != null) return@launch
                 fail(e)
                 // The reply goes on on the server; what it has written so far is read back
                 // rather than left half-drawn.
@@ -297,21 +327,8 @@ class ChatViewModel(app: Application) :
                 refresh()
                 return@launch
             }
-            val ended = _state.value.live
-            _state.update { s ->
-                val finished = ended?.finished
-                s.copy(
-                    live = null,
-                    messages = if (finished != null) s.messages.map { if (it.id == finished.id) finished else it } else s.messages,
-                    chat = s.chat?.let { c -> ended?.title?.let { c.copy(title = it) } ?: c },
-                )
-            }
-            // The queue handed a waiting prompt to a fresh reply: the transcript has moved on
-            // the server, so it is read again rather than patched.
-            ended?.next?.let { next ->
-                refresh()
-                follow(next)
-            }
+            // The stream closed without a `done` (an older reply already gone): nothing is live.
+            if (ended == null) _state.update { it.copy(live = null) }
         }
     }
 

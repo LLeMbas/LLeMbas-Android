@@ -25,7 +25,11 @@ data class LiveReply(
     val tree: SubagentTree? = null,
     val metrics: Metrics? = null,
     val steered: Set<String> = emptySet(),
-    /** Set by `done`: the finished row, which replaces this in the transcript. */
+    /**
+     * Set by `done`: the finished row, which replaces this in the transcript. `done` is the end
+     * of the reply -- the stream may stay open after it for one `title` frame, which nobody
+     * waits for.
+     */
     val finished: Message? = null,
     val title: String? = null,
     /** A queued prompt the server started when this reply ended: the next stream to follow. */
@@ -78,6 +82,9 @@ data class LiveReply(
                 progress = null,
             )
         } ?: this
+
+        // After `done`, when a model has named the chat: the name, and nothing else changes.
+        "title" -> decode(TitleFrame.serializer(), data)?.let { named -> copy(title = named.chat.title.ifEmpty { title }) } ?: this
 
         "close" -> copy(closed = true)
 

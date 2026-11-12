@@ -637,9 +637,18 @@ data class JobsFrame(val jobs: List<Job> = emptyList())
 
 @Serializable
 data class DoneFrame(val message: Message, val chat: DoneChat = DoneChat(), val next: String? = null) {
+    /**
+     * [titlePending]: a model is still naming the chat, so [title] is the one made from the
+     * prompt and a `title` frame may follow before `close`. `done` is the end of the reply all
+     * the same.
+     */
     @Serializable
-    data class DoneChat(val id: String = "", val title: String = "")
+    data class DoneChat(val id: String = "", val title: String = "", @SerialName("title_pending") val titlePending: Boolean = false)
 }
+
+/** The `title` frame: the name a model gave the chat, after `done`. */
+@Serializable
+data class TitleFrame(val chat: DoneFrame.DoneChat = DoneFrame.DoneChat())
 
 /** The push payload the server sends (services/push.py), as the app reads it. */
 @Serializable

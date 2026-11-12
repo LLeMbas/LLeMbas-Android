@@ -27,6 +27,7 @@ import eu.llembas.android.api.SteeredFrame
 import eu.llembas.android.api.StepsFrame
 import eu.llembas.android.api.SubagentTranscript
 import eu.llembas.android.api.Tail
+import eu.llembas.android.api.TitleFrame
 import eu.llembas.android.api.ToolCall
 import eu.llembas.android.api.TreeFrame
 import eu.llembas.android.api.TreeView
@@ -313,6 +314,26 @@ class ContractTest {
         assertEquals("explore", read("event_jobs", JobsFrame.serializer()).jobs.single().agent)
         assertEquals(2, read("event_metrics", Metrics.serializer()).percent)
         assertEquals("Waybread", read("event_done", DoneFrame.serializer()).chat.title)
+    }
+
+    @Test
+    fun doneIsTheEndAndTheChatsNameMayFollow() {
+        // A new chat's first reply: saved and done at once, under the name made from the prompt.
+        val pending = read("event_done_title_pending", DoneFrame.serializer())
+        assertTrue(pending.chat.titlePending)
+        assertEquals("How is lembas made?", pending.chat.title)
+        assertFalse(read("event_done", DoneFrame.serializer()).chat.titlePending)
+        var live = LiveReply("msg2").apply("done", text("event_done_title_pending"))
+        assertNotNull(live.finished)
+        assertEquals("How is lembas made?", live.title)
+        assertFalse(live.closed)
+        // Then, if a model names it before the stream closes, one `title` frame: only the name changes.
+        val finished = live.finished
+        live = live.apply("title", text("event_title"))
+        assertEquals("Waybread", live.title)
+        assertEquals(finished, live.finished)
+        assertEquals("chat1", read("event_title", TitleFrame.serializer()).chat.id)
+        assertTrue(live.apply("close", text("event_close")).closed)
     }
 
     @Test

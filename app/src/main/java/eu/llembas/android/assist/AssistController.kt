@@ -28,6 +28,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.transformWhile
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -432,7 +433,12 @@ class AssistController(private val context: Context, private val scope: Coroutin
                     }
                 }
                 var live = LiveReply(replyId)
-                StreamClient(api).follow(inChat, replyId).collect { frame ->
+                // To `done`, which is the end of the reply: the stream may stay open after it for
+                // the chat's name, and a spoken answer must not wait for that.
+                StreamClient(api).follow(inChat, replyId).transformWhile { frame ->
+                    emit(frame)
+                    frame.event != "done"
+                }.collect { frame ->
                     live = live.apply(frame.event, frame.data)
                     _state.update { s -> s.copy(turns = s.turns.dropLast(1) + turn.copy(reply = live), busy = live.finished == null) }
                 }

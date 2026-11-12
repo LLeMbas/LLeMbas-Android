@@ -41,6 +41,10 @@ is in alpha and releases come off `main`.
   - The approval card offers the spec's four actions: *Allow once*, *Always allow*, *Deny*, and
     *Deny, and say why*. The plan card approves together with the mode to continue in --
     *Approve, continue in Edit* or *Approve, continue in Manual* -- and *Revise*.
+- **A reply ends when it is saved, and the chat's name follows** (with a server that sends `done`
+  first: LLeMbas 2.0.0-beta.11). The app treats `done` as the end -- the transcript, a spoken
+  answer and a queued prompt no longer wait for a model to name a new chat -- and takes the name
+  from the `title` frame when it comes.
 - **Wake phrases the engine can hear.** "Hey Lembas" is gone: Lembas is not a word the engine's
   model was ever trained on, so it had to be repeated until it happened to land. The phrase is now
   a greeting and a name, each chosen in Settings › Wake word: **Hey**, **OK** or **Hello**, then
