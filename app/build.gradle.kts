@@ -91,6 +91,12 @@ android {
         }
     }
 
+    androidResources {
+        // The wake-word model is read as files the engine opens itself: stored as it is, never
+        // deflated a second time (it does not shrink, and nothing has to inflate it on the phone).
+        noCompress += "onnx"
+    }
+
     buildFeatures {
         compose = true
         buildConfig = true

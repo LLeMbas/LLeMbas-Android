@@ -3,6 +3,35 @@
 What changed in each release of LLeMbas for Android. Versions follow SemVer; until 1.0.0 the app
 is in alpha and releases come off `main`.
 
+## [Unreleased] — for 1.0.0-beta.8
+
+### Fixed
+
+- **The wake word never started, on any phone.** The engine read its model out of the APK in a
+  way that only works for files stored uncompressed, and they were not; the failure was swallowed,
+  so the notification went on saying it listened. The model is now copied out by stream (once per
+  model version, so an update that brings a new model replaces the old one) and stored
+  uncompressed as well.
+- **The wake word's notification told the default phrase, not yours**, each time the app was
+  opened. It is now written from one place, from what the wake word is really doing.
+- A change of phrase could release the engine while the old listening loop was still using it.
+  The old loop is now stopped and waited for first.
+- A microphone that failed to start, or stopped giving sound, was not noticed (and one kind of
+  failure kept a processor core busy for nothing). Both are failures that are shown now.
+- Opening the app with the wake word on but the microphone permission taken away could close the
+  app. The service is no longer started without the permission; the state says what is missing.
+
+### Changed
+
+- **The wake word says what it is doing**, in its notification and under its switch in Settings:
+  *Starting*, *Listening for "…"*, paused and why (screen off, battery saver, assistant open, no
+  microphone permission, or the microphone gives no sound because another app has it or it is
+  switched off), or not working and why (its model could not be unpacked, the engine did not
+  start, the microphone did not start) -- with the technical reason under it in Settings. A
+  failure is tried again by itself, after 2 s, 5 s, 15 s, a minute, then every five minutes.
+- A microphone permission given or taken in the system's settings is noticed when the app comes
+  back to the screen.
+
 ## [1.0.0-beta.7] — 2026-11-10
 
 For LLeMbas server 2.0 (2.0.0-beta.10 or later for phone actions).

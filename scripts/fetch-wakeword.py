@@ -6,7 +6,9 @@
 The engine is sherpa-onnx (Apache-2.0, k2-fsa): its Android library, as the project publishes it
 on its GitHub releases (onnxruntime inside, MIT). The model is its English keyword spotter,
 `sherpa-onnx-kws-zipformer-gigaspeech-3.3M-2024-01-01` (Apache-2.0, trained with icefall), of
-which the int8 encoder, decoder and joiner and the token table go into the APK's assets.
+which the int8 encoder, decoder and joiner and the token table go into the APK's assets, beside a
+`version` file (a hash of the four pinned hashes): the app copies the model out of the APK once
+per version, so a new model replaces the old one on the phone.
 
 Neither file is in the repository: prebuilt binaries are not source. CI runs this before Gradle;
 an F-Droid build, which builds every library from source, uses the `fdroid` flavour, which has
@@ -40,6 +42,8 @@ FILES = {
     "joiner-epoch-12-avg-2-chunk-16-left-64.int8.onnx": ("joiner.int8.onnx", "eae9da0c7e1e6c6a3f4cc42d167899c388f6c6701b94cb96320e4f55df79624c"),
     "tokens.txt": ("tokens.txt", "fd2ded4050a55d2b1578870ba8697d02371980217806b7558bd0a5cc60f3ba53"),
 }
+# What the app keys its copy of the model by: changes whenever a pinned file does.
+MODEL_VERSION = hashlib.sha256("".join(sorted(d for _, d in FILES.values())).encode()).hexdigest()[:16]
 
 
 def sha(data: bytes) -> str:
@@ -66,7 +70,9 @@ def main() -> None:
         AAR.write_bytes(download(AAR_URL, AAR_SHA))
         print(f"fetch-wakeword: {AAR.relative_to(ROOT)}")
     wanted = {ASSETS / name: digest for name, digest in FILES.values()}
+    version = ASSETS / "version"
     if all(p.exists() and sha(p.read_bytes()) == d for p, d in wanted.items()):
+        version.write_text(MODEL_VERSION + "\n")
         print("fetch-wakeword: engine and model are in place")
         return
     archive = tarfile.open(fileobj=io.BytesIO(download(MODEL_URL, MODEL_SHA)), mode="r:bz2")
@@ -76,6 +82,7 @@ def main() -> None:
         if sha(data) != digest:
             sys.exit(f"fetch-wakeword: {source} in the archive is not the pinned file")
         (ASSETS / name).write_bytes(data)
+    version.write_text(MODEL_VERSION + "\n")
     print(f"fetch-wakeword: {ASSETS.relative_to(ROOT)} ({len(FILES)} files)")
 
 

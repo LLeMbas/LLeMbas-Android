@@ -15,40 +15,49 @@ import java.io.File
  * `scripts/fetch-wakeword.py`. It runs on the phone's CPU, one thread, on the 16 kHz samples the
  * service hands it; nothing leaves the phone.
  *
- * The model's files are copied out of the APK's assets once, into the app's no-backup files, so
- * the engine reads them as files beside a keywords file written for the chosen phrase.
+ * The model's files are copied out of the APK's assets into the app's no-backup files
+ * ([unpackWakeModel]: by stream, keyed by the model's version), so the engine reads them as files
+ * beside a keywords file written for the chosen phrase.
  */
 object WakeEngine {
     const val AVAILABLE = true
 
     private val FILES = listOf("encoder.int8.onnx", "decoder.int8.onnx", "joiner.int8.onnx", "tokens.txt")
 
-    fun create(context: Context, phrase: WakePhrase): WakeDetector? = runCatching {
-        val dir = File(context.noBackupFilesDir, "wakeword").apply { mkdirs() }
-        for (name in FILES) {
-            val target = File(dir, name)
-            val size = context.assets.openFd("wakeword/$name").use { it.length }
-            if (!target.exists() || (size >= 0 && target.length() != size)) {
-                context.assets.open("wakeword/$name").use { input -> target.outputStream().use { input.copyTo(it) } }
-            }
+    /**
+     * The engine for [keywords] (the keywords file's text). Throws a [WakeError] that says which
+     * half failed -- the model's files or the engine -- and never returns nothing.
+     */
+    fun create(context: Context, keywords: String): WakeDetector {
+        val dir = File(context.noBackupFilesDir, "wakeword")
+        try {
+            unpackWakeModel({ context.assets.open("wakeword/$it") }, dir, FILES)
+        } catch (e: Exception) {
+            throw WakeError(WakeFailure.Model, e)
         }
-        val keywords = File(dir, "keywords.txt").apply { writeText("${phrase.tokens} @${phrase.id}\n") }
-        val config = KeywordSpotterConfig(
-            featConfig = FeatureConfig(sampleRate = RATE, featureDim = 80),
-            modelConfig = OnlineModelConfig(
-                transducer = OnlineTransducerModelConfig(
-                    encoder = File(dir, "encoder.int8.onnx").path,
-                    decoder = File(dir, "decoder.int8.onnx").path,
-                    joiner = File(dir, "joiner.int8.onnx").path,
+        checkKeywords(keywords, File(dir, "tokens.txt").readText())
+        try {
+            val file = File(dir, "keywords.txt").apply { writeText(keywords) }
+            val config = KeywordSpotterConfig(
+                featConfig = FeatureConfig(sampleRate = RATE, featureDim = 80),
+                modelConfig = OnlineModelConfig(
+                    transducer = OnlineTransducerModelConfig(
+                        encoder = File(dir, "encoder.int8.onnx").path,
+                        decoder = File(dir, "decoder.int8.onnx").path,
+                        joiner = File(dir, "joiner.int8.onnx").path,
+                    ),
+                    tokens = File(dir, "tokens.txt").path,
+                    modelType = "zipformer2",
+                    numThreads = 1,
                 ),
-                tokens = File(dir, "tokens.txt").path,
-                modelType = "zipformer2",
-                numThreads = 1,
-            ),
-            keywordsFile = keywords.path,
-        )
-        SherpaDetector(KeywordSpotter(null, config))
-    }.getOrNull()
+                keywordsFile = file.path,
+            )
+            return SherpaDetector(KeywordSpotter(null, config))
+        } catch (e: Throwable) {
+            // UnsatisfiedLinkError included: a phone whose processor the library was not built for.
+            throw WakeError(WakeFailure.Engine, e)
+        }
+    }
 
     private const val RATE = 16_000
 

@@ -34,7 +34,9 @@ import androidx.compose.material.icons.filled.BatteryAlert
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.Forum
+import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Hearing
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Mic
@@ -102,8 +104,13 @@ import eu.llembas.android.update.Updater
 import eu.llembas.android.update.checksUpdates
 import eu.llembas.android.update.offersBetas
 import eu.llembas.android.wake.WakeEngine
+import eu.llembas.android.wake.WakeFailure
+import eu.llembas.android.wake.WakePause
 import eu.llembas.android.wake.WakePhrases
+import eu.llembas.android.wake.WakeState
+import eu.llembas.android.wake.WakeStatus
 import eu.llembas.android.wake.WakeWordService
+import eu.llembas.android.wake.wakeTitle
 import kotlinx.coroutines.launch
 
 /** What the settings page does; every action has a do-nothing default for the screenshots. */
@@ -154,6 +161,8 @@ data class SettingsState(
     val phoneRecognizer: Boolean = false,
     /** Whether this build has a wake-word engine (the F-Droid build has none). */
     val wakeAvailable: Boolean = false,
+    /** What the wake word is doing right now (WakeStatus), said under its switch while it is on. */
+    val wakeState: WakeState = WakeState.Off,
     /** Whether Android's notification access is given to LLeMbas. */
     val notificationAccess: Boolean = false,
     /** The navigation apps installed: NavApp ids. */
@@ -168,6 +177,7 @@ fun SettingsScreen(onBack: () -> Unit, onAddInstance: () -> Unit) {
     val instances by store.instances.collectAsState(initial = emptyList())
     val active by store.active.collectAsState(initial = null)
     val prefs by store.prefs.collectAsState(initial = Prefs())
+    val wakeState by WakeStatus.state.collectAsState()
     var pushNote by remember { mutableStateOf<String?>(null) }
     var updateNote by remember { mutableStateOf<String?>(null) }
     var updateFound by remember { mutableStateOf<UpdateOffer?>(null) }
@@ -344,6 +354,7 @@ fun SettingsScreen(onBack: () -> Unit, onAddInstance: () -> Unit) {
             beta = beta,
             phoneRecognizer = remember { PhoneRecognizer.available(context) },
             wakeAvailable = WakeEngine.AVAILABLE,
+            wakeState = wakeState,
             // Read again each time Settings is composed: the person comes back from the system's page.
             notificationAccess = NotificationReader.granted(context),
             navApps = remember { NavApp.installedApps(context).map { it.id } },
@@ -629,6 +640,27 @@ private fun WakeWordGroup(state: SettingsState, actions: SettingsActions) {
             onClick = { actions.wakeWord(!on) },
             trailing = { Switch(checked = on, enabled = state.wakeAvailable, onCheckedChange = actions::wakeWord) },
         )
+        if (on) {
+            // The truth, not the setting: listening, paused and why, or failed and why. A tap
+            // tries again (and asks for the microphone when that is what is missing).
+            val wake = state.wakeState
+            val trouble = wake is WakeState.Failed || wake == WakeState.Off || wake == WakeState.Paused(WakePause.NoMicrophone)
+            Rule()
+            SettingRow(
+                if (trouble) Icons.Filled.ErrorOutline else Icons.Filled.GraphicEq,
+                wakeTitle(LocalContext.current, wake),
+                subtitle = when {
+                    wake is WakeState.Failed && wake.why != WakeFailure.NoEngine ->
+                        listOf(stringResource(R.string.wake_failed_line), wake.detail).filter { it.isNotBlank() }.joinToString("\n")
+
+                    wake == WakeState.Off || wake == WakeState.Paused(WakePause.NoMicrophone) -> stringResource(R.string.wake_tap_to_start)
+
+                    else -> null
+                },
+                tint = if (trouble) palette.warning else null,
+                onClick = { actions.wakeWord(true) },
+            )
+        }
         if (state.wakeAvailable) {
             WakePhrases.all.forEach { phrase ->
                 Rule()

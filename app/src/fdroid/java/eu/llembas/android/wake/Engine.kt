@@ -10,5 +10,5 @@ import android.content.Context
 object WakeEngine {
     const val AVAILABLE = false
 
-    fun create(context: Context, phrase: WakePhrase): WakeDetector? = null
+    fun create(context: Context, keywords: String): WakeDetector = throw WakeError(WakeFailure.NoEngine, message = "this build has no wake-word engine")
 }

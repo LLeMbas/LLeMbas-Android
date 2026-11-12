@@ -16,6 +16,7 @@ import android.media.AudioRecord
 import android.media.MediaRecorder
 import android.os.Bundle
 import android.os.PowerManager
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
@@ -32,11 +33,10 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.isActive
+import kotlinx.coroutines.flow.takeWhile
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 /**
  * Listening for the wake word: opt-in (Settings › Assistant › Wake word), off by default.
@@ -55,15 +55,22 @@ import kotlinx.coroutines.withContext
 class WakeWordService : LifecycleService() {
     private val screenOn = MutableStateFlow(true)
     private val batterySaver = MutableStateFlow(false)
-    private var listening: Job? = null
-    private var detector: WakeDetector? = null
-    private var phraseId: String? = null
+    private val mayRecord = MutableStateFlow(true)
+    private var following: Job? = null
+
+    /** Set when the service could not even start: the state then says why, and is not wiped on the way out. */
+    private var keepState = false
 
     private val receiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             when (intent.action) {
-                Intent.ACTION_SCREEN_ON -> screenOn.value = true
+                Intent.ACTION_SCREEN_ON -> {
+                    screenOn.value = true
+                    mayRecord.value = micAllowed(this@WakeWordService)
+                }
+
                 Intent.ACTION_SCREEN_OFF -> screenOn.value = false
+
                 PowerManager.ACTION_POWER_SAVE_MODE_CHANGED -> batterySaver.value = power().isPowerSaveMode
             }
         }
@@ -95,69 +102,66 @@ class WakeWordService : LifecycleService() {
             }
             return START_NOT_STICKY
         }
+        mayRecord.value = micAllowed(this)
         // The notification first: Android stops a foreground service that is slow to show one.
-        ServiceCompat.startForeground(this, NOTIFICATION_ID, notification(null, WakePause.None), ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE)
-        if (listening == null) follow()
+        // It says what is true now -- "starting" for a service that just began, and on every
+        // later start (the app opens) whatever the state already is; never a phrase by default.
+        val now = WakeStatus.state.value.takeUnless { following == null || it == WakeState.Off } ?: WakeState.Starting
+        try {
+            ServiceCompat.startForeground(this, NOTIFICATION_ID, wakeNotification(this, now), ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE)
+        } catch (e: Exception) {
+            // Android refuses a microphone service without the permission, or from the background.
+            Log.w(TAG, "wake word: the service could not start", e)
+            keepState = true
+            WakeStatus.set(
+                if (mayRecord.value) {
+                    WakeState.Failed(WakeFailure.Microphone, WakeError(WakeFailure.Microphone, e).detail)
+                } else {
+                    WakeState.Paused(WakePause.NoMicrophone)
+                },
+            )
+            stopSelf()
+            return START_NOT_STICKY
+        }
+        if (following == null) {
+            keepState = false
+            WakeStatus.set(now)
+            following = lifecycleScope.launch { follow() }
+            // The one place the notification is written: from the state, whenever it changes.
+            val manager = getSystemService(NotificationManager::class.java)
+            lifecycleScope.launch {
+                WakeStatus.state.collect { state ->
+                    if (state != WakeState.Off) manager.notify(NOTIFICATION_ID, wakeNotification(this@WakeWordService, state))
+                }
+            }
+        }
         return START_NOT_STICKY
     }
 
     /** Listen, or pause, as the phone and Settings change; stop when Settings turns it off. */
-    private fun follow() {
-        listening = lifecycleScope.launch {
-            combine(lembas.instances.prefs, screenOn, batterySaver, AssistPresence.open) { prefs, on, saver, open ->
-                if (!prefs.wakeWord) {
-                    null
-                } else {
-                    prefs.wakePhrase to wakePause(on, prefs.wakeScreenOnly, saver, open > 0, micAllowed())
-                }
-            }.distinctUntilChanged().collect { now ->
-                if (now == null) {
-                    stopSelf()
-                    return@collect
-                }
-                val (id, pause) = now
-                val phrase = WakePhrases.byId(id)
-                notify(phrase, pause)
-                hearing?.cancel()
-                hearing = if (pause == WakePause.None) launch { hear(phrase) } else null
+    private suspend fun follow() {
+        val plans = combine(lembas.instances.prefs, screenOn, batterySaver, AssistPresence.open, mayRecord) { prefs, on, saver, open, mic ->
+            if (!prefs.wakeWord) {
+                null
+            } else {
+                val phrase = WakePhrases.byId(prefs.wakePhrase)
+                WakePlan(phrase, wakeKeywords(phrase), wakePause(on, prefs.wakeScreenOnly, saver, open > 0, mic))
             }
         }
-    }
-
-    private var hearing: Job? = null
-
-    @android.annotation.SuppressLint("MissingPermission")
-    private suspend fun hear(phrase: WakePhrase) {
-        val engine = withContext(Dispatchers.Default) {
-            if (phraseId != phrase.id) {
-                detector?.release()
-                detector = WakeEngine.create(this@WakeWordService, phrase)
-                phraseId = phrase.id
-            }
-            detector
-        } ?: return notify(phrase, WakePause.NoMicrophone)
-        val min = AudioRecord.getMinBufferSize(RATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT)
-        val audio = runCatching {
-            AudioRecord(MediaRecorder.AudioSource.VOICE_RECOGNITION, RATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, maxOf(min, RATE))
-        }.getOrNull() ?: return
-        var heard = false
-        withContext(Dispatchers.IO) {
-            try {
-                audio.startRecording()
-                val chunk = ShortArray(RATE / 10)
-                val samples = FloatArray(chunk.size)
-                while (isActive && !heard) {
-                    val read = audio.read(chunk, 0, chunk.size)
-                    if (read <= 0) continue
-                    for (i in 0 until read) samples[i] = chunk[i] / 32768f
-                    heard = engine.accept(if (read == chunk.size) samples else samples.copyOf(read))
-                }
-            } finally {
-                runCatching { audio.stop() }
-                audio.release()
-            }
+        val listener = WakeListener(
+            say = WakeStatus::set,
+            engine = { keywords -> WakeEngine.create(this, keywords) },
+            microphone = { PhoneMicrophone() },
+            heard = { wake() },
+            log = { message, cause -> Log.w(TAG, message, cause) },
+        )
+        try {
+            listener.follow(plans.takeWhile { it != null }.filterNotNull())
+        } finally {
+            // After the loop has ended, so nothing it said on its way out is left standing.
+            if (!keepState) WakeStatus.set(WakeState.Off)
         }
-        if (heard) wake()
+        stopSelf()
     }
 
     /**
@@ -190,44 +194,13 @@ class WakeWordService : LifecycleService() {
         }
     }
 
-    private fun notify(phrase: WakePhrase, pause: WakePause) {
-        getSystemService(NotificationManager::class.java).notify(NOTIFICATION_ID, notification(phrase, pause))
-    }
-
-    /** What the persistent notification says: the phrase it listens for, or why it is paused. Nothing from the account. */
-    private fun notification(phrase: WakePhrase?, pause: WakePause): Notification {
-        val title = when (pause) {
-            WakePause.None -> getString(R.string.wake_listening_for, (phrase ?: WakePhrases.default).words)
-            WakePause.ScreenOff -> getString(R.string.wake_paused_screen)
-            WakePause.BatterySaver -> getString(R.string.wake_paused_battery)
-            WakePause.Assistant -> getString(R.string.wake_paused_assistant)
-            WakePause.NoMicrophone -> getString(R.string.wake_paused_microphone)
-        }
-        val stop = PendingIntent.getService(this, 2, Intent(this, WakeWordService::class.java).setAction(ACTION_STOP), PendingIntent.FLAG_IMMUTABLE)
-        val open = PendingIntent.getActivity(this, 3, Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE)
-        return NotificationCompat.Builder(this, CHANNEL)
-            .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle(title)
-            .setContentText(getString(R.string.wake_notification_line))
-            .setOngoing(true)
-            .setSilent(true)
-            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-            .setContentIntent(open)
-            .addAction(0, getString(R.string.wake_stop), stop)
-            .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
-            .build()
-    }
-
-    private fun micAllowed() = ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
-
     private fun power() = getSystemService(PowerManager::class.java)
 
     override fun onDestroy() {
-        hearing?.cancel()
-        listening?.cancel()
         runCatching { unregisterReceiver(receiver) }
-        detector?.release()
-        detector = null
+        // The scope ends with the service: the listener's loop is joined and its engine released
+        // on the way out (WakeListener.follow), not here under a loop that may still run.
+        if (!keepState) WakeStatus.set(WakeState.Off)
         super.onDestroy()
     }
 
@@ -235,24 +208,95 @@ class WakeWordService : LifecycleService() {
         const val CHANNEL = "wake_word"
         private const val NOTIFICATION_ID = 7001
         private const val HEARD_ID = 7002
-        private const val RATE = 16_000
         private const val SHEET_GRACE_MS = 3_000L
+        private const val TAG = "LLeMbasWake"
         const val ACTION_STOP = "eu.llembas.android.action.WAKE_STOP"
 
-        /** Start listening. Only from the app on screen: Android allows a microphone service from there. */
+        /**
+         * Start listening, or say why not. Only from the app on screen: Android allows a
+         * microphone service from there, and only with the microphone permission -- without it
+         * the service is not started at all, and the state says so.
+         */
         fun start(context: Context) {
-            ContextCompat.startForegroundService(context, Intent(context, WakeWordService::class.java))
+            if (!WakeEngine.AVAILABLE) return WakeStatus.set(WakeState.Failed(WakeFailure.NoEngine))
+            if (!micAllowed(context)) return WakeStatus.set(WakeState.Paused(WakePause.NoMicrophone))
+            try {
+                ContextCompat.startForegroundService(context, Intent(context, WakeWordService::class.java))
+            } catch (e: Exception) {
+                Log.w(TAG, "wake word: the service could not be started", e)
+                WakeStatus.set(WakeState.Failed(WakeFailure.Microphone, WakeError(WakeFailure.Microphone, e).detail))
+            }
         }
 
         fun stop(context: Context) {
             context.stopService(Intent(context, WakeWordService::class.java))
+            WakeStatus.set(WakeState.Off)
         }
+
+        fun micAllowed(context: Context) = ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
 
         fun channel(context: Context) {
             context.getSystemService(NotificationManager::class.java).createNotificationChannel(
                 NotificationChannel(CHANNEL, context.getString(R.string.channel_wake), NotificationManager.IMPORTANCE_LOW),
             )
         }
+    }
+}
+
+/**
+ * The persistent notification, from [state] alone: what the wake word is doing in plain words
+ * (the phrase it listens for, why it is paused, what failed). Nothing from the account.
+ */
+fun wakeNotification(context: Context, state: WakeState): Notification {
+    val stop = PendingIntent.getService(
+        context,
+        2,
+        Intent(context, WakeWordService::class.java).setAction(WakeWordService.ACTION_STOP),
+        PendingIntent.FLAG_IMMUTABLE,
+    )
+    val open = PendingIntent.getActivity(context, 3, Intent(context, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE)
+    return NotificationCompat.Builder(context, WakeWordService.CHANNEL)
+        .setSmallIcon(R.drawable.ic_notification)
+        .setContentTitle(wakeTitle(context, state))
+        .setContentText(wakeLine(context, state))
+        .setOngoing(true)
+        .setSilent(true)
+        .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+        .setContentIntent(open)
+        .addAction(0, context.getString(R.string.wake_stop), stop)
+        .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
+        .build()
+}
+
+/**
+ * The phone's microphone at 16 kHz, recording from the moment it is made -- or an exception that
+ * says what did not work. Android reports none of this by throwing: a recorder that could not be
+ * opened is merely "uninitialized", and one that did not start merely "stopped".
+ */
+@android.annotation.SuppressLint("MissingPermission")
+private class PhoneMicrophone : WakeMicrophone {
+    private val audio: AudioRecord
+
+    init {
+        val rate = WakeListener.RATE
+        val min = AudioRecord.getMinBufferSize(rate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT)
+        check(min > 0) { "the phone cannot record at 16 kHz" }
+        audio = AudioRecord(MediaRecorder.AudioSource.VOICE_RECOGNITION, rate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, maxOf(min, rate))
+        try {
+            check(audio.state == AudioRecord.STATE_INITIALIZED) { "the microphone could not be opened" }
+            audio.startRecording()
+            check(audio.recordingState == AudioRecord.RECORDSTATE_RECORDING) { "recording did not start; another app may have the microphone" }
+        } catch (e: Exception) {
+            audio.release()
+            throw e
+        }
+    }
+
+    override fun read(into: ShortArray): Int = audio.read(into, 0, into.size)
+
+    override fun close() {
+        runCatching { audio.stop() }
+        audio.release()
     }
 }
 

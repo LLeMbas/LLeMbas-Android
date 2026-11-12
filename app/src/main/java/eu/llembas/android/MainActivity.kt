@@ -78,10 +78,6 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         take(intent)
         followLanguage()
-        // A wake word that is on, but whose service the phone stopped: it listens again.
-        lifecycleScope.launch {
-            if (WakeEngine.AVAILABLE && lembas.instances.prefs.first().wakeWord) runCatching { WakeWordService.start(this@MainActivity) }
-        }
         // At most once a day, and only while Settings › About says so (update/ReleaseCheck.kt).
         lifecycleScope.launch { runCatching { ReleaseCheck(this@MainActivity).daily() } }
         if (Build.VERSION.SDK_INT >= 33 &&
@@ -94,6 +90,18 @@ class MainActivity : ComponentActivity() {
             LembasTheme(prefs.theme) {
                 Surface(Modifier.fillMaxSize()) { Root(opening.value) { opening.value = null } }
             }
+        }
+    }
+
+    /**
+     * A wake word that is on, but whose service the phone stopped, listens again -- each time the
+     * app comes to the screen, which is also when a microphone permission given or taken in the
+     * system's settings is noticed ([WakeWordService.start] says which it is).
+     */
+    override fun onStart() {
+        super.onStart()
+        lifecycleScope.launch {
+            if (WakeEngine.AVAILABLE && lembas.instances.prefs.first().wakeWord) WakeWordService.start(this@MainActivity)
         }
     }
 
