@@ -45,11 +45,13 @@ fun ToolCall.state(): String = when {
  */
 fun callDuration(state: String, ms: Long?): String? {
     if (ms == null || state == "running" || state == "denied") return null
-    val seconds = ms.coerceAtLeast(0) / 1000.0
-    if (seconds < 60) return String.format(Locale.ROOT, "%.1fs", seconds)
-    val minutes = (seconds / 60).toLong()
+    // Tenths, rounded half up, decide the form: 59.96 s is not "60.0s" but a minute.
+    val tenths = (ms.coerceAtLeast(0) + 50) / 100
+    if (tenths < 600) return "${tenths / 10}.${tenths % 10}s"
+    val seconds = (ms / 1000).coerceAtLeast(60)
+    val minutes = seconds / 60
     return if (minutes < 60) {
-        String.format(Locale.ROOT, "%dm %02ds", minutes, (seconds % 60).toLong())
+        String.format(Locale.ROOT, "%dm %02ds", minutes, seconds % 60)
     } else {
         String.format(Locale.ROOT, "%dh %02dm", minutes / 60, minutes % 60)
     }

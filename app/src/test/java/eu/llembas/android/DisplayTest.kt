@@ -49,6 +49,9 @@ class DisplayTest {
         assertEquals("0.4s", callDuration("done", 412))
         assertEquals("8.4s", callDuration("done", 8_449))
         assertEquals("59.9s", callDuration("failed", 59_940))
+        // What would round to sixty seconds is a minute, never "60.0s".
+        assertEquals("1m 00s", callDuration("done", 59_960))
+        assertEquals("1m 00s", callDuration("done", 60_000))
         assertEquals("1m 05s", callDuration("done", 65_000))
         assertEquals("2h 03m", callDuration("done", 7_380_000))
         assertEquals("1.2s", callDuration("failed", 1_200))
