@@ -403,6 +403,17 @@
     <string name="wake_word_listen">Listen for a wake word</string>
     <string name="wake_word_line">Off by default. Say the phrase and the assistant opens, listening, over whatever app is on screen.</string>
     <string name="wake_word_unavailable">Not in this build. The F-Droid build has no wake-word engine, because F-Droid builds every library from source; the build from llembas.eu has one.</string>
+    <string name="wake_phrase_line">What you say. In English, whatever language the app is in: the engine only knows English speech.</string>
+    <string name="wake_greeting">Greeting</string>
+    <string name="wake_name">Name</string>
+    <string name="wake_name_google_line">A Google phone or speaker nearby will answer too.</string>
+    <string name="wake_sensitivity">Sensitivity</string>
+    <string name="wake_sensitivity_low">Low</string>
+    <string name="wake_sensitivity_low_line">Starts by mistake least often. You may have to say the phrase more clearly, or twice.</string>
+    <string name="wake_sensitivity_normal">Normal</string>
+    <string name="wake_sensitivity_normal_line">The engine\'s own setting.</string>
+    <string name="wake_sensitivity_high">High</string>
+    <string name="wake_sensitivity_high_line">Hears you most easily, also from further away. Starts by mistake more often.</string>
     <string name="wake_screen_only">Only while the screen is on</string>
     <string name="wake_screen_only_line">Off: it listens with the screen off too, at more cost to the battery.</string>
     <string name="wake_battery">Let it run in the background</string>

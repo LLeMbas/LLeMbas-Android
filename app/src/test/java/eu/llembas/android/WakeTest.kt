@@ -1,9 +1,13 @@
 package eu.llembas.android
 
+import eu.llembas.android.api.LembasJson
+import eu.llembas.android.auth.Prefs
 import eu.llembas.android.wake.WakeError
 import eu.llembas.android.wake.WakeFailure
 import eu.llembas.android.wake.WakePause
 import eu.llembas.android.wake.WakePhrases
+import eu.llembas.android.wake.WakeSensitivity
+import eu.llembas.android.wake.WakeWords
 import eu.llembas.android.wake.checkKeywords
 import eu.llembas.android.wake.unpackWakeModel
 import eu.llembas.android.wake.wakeBackoff
@@ -19,6 +23,7 @@ import org.junit.rules.TemporaryFolder
 import java.io.File
 import java.io.FileNotFoundException
 import java.io.InputStream
+import java.util.Locale
 
 class WakeTest {
     @get:Rule
@@ -79,10 +84,47 @@ class WakeTest {
     }
 
     @Test
-    fun theKeywordsFileNamesThePhraseForTheEngine() {
-        val phrase = WakePhrases.byId("hey_assistant")
-        assertTrue(wakeKeywords(phrase).startsWith("▁HE Y ▁AS S IST ANT "))
-        assertTrue(wakeKeywords(phrase).endsWith("@hey_assistant\n"))
+    fun theKeywordsFileCarriesBoostAndThresholdInTheEnginesSyntax() {
+        val assistant = WakePhrases.byId("hey_assistant")
+        assertEquals("▁HE Y ▁AS S IST ANT :1.5 #0.25 @hey_assistant\n", wakeKeywords(assistant))
+        assertEquals("▁HE Y ▁AS S IST ANT :1.0 #0.35 @hey_assistant\n", wakeKeywords(assistant, WakeSensitivity.Low))
+        assertEquals("▁HE Y ▁AS S IST ANT :2.0 #0.15 @hey_assistant\n", wakeKeywords(assistant, WakeSensitivity.High))
+        // Four pieces: short enough to turn up inside other speech, so it must be a little surer.
+        assertEquals("▁OKAY ▁COMP U TER :1.5 #0.30 @ok_computer\n", wakeKeywords(WakePhrases.byId("ok_computer")))
+        // A phone set to a language with a decimal comma still writes numbers the engine reads.
+        val phone = Locale.getDefault()
+        try {
+            Locale.setDefault(Locale.forLanguageTag("sk-SK"))
+            assertEquals("▁HE Y ▁AS S IST ANT :1.5 #0.25 @hey_assistant\n", wakeKeywords(assistant))
+        } finally {
+            Locale.setDefault(phone)
+        }
+        assertEquals(WakeSensitivity.Normal, WakeSensitivity.byId("nonsense"))
+    }
+
+    @Test
+    fun aPhraseIsAGreetingAndAName() {
+        assertEquals("Hey Assistant", WakePhrases.default.words)
+        assertEquals(WakeWords.greetings.size * WakeWords.names.size, WakePhrases.all.size)
+        assertEquals(WakePhrases.all.size, WakePhrases.all.map { it.id }.toSet().size)
+        assertEquals("OK Google", WakePhrases.byId("ok_google").words)
+        assertEquals("Hello Samantha", WakePhrases.byId("hello_samantha").words)
+        // Nothing the model cannot hear is offered.
+        assertFalse(WakePhrases.all.any { "lembas" in it.id })
+    }
+
+    @Test
+    fun aSavedPhraseThatIsGoneBecomesHeyAssistant() {
+        for (old in listOf("hey_lembas", "ok_lembas", "hello_lembas", "nonsense", "")) assertEquals("hey_assistant", WakePhrases.byId(old).id)
+        assertEquals("hey_assistant", WakePhrases.byId("hey_assistant").id)
+        // Settings as beta.7 saved them: the old phrase id, no sensitivity yet.
+        val saved = LembasJson.decodeFromString(Prefs.serializer(), """{"wakeWord":true,"wakePhrase":"hey_lembas","wakeScreenOnly":false}""")
+        assertTrue(saved.wakeWord)
+        assertFalse(saved.wakeScreenOnly)
+        assertEquals("Hey Assistant", WakePhrases.byId(saved.wakePhrase).words)
+        assertEquals(WakeSensitivity.Normal, WakeSensitivity.byId(saved.wakeSensitivity))
+        // And a phone that never had the wake word starts on the same phrase.
+        assertEquals("hey_assistant", Prefs().wakePhrase)
     }
 
     @Test
@@ -104,7 +146,6 @@ class WakeTest {
 
     @Test
     fun phrasesAreSpelledInTheModelsPieces() {
-        assertEquals("hey_lembas", WakePhrases.byId("nonsense").id)
         // Every piece of the spelling starts a word with ▁ or continues one; no spaces inside a word.
         for (phrase in WakePhrases.all) {
             assertTrue(phrase.tokens.startsWith("▁"))

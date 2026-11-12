@@ -401,6 +401,17 @@
     <string name="wake_word_listen">Auf ein Aktivierungswort hören</string>
     <string name="wake_word_line">Standardmäßig aus. Sag den Satz, und der Assistent öffnet sich zuhörend über der App auf dem Bildschirm.</string>
     <string name="wake_word_unavailable">Nicht in diesem Build. Der F-Droid-Build hat keine Aktivierungswort-Engine, weil F-Droid jede Bibliothek aus dem Quellcode baut; der Build von llembas.eu hat eine.</string>
+    <string name="wake_phrase_line">Das sagst du. Auf Englisch, egal in welcher Sprache die App ist: Die Engine kennt nur englische Sprache.</string>
+    <string name="wake_greeting">Anrede</string>
+    <string name="wake_name">Name</string>
+    <string name="wake_name_google_line">Ein Google-Telefon oder -Lautsprecher in der Nähe antwortet ebenfalls.</string>
+    <string name="wake_sensitivity">Empfindlichkeit</string>
+    <string name="wake_sensitivity_low">Niedrig</string>
+    <string name="wake_sensitivity_low_line">Startet am seltensten versehentlich. Du musst den Satz vielleicht deutlicher oder zweimal sagen.</string>
+    <string name="wake_sensitivity_normal">Normal</string>
+    <string name="wake_sensitivity_normal_line">Die eigene Einstellung der Engine.</string>
+    <string name="wake_sensitivity_high">Hoch</string>
+    <string name="wake_sensitivity_high_line">Hört dich am leichtesten, auch aus größerer Entfernung. Startet öfter versehentlich.</string>
     <string name="wake_screen_only">Nur bei eingeschaltetem Bildschirm</string>
     <string name="wake_screen_only_line">Aus: Es hört auch bei ausgeschaltetem Bildschirm zu, was mehr Akku kostet.</string>
     <string name="wake_battery">Im Hintergrund laufen lassen</string>

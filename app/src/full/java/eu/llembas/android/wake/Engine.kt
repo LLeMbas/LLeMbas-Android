@@ -51,6 +51,9 @@ object WakeEngine {
                     numThreads = 1,
                 ),
                 keywordsFile = file.path,
+                // The word counts once one frame of something else follows it (the engine's own
+                // default; the Kotlin wrapper's is two), so a question may follow straight on.
+                numTrailingBlanks = 1,
             )
             return SherpaDetector(KeywordSpotter(null, config))
         } catch (e: Throwable) {

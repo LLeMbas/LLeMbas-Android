@@ -10,6 +10,10 @@ which the int8 encoder, decoder and joiner and the token table go into the APK's
 `version` file (a hash of the four pinned hashes): the app copies the model out of the APK once
 per version, so a new model replaces the old one on the phone.
 
+The same archive carries the model's `bpe.model`, the tokenizer its token pieces come from. It
+does not go into the APK (the phone has no tokenizer): it is written to `build/wakeword/`, where
+`scripts/gen-wake-phrases.py` reads it to spell the wake phrases.
+
 Neither file is in the repository: prebuilt binaries are not source. CI runs this before Gradle;
 an F-Droid build, which builds every library from source, uses the `fdroid` flavour, which has
 no engine (`app/src/fdroid/.../wake/Engine.kt`). Every download is checked against the SHA-256
@@ -42,6 +46,9 @@ FILES = {
     "joiner-epoch-12-avg-2-chunk-16-left-64.int8.onnx": ("joiner.int8.onnx", "eae9da0c7e1e6c6a3f4cc42d167899c388f6c6701b94cb96320e4f55df79624c"),
     "tokens.txt": ("tokens.txt", "fd2ded4050a55d2b1578870ba8697d02371980217806b7558bd0a5cc60f3ba53"),
 }
+# The model's tokenizer, from the same archive: for scripts/gen-wake-phrases.py, not for the APK.
+BPE = ROOT / "build/wakeword/bpe.model"
+BPE_SHA = "c8a2a0129c4ab8e463164c142f82d25649661b122c8cd0b7aab5c9e80b90ad24"
 # What the app keys its copy of the model by: changes whenever a pinned file does.
 MODEL_VERSION = hashlib.sha256("".join(sorted(d for _, d in FILES.values())).encode()).hexdigest()[:16]
 
@@ -71,6 +78,7 @@ def main() -> None:
         print(f"fetch-wakeword: {AAR.relative_to(ROOT)}")
     wanted = {ASSETS / name: digest for name, digest in FILES.values()}
     version = ASSETS / "version"
+    wanted[BPE] = BPE_SHA
     if all(p.exists() and sha(p.read_bytes()) == d for p, d in wanted.items()):
         version.write_text(MODEL_VERSION + "\n")
         print("fetch-wakeword: engine and model are in place")
@@ -82,6 +90,11 @@ def main() -> None:
         if sha(data) != digest:
             sys.exit(f"fetch-wakeword: {source} in the archive is not the pinned file")
         (ASSETS / name).write_bytes(data)
+    bpe = archive.extractfile(f"{MODEL}/bpe.model").read()
+    if sha(bpe) != BPE_SHA:
+        sys.exit("fetch-wakeword: bpe.model in the archive is not the pinned file")
+    BPE.parent.mkdir(parents=True, exist_ok=True)
+    BPE.write_bytes(bpe)
     version.write_text(MODEL_VERSION + "\n")
     print(f"fetch-wakeword: {ASSETS.relative_to(ROOT)} ({len(FILES)} files)")
 

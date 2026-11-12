@@ -89,8 +89,10 @@ data class Prefs(
     val assistantConversation: Boolean = true,
     /** Listen for a wake word on the phone (WakeWordService). Off until the person turns it on. */
     val wakeWord: Boolean = false,
-    /** Which of WakePhrases.all. */
-    val wakePhrase: String = "hey_lembas",
+    /** Which of WakePhrases.all, as `greeting_name`; an id that is no phrase any more reads as the default. */
+    val wakePhrase: String = "hey_assistant",
+    /** WakeSensitivity's id: low, normal or high. */
+    val wakeSensitivity: String = "normal",
     /** Listen only while the screen is on. */
     val wakeScreenOnly: Boolean = true,
     /** The assistant may read the notifications when asked (with Android's notification access). */

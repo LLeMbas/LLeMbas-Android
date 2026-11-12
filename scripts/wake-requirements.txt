@@ -1,0 +1,5 @@
+# For scripts/gen-wake-phrases.py only (never in the app): the tokenizer the model's bpe.model
+# is read with. Hash-pinned; the two wheels are CPython 3.12 and 3.13 on x86-64 Linux.
+sentencepiece==0.2.3 \
+    --hash=sha256:cc3189b79c1ffda767f71b04238c27ac746f3b7abc263eab9a41c4cf46aee49e \
+    --hash=sha256:4d82f2a0f704f5d0cf027bc8cc5ad49e23c11a9cc0b5bd08ca51985917963bf5

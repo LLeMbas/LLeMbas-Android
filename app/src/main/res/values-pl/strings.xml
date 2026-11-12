@@ -401,6 +401,17 @@
     <string name="wake_word_listen">Nasłuchuj słowa aktywującego</string>
     <string name="wake_word_line">Domyślnie wyłączone. Powiedz frazę, a asystent otworzy się i zacznie słuchać, nad aplikacją na ekranie.</string>
     <string name="wake_word_unavailable">Nie w tej wersji. Wersja z F-Droid nie ma silnika słowa aktywującego, bo F-Droid buduje każdą bibliotekę ze źródeł; wersja z llembas.eu go ma.</string>
+    <string name="wake_phrase_line">To, co mówisz. Po angielsku, niezależnie od języka aplikacji: silnik zna tylko mowę angielską.</string>
+    <string name="wake_greeting">Powitanie</string>
+    <string name="wake_name">Imię</string>
+    <string name="wake_name_google_line">Odpowie też telefon lub głośnik Google w pobliżu.</string>
+    <string name="wake_sensitivity">Czułość</string>
+    <string name="wake_sensitivity_low">Niska</string>
+    <string name="wake_sensitivity_low_line">Najrzadziej uruchamia się przez pomyłkę. Być może trzeba będzie powiedzieć frazę wyraźniej albo dwa razy.</string>
+    <string name="wake_sensitivity_normal">Normalna</string>
+    <string name="wake_sensitivity_normal_line">Własne ustawienie silnika.</string>
+    <string name="wake_sensitivity_high">Wysoka</string>
+    <string name="wake_sensitivity_high_line">Słyszy Cię najłatwiej, także z większej odległości. Częściej uruchamia się przez pomyłkę.</string>
     <string name="wake_screen_only">Tylko przy włączonym ekranie</string>
     <string name="wake_screen_only_line">Wyłączone: słucha także przy wyłączonym ekranie, kosztem baterii.</string>
     <string name="wake_battery">Pozwól działać w tle</string>

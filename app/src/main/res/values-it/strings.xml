@@ -401,6 +401,17 @@
     <string name="wake_word_listen">Ascolta una parola di attivazione</string>
     <string name="wake_word_line">Disattivata per impostazione predefinita. Di’ la frase e l’assistente si apre in ascolto, sopra l’app sullo schermo.</string>
     <string name="wake_word_unavailable">Non in questa build. La build F-Droid non ha un motore per la parola di attivazione, perché F-Droid compila ogni libreria dal sorgente; la build di llembas.eu ce l’ha.</string>
+    <string name="wake_phrase_line">Quello che dici. In inglese, qualunque sia la lingua dell’app: il motore conosce solo il parlato inglese.</string>
+    <string name="wake_greeting">Saluto</string>
+    <string name="wake_name">Nome</string>
+    <string name="wake_name_google_line">Risponderà anche un telefono o un altoparlante Google nelle vicinanze.</string>
+    <string name="wake_sensitivity">Sensibilità</string>
+    <string name="wake_sensitivity_low">Bassa</string>
+    <string name="wake_sensitivity_low_line">È quella che si attiva per errore meno spesso. Potresti dover dire la frase più chiaramente, o due volte.</string>
+    <string name="wake_sensitivity_normal">Normale</string>
+    <string name="wake_sensitivity_normal_line">L’impostazione propria del motore.</string>
+    <string name="wake_sensitivity_high">Alta</string>
+    <string name="wake_sensitivity_high_line">Ti sente più facilmente, anche da più lontano. Si attiva per errore più spesso.</string>
     <string name="wake_screen_only">Solo a schermo acceso</string>
     <string name="wake_screen_only_line">Disattivato: ascolta anche a schermo spento, con più consumo di batteria.</string>
     <string name="wake_battery">Lascialo funzionare in background</string>

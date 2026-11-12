@@ -145,7 +145,7 @@ class WakeWordService : LifecycleService() {
                 null
             } else {
                 val phrase = WakePhrases.byId(prefs.wakePhrase)
-                WakePlan(phrase, wakeKeywords(phrase), wakePause(on, prefs.wakeScreenOnly, saver, open > 0, mic))
+                WakePlan(phrase, wakeKeywords(phrase, WakeSensitivity.byId(prefs.wakeSensitivity)), wakePause(on, prefs.wakeScreenOnly, saver, open > 0, mic))
             }
         }
         val listener = WakeListener(

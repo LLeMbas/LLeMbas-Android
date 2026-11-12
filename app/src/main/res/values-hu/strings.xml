@@ -401,6 +401,17 @@
     <string name="wake_word_listen">Ébresztőszó figyelése</string>
     <string name="wake_word_line">Alapból ki van kapcsolva. Mondd ki a kifejezést, és az asszisztens figyelve megnyílik a képernyőn lévő alkalmazás fölött.</string>
     <string name="wake_word_unavailable">Ebben a változatban nincs. Az F-Droid-változatban nincs ébresztőszó-motor, mert az F-Droid minden könyvtárat forrásból fordít; a llembas.eu-s változatban van.</string>
+    <string name="wake_phrase_line">Ezt mondod. Angolul, bármilyen nyelvű is az alkalmazás: a motor csak az angol beszédet ismeri.</string>
+    <string name="wake_greeting">Megszólítás</string>
+    <string name="wake_name">Név</string>
+    <string name="wake_name_google_line">A közelben lévő Google-telefon vagy -hangszóró is válaszolni fog.</string>
+    <string name="wake_sensitivity">Érzékenység</string>
+    <string name="wake_sensitivity_low">Alacsony</string>
+    <string name="wake_sensitivity_low_line">A legritkábban indul el tévedésből. Lehet, hogy tisztábban vagy kétszer kell kimondanod a kifejezést.</string>
+    <string name="wake_sensitivity_normal">Normál</string>
+    <string name="wake_sensitivity_normal_line">A motor saját beállítása.</string>
+    <string name="wake_sensitivity_high">Magas</string>
+    <string name="wake_sensitivity_high_line">A legkönnyebben hall meg, távolabbról is. Gyakrabban indul el tévedésből.</string>
     <string name="wake_screen_only">Csak bekapcsolt képernyőnél</string>
     <string name="wake_screen_only_line">Kikapcsolva kikapcsolt képernyőnél is figyel, ami több akkumulátort fogyaszt.</string>
     <string name="wake_battery">Futhasson a háttérben</string>

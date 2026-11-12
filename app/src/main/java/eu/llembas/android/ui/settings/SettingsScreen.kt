@@ -53,6 +53,7 @@ import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.Translate
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Update
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -106,10 +107,13 @@ import eu.llembas.android.update.offersBetas
 import eu.llembas.android.wake.WakeEngine
 import eu.llembas.android.wake.WakeFailure
 import eu.llembas.android.wake.WakePause
+import eu.llembas.android.wake.WakePhrase
 import eu.llembas.android.wake.WakePhrases
+import eu.llembas.android.wake.WakeSensitivity
 import eu.llembas.android.wake.WakeState
 import eu.llembas.android.wake.WakeStatus
 import eu.llembas.android.wake.WakeWordService
+import eu.llembas.android.wake.WakeWords
 import eu.llembas.android.wake.wakeTitle
 import kotlinx.coroutines.launch
 
@@ -129,6 +133,7 @@ interface SettingsActions {
     fun assistantConversation(on: Boolean) {}
     fun wakeWord(on: Boolean) {}
     fun wakePhrase(id: String) {}
+    fun wakeSensitivity(id: String) {}
     fun wakeScreenOnly(on: Boolean) {}
     fun batterySettings() {}
     fun notificationSummaries(on: Boolean) {}
@@ -272,6 +277,10 @@ fun SettingsScreen(onBack: () -> Unit, onAddInstance: () -> Unit) {
                 scope.launch { store.savePrefs { it.copy(wakePhrase = id) } }
             }
 
+            override fun wakeSensitivity(id: String) {
+                scope.launch { store.savePrefs { it.copy(wakeSensitivity = id) } }
+            }
+
             override fun wakeScreenOnly(on: Boolean) {
                 scope.launch { store.savePrefs { it.copy(wakeScreenOnly = on) } }
             }
@@ -373,6 +382,15 @@ fun SettingsScreen(onBack: () -> Unit, onAddInstance: () -> Unit) {
 fun SettingsContent(state: SettingsState, actions: SettingsActions, onBack: () -> Unit = {}) {
     val palette = LocalPalette.current
     var choosingLanguage by remember { mutableStateOf(false) }
+    var choosingWake by remember { mutableStateOf<WakeChoice?>(null) }
+    choosingWake?.let { which ->
+        ModalBottomSheet(onDismissRequest = { choosingWake = null }, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+            WakeChoices(which, state.prefs, onPick = { pick ->
+                choosingWake = null
+                pick(actions)
+            })
+        }
+    }
     if (choosingLanguage) {
         ModalBottomSheet(onDismissRequest = { choosingLanguage = false }, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
             LanguageChoices(state.prefs, onPick = {
@@ -539,7 +557,7 @@ fun SettingsContent(state: SettingsState, actions: SettingsActions, onBack: () -
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 )
             }
-            item { WakeWordGroup(state, actions) }
+            item { WakeWordGroup(state, actions, onChoose = { choosingWake = it }) }
             item { NotificationSummaryGroup(state, actions) }
             item { PhoneActionsGroup(state, actions) }
             item {
@@ -623,12 +641,16 @@ fun SettingsContent(state: SettingsState, actions: SettingsActions, onBack: () -
     }
 }
 
+/** The three things about the wake word that are chosen from a list, each in a sheet. */
+enum class WakeChoice { Greeting, Name, Sensitivity }
+
 /**
- * The wake word: off until turned on; the phrase (the engine's own, English); only while the
- * screen is on; and what it costs and why a phone may stop it, said before it is turned on.
+ * The wake word: off until turned on; the phrase as a greeting and a name (English, words the
+ * engine's model knows); how easily it is taken as heard; only while the screen is on; and what
+ * it costs and why a phone may stop it, said before it is turned on.
  */
 @Composable
-private fun WakeWordGroup(state: SettingsState, actions: SettingsActions) {
+private fun WakeWordGroup(state: SettingsState, actions: SettingsActions, onChoose: (WakeChoice) -> Unit) {
     val palette = LocalPalette.current
     val on = state.prefs.wakeWord && state.wakeAvailable
     Group(stringResource(R.string.wake_word)) {
@@ -662,16 +684,37 @@ private fun WakeWordGroup(state: SettingsState, actions: SettingsActions) {
             )
         }
         if (state.wakeAvailable) {
-            WakePhrases.all.forEach { phrase ->
-                Rule()
-                SettingRow(
-                    Icons.Filled.RecordVoiceOver,
-                    "“${phrase.words}”",
-                    showIcon = false,
-                    onClick = { actions.wakePhrase(phrase.id) },
-                    trailing = { RadioButton(selected = state.prefs.wakePhrase == phrase.id, onClick = { actions.wakePhrase(phrase.id) }) },
-                )
-            }
+            val phrase = WakePhrases.byId(state.prefs.wakePhrase)
+            Rule()
+            SettingRow(
+                Icons.Filled.RecordVoiceOver,
+                "“${phrase.words}”",
+                subtitle = stringResource(R.string.wake_phrase_line),
+                onClick = { onChoose(WakeChoice.Name) },
+            )
+            Rule()
+            SettingRow(
+                Icons.Filled.RecordVoiceOver,
+                stringResource(R.string.wake_greeting),
+                subtitle = phrase.greeting.words,
+                showIcon = false,
+                onClick = { onChoose(WakeChoice.Greeting) },
+            )
+            Rule()
+            SettingRow(
+                Icons.Filled.RecordVoiceOver,
+                stringResource(R.string.wake_name),
+                subtitle = if (phrase.name.id == GOOGLE) phrase.name.words + " · " + stringResource(R.string.wake_name_google_line) else phrase.name.words,
+                showIcon = false,
+                onClick = { onChoose(WakeChoice.Name) },
+            )
+            Rule()
+            SettingRow(
+                Icons.Filled.Tune,
+                stringResource(R.string.wake_sensitivity),
+                subtitle = stringResource(sensitivityLabel(WakeSensitivity.byId(state.prefs.wakeSensitivity))),
+                onClick = { onChoose(WakeChoice.Sensitivity) },
+            )
             Rule()
             SettingRow(
                 Icons.Filled.ScreenLockPortrait,
@@ -858,6 +901,84 @@ private fun languageLabel(prefs: Prefs): String = when (prefs.language) {
     AppLanguage.PHONE -> stringResource(R.string.language_phone_is, phoneLanguage())
 
     else -> AppLanguage.name(prefs.language) ?: stringResource(R.string.language_account)
+}
+
+private const val GOOGLE = "google"
+
+private fun sensitivityLabel(sensitivity: WakeSensitivity): Int = when (sensitivity) {
+    WakeSensitivity.Low -> R.string.wake_sensitivity_low
+    WakeSensitivity.Normal -> R.string.wake_sensitivity_normal
+    WakeSensitivity.High -> R.string.wake_sensitivity_high
+}
+
+/**
+ * One of the wake word's lists, as a sheet: the greetings, the names (Google's says that a Google
+ * device nearby answers to it too), or the sensitivity with what each step trades. A pick is
+ * handed back as what to do with the actions.
+ */
+@Composable
+fun WakeChoices(which: WakeChoice, prefs: Prefs, onPick: ((SettingsActions) -> Unit) -> Unit) {
+    val phrase = WakePhrases.byId(prefs.wakePhrase)
+    val google = stringResource(R.string.wake_name_google_line)
+    val title = stringResource(
+        when (which) {
+            WakeChoice.Greeting -> R.string.wake_greeting
+            WakeChoice.Name -> R.string.wake_name
+            WakeChoice.Sensitivity -> R.string.wake_sensitivity
+        },
+    )
+    // id, words, a line under them, whether it is the one chosen.
+    val choices: List<Choice> = when (which) {
+        WakeChoice.Greeting -> WakeWords.greetings.map { Choice(WakePhrase(it, phrase.name).id, it.words, null, it.id == phrase.greeting.id) }
+
+        WakeChoice.Name -> WakeWords.names.map {
+            Choice(WakePhrase(phrase.greeting, it).id, it.words, if (it.id == GOOGLE) google else null, it.id == phrase.name.id)
+        }
+
+        WakeChoice.Sensitivity -> WakeSensitivity.entries.map {
+            val line = when (it) {
+                WakeSensitivity.Low -> R.string.wake_sensitivity_low_line
+                WakeSensitivity.Normal -> R.string.wake_sensitivity_normal_line
+                WakeSensitivity.High -> R.string.wake_sensitivity_high_line
+            }
+            Choice(it.id, stringResource(sensitivityLabel(it)), stringResource(line), it.id == WakeSensitivity.byId(prefs.wakeSensitivity).id)
+        }
+    }
+    ChoiceList(title, choices) { id ->
+        onPick { actions -> if (which == WakeChoice.Sensitivity) actions.wakeSensitivity(id) else actions.wakePhrase(id) }
+    }
+}
+
+private data class Choice(val id: String, val title: String, val subtitle: String?, val chosen: Boolean)
+
+/** A sheet's list of choices: a title, then rows of words that give and a radio button that keeps its size. */
+@Composable
+private fun ChoiceList(title: String, choices: List<Choice>, onPick: (String) -> Unit) {
+    val palette = LocalPalette.current
+    LazyColumn(Modifier.fillMaxWidth(), contentPadding = PaddingValues(bottom = 24.dp)) {
+        item {
+            Text(title, style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(start = 24.dp, end = 24.dp, bottom = 8.dp))
+        }
+        choices.forEach { choice ->
+            item(key = choice.id) {
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable { onPick(choice.id) }
+                        .heightIn(min = 56.dp)
+                        .padding(horizontal = 24.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(choice.title, style = MaterialTheme.typography.bodyLarge)
+                        choice.subtitle?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = palette.inkMuted) }
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    RadioButton(selected = choice.chosen, onClick = { onPick(choice.id) })
+                }
+            }
+        }
+    }
 }
 
 /**

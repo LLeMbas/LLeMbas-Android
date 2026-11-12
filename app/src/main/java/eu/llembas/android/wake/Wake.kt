@@ -9,29 +9,60 @@ import kotlinx.coroutines.flow.update
 import java.io.File
 import java.io.IOException
 import java.io.InputStream
+import java.util.Locale
+
+/** One word of a wake phrase: its [id], how it is written for the person, and its spelling in the model's [pieces]. */
+data class WakeWord(val id: String, val words: String, val pieces: String)
 
 /**
- * A wake word the engine ships: what the person says ([words]), the engine's spelling of it
- * ([tokens], the model's BPE pieces, worked out once with its `bpe.model` -- the phone has no
- * tokenizer), and the id Settings keeps.
+ * A wake phrase: a greeting and a name ("Hey Assistant"). What the person says ([words]), the
+ * engine's spelling of it ([tokens], the model's BPE pieces -- generated with its `bpe.model` by
+ * `scripts/gen-wake-phrases.py`, since the phone has no tokenizer), and the [id] Settings keeps.
  *
- * Only phrases from this list can be chosen: an open-vocabulary spotter hears any phrase it can
- * spell, but how well each one works was not measured, and a free text box would invite one that
- * fires on every other sentence. English only: the model is trained on English speech.
+ * Only words from [WakeWords] can be chosen: an open-vocabulary spotter hears any phrase it can
+ * spell, but one it was never trained to hear (a made-up name) has to be repeated until it lands,
+ * and a free text box would invite one that fires on every other sentence. English only: the
+ * model is trained on English speech.
  */
-data class WakePhrase(val id: String, val words: String, val tokens: String)
+data class WakePhrase(val greeting: WakeWord, val name: WakeWord) {
+    val id: String get() = "${greeting.id}_${name.id}"
+    val words: String get() = "${greeting.words} ${name.words}"
+    val tokens: String get() = "${greeting.pieces} ${name.pieces}"
+}
 
 object WakePhrases {
-    val all = listOf(
-        WakePhrase("hey_lembas", "Hey Lembas", "▁HE Y ▁LE M B AS"),
-        WakePhrase("ok_lembas", "OK Lembas", "▁O K ▁LE M B AS"),
-        WakePhrase("hello_lembas", "Hello Lembas", "▁HE LL O ▁LE M B AS"),
-        WakePhrase("hey_assistant", "Hey Assistant", "▁HE Y ▁AS S IST ANT"),
-    )
+    /** "Hey Assistant". */
+    val default: WakePhrase = WakePhrase(WakeWords.greetings.first { it.id == "hey" }, WakeWords.names.first { it.id == "assistant" })
 
-    val default: WakePhrase get() = all.first()
+    val all: List<WakePhrase> = WakeWords.greetings.flatMap { greeting -> WakeWords.names.map { WakePhrase(greeting, it) } }
 
+    /**
+     * The phrase Settings saved as [id] (`greeting_name`). An id that is no longer a phrase --
+     * the "Lembas" ones of the first wake word, which the model could not hear -- is the default.
+     */
     fun byId(id: String): WakePhrase = all.firstOrNull { it.id == id } ?: default
+}
+
+/**
+ * How easily the phrase is taken as heard: Settings › Wake word › Sensitivity.
+ *
+ * The engine has two numbers per keyword (sherpa-onnx's keyword-spotting documentation): a
+ * boosting score that keeps the phrase's path alive in the search ([boost], larger is easier),
+ * and a trigger threshold, the least probability the heard pieces must reach ([threshold], 0 to
+ * 1, lower is easier). Normal is the engine's own default threshold with the boost its
+ * documentation uses for a two-word phrase; Low takes that documentation's stricter example
+ * (0.35), High goes as far below the default as Low goes above it. Starting values: nobody has
+ * measured them on a phone yet.
+ */
+enum class WakeSensitivity(val id: String, val boost: Float, val threshold: Float) {
+    Low("low", 1.0f, 0.35f),
+    Normal("normal", 1.5f, 0.25f),
+    High("high", 2.0f, 0.15f),
+    ;
+
+    companion object {
+        fun byId(id: String): WakeSensitivity = entries.firstOrNull { it.id == id } ?: Normal
+    }
 }
 
 /**
@@ -171,8 +202,21 @@ fun wakeLine(context: Context, state: WakeState): String? = when (state) {
     else -> null
 }
 
-/** The engine's keywords file for [phrase]: its pieces, then `@` and the id the engine answers with. */
-fun wakeKeywords(phrase: WakePhrase): String = "${phrase.tokens} @${phrase.id}\n"
+/**
+ * The engine's keywords file for [phrase]: its pieces, `:` the boosting score, `#` the trigger
+ * threshold, then `@` and the id the engine answers with (sherpa-onnx's syntax; no space after
+ * `:` or `#`). A phrase of fewer than five pieces is short enough to turn up inside other speech,
+ * so it has to be a little surer ([SHORT_PHRASE_STRICTER]).
+ */
+fun wakeKeywords(phrase: WakePhrase, sensitivity: WakeSensitivity = WakeSensitivity.Normal): String {
+    val short = phrase.tokens.split(' ').size < SHORT_PHRASE_PIECES
+    val threshold = sensitivity.threshold + if (short) SHORT_PHRASE_STRICTER else 0f
+    // Locale.ROOT: a decimal comma would not be a number to the engine.
+    return String.format(Locale.ROOT, "%s :%.1f #%.2f @%s\n", phrase.tokens, sensitivity.boost, threshold, phrase.id)
+}
+
+private const val SHORT_PHRASE_PIECES = 5
+private const val SHORT_PHRASE_STRICTER = 0.05f
 
 /**
  * Every piece of [keywords] must be in the model's token table ([tokens], `tokens.txt`: a piece

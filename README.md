@@ -40,8 +40,11 @@ certificate). The app trusts CAs you installed, as the browser does.
   digital assistant app. On Samsung phones also set Settings › Advanced features › Side button ›
   Press and hold › Digital assistant.
 
-There is no wake word. Android reserves always-on hotword detection for the system's own
-preinstalled assistant; no app from outside can use it.
+A wake word is there if you want one, off by default: Settings › Assistant › Wake word, a
+greeting and a name in English ("Hey Assistant"). Android reserves its low-power, always-on
+hotword detection for the system's own preinstalled assistant, so LLeMbas listens with an
+on-device engine in a microphone service, with a notification up the whole time; nothing leaves
+the phone before the word. Not in the F-Droid build.
 
 ## Build
 

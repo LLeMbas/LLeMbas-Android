@@ -41,6 +41,14 @@ jobs:
       - name: Wake-word engine (hash-pinned)
         run: python3 scripts/fetch-wakeword.py
 
+      # The wake phrases' token pieces are generated from the model's own tokenizer (bpe.model,
+      # fetched above); the committed table must be what it gives.
+      - name: Wake phrases match the model's tokenizer
+        run: |
+          python3 -m venv "$RUNNER_TEMP/wake"
+          "$RUNNER_TEMP/wake/bin/pip" install --quiet --require-hashes --only-binary :all: -r scripts/wake-requirements.txt
+          "$RUNNER_TEMP/wake/bin/python" scripts/gen-wake-phrases.py --check
+
       - uses: gradle/actions/wrapper-validation@v4
 
       - uses: gradle/actions/setup-gradle@v4

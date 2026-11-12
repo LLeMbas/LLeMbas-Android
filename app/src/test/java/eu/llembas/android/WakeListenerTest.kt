@@ -206,7 +206,7 @@ class WakeListenerTest {
         )
         val plans = MutableStateFlow(plan)
         val job = launch(Dispatchers.Default) { listener.follow(plans) }
-        val other = WakePhrases.all.first { it.id != assistant.id }
+        val other = WakePhrases.byId("ok_computer")
         repeat(5) { round ->
             val phrase = if (round % 2 == 0) other else assistant
             said(now, WakeState.Listening(if (round % 2 == 0) assistant.words else other.words))

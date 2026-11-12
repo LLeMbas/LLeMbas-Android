@@ -23,6 +23,22 @@ is in alpha and releases come off `main`.
 
 ### Changed
 
+- **Wake phrases the engine can hear.** "Hey Lembas" is gone: Lembas is not a word the engine's
+  model was ever trained on, so it had to be repeated until it happened to land. The phrase is now
+  a greeting and a name, each chosen in Settings › Wake word: **Hey**, **OK** or **Hello**, then
+  **Assistant**, **Computer**, **Google** (Settings says a Google device nearby will answer too),
+  or an ordinary name -- Victoria, Samantha, Jessica, Amanda, Olivia, Oliver, Sebastian, Jonathan,
+  Alexander, Christopher. The default is "Hey Assistant", and a phrase saved by an earlier beta
+  becomes it. The phrases are English whatever language the app is in, and Settings says so: the
+  model knows English speech only.
+- **Sensitivity** (Low, Normal, High) in Settings › Wake word: how easily the phrase is taken as
+  heard, against how often it starts by mistake. Each phrase now goes to the engine with a
+  boosting score and a trigger threshold (1.0 / 0.35, 1.5 / 0.25, 2.0 / 0.15; a short phrase such
+  as "OK Computer" is held 0.05 stricter). These are starting values from the engine's
+  documentation, not yet tuned on phones.
+- The phrases' spelling in the model's token pieces is generated from the model's own tokenizer
+  (`scripts/gen-wake-phrases.py`) and checked against its token table in CI, instead of written by
+  hand. Elizabeth and Benjamin are left out: the tokenizer can only spell them letter by letter.
 - **The wake word says what it is doing**, in its notification and under its switch in Settings:
   *Starting*, *Listening for "…"*, paused and why (screen off, battery saver, assistant open, no
   microphone permission, or the microphone gives no sound because another app has it or it is

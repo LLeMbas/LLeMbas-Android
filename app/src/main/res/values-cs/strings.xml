@@ -401,6 +401,17 @@
     <string name="wake_word_listen">Naslouchat budicímu slovu</string>
     <string name="wake_word_line">Ve výchozím stavu vypnuto. Řekněte frázi a asistent se otevře a poslouchá, nad jakoukoli aplikací na obrazovce.</string>
     <string name="wake_word_unavailable">V tomto sestavení není. Sestavení pro F-Droid nemá modul pro budicí slovo, protože F-Droid sestavuje každou knihovnu ze zdrojů; sestavení z llembas.eu ho má.</string>
+    <string name="wake_phrase_line">Tohle říkáte. Anglicky, ať je aplikace v jakémkoli jazyce: modul zná jen anglickou řeč.</string>
+    <string name="wake_greeting">Oslovení</string>
+    <string name="wake_name">Jméno</string>
+    <string name="wake_name_google_line">Ozve se i telefon nebo reproduktor Google poblíž.</string>
+    <string name="wake_sensitivity">Citlivost</string>
+    <string name="wake_sensitivity_low">Nízká</string>
+    <string name="wake_sensitivity_low_line">Omylem se spustí nejméně často. Frázi možná budete muset říct zřetelněji nebo dvakrát.</string>
+    <string name="wake_sensitivity_normal">Normální</string>
+    <string name="wake_sensitivity_normal_line">Vlastní nastavení modulu.</string>
+    <string name="wake_sensitivity_high">Vysoká</string>
+    <string name="wake_sensitivity_high_line">Slyší vás nejsnáze, i z větší dálky. Omylem se spustí častěji.</string>
     <string name="wake_screen_only">Jen při zapnuté obrazovce</string>
     <string name="wake_screen_only_line">Vypnuto: poslouchá i při zhasnuté obrazovce, za cenu vyšší spotřeby baterie.</string>
     <string name="wake_battery">Nechat běžet na pozadí</string>
