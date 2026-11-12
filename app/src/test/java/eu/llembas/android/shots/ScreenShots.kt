@@ -62,6 +62,8 @@ import eu.llembas.android.ui.scheduled.SchedulingModelsContent
 import eu.llembas.android.ui.settings.LanguageChoices
 import eu.llembas.android.ui.settings.SettingsActions
 import eu.llembas.android.ui.settings.SettingsContent
+import eu.llembas.android.ui.settings.WakeChoice
+import eu.llembas.android.ui.settings.WakeChoices
 import eu.llembas.android.ui.theme.LocalPalette
 import eu.llembas.android.ui.viewer.FileBody
 import org.junit.Test
@@ -188,6 +190,19 @@ class ScreenShots {
         shoot("08-settings", Phone.Small) { SettingsContent(Fakes.settings, NoSettingsActions) }
         // The whole page: Language, the assistant's switches and Voice input.
         shoot("08-settings", Phone.Scroll) { SettingsContent(Fakes.settings, NoSettingsActions) }
+        // The wake word's rows: failed with its reason and a test that heard nothing; a test that heard it twice.
+        shoot("08-settings-wake-failed", Phone.Scroll) { SettingsContent(Fakes.settingsWakeFailed, NoSettingsActions) }
+        shoot("08-settings-wake-failed", Phone.SmallScroll, fontScale = 1.5f) { SettingsContent(Fakes.settingsWakeFailed, NoSettingsActions) }
+        shoot("08-settings-wake-tested", Phone.Scroll) { SettingsContent(Fakes.settingsWakeTested, NoSettingsActions) }
+    }
+
+    @Test
+    fun wakeChoices() {
+        shoot("08-wake-name", Phone.Scroll) { SheetOver { WakeChoices(WakeChoice.Name, Fakes.settings.prefs, onPick = {}) } }
+        shoot("08-wake-name", Phone.Small, fontScale = 1.5f) { SheetOver { WakeChoices(WakeChoice.Name, Fakes.settings.prefs, onPick = {}) } }
+        shoot("08-wake-greeting") { SheetOver { WakeChoices(WakeChoice.Greeting, Fakes.settings.prefs, onPick = {}) } }
+        shoot("08-wake-sensitivity") { SheetOver { WakeChoices(WakeChoice.Sensitivity, Fakes.settings.prefs, onPick = {}) } }
+        shoot("08-wake-sensitivity", Phone.Small, fontScale = 1.5f) { SheetOver { WakeChoices(WakeChoice.Sensitivity, Fakes.settings.prefs, onPick = {}) } }
     }
 
     @Test

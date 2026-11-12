@@ -5,6 +5,12 @@ is in alpha and releases come off `main`.
 
 ## [Unreleased] — for 1.0.0-beta.8
 
+### Added
+
+- **Test the wake word** (Settings › Wake word): for ten seconds the row shows what the wake word
+  is doing and says *Heard it* when your phrase lands, without opening the assistant -- so a
+  phrase, a sensitivity and a place in the room can be tried before relying on them.
+
 ### Fixed
 
 - **The wake word never started, on any phone.** The engine read its model out of the APK in a

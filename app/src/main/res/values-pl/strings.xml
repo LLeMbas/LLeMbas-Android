@@ -412,6 +412,12 @@
     <string name="wake_sensitivity_normal_line">Własne ustawienie silnika.</string>
     <string name="wake_sensitivity_high">Wysoka</string>
     <string name="wake_sensitivity_high_line">Słyszy Cię najłatwiej, także z większej odległości. Częściej uruchamia się przez pomyłkę.</string>
+    <string name="wake_test">Wypróbuj słowo aktywujące</string>
+    <string name="wake_test_line">Przez dziesięć sekund pokazuje, czy Twoja fraza jest słyszana, bez otwierania asystenta.</string>
+    <string name="wake_test_say">Powiedz teraz „%1$s”…</string>
+    <string name="wake_test_heard">Usłyszano</string>
+    <string name="wake_test_missed">Nie usłyszano w ciągu dziesięciu sekund. Spróbuj bliżej telefonu, w cichszej chwili albo z wyższą czułością.</string>
+    <string name="wake_test_off">Najpierw włącz słowo aktywujące.</string>
     <string name="wake_screen_only">Tylko przy włączonym ekranie</string>
     <string name="wake_screen_only_line">Wyłączone: słucha także przy wyłączonym ekranie, kosztem baterii.</string>
     <string name="wake_battery">Pozwól działać w tle</string>

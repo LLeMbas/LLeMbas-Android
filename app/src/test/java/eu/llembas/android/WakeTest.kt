@@ -7,6 +7,7 @@ import eu.llembas.android.wake.WakeFailure
 import eu.llembas.android.wake.WakePause
 import eu.llembas.android.wake.WakePhrases
 import eu.llembas.android.wake.WakeSensitivity
+import eu.llembas.android.wake.WakeStatus
 import eu.llembas.android.wake.WakeWords
 import eu.llembas.android.wake.checkKeywords
 import eu.llembas.android.wake.unpackWakeModel
@@ -125,6 +126,22 @@ class WakeTest {
         assertEquals(WakeSensitivity.Normal, WakeSensitivity.byId(saved.wakeSensitivity))
         // And a phone that never had the wake word starts on the same phrase.
         assertEquals("hey_assistant", Prefs().wakePhrase)
+    }
+
+    @Test
+    fun aTestTakesTheWordForTenSecondsAndNoLonger() {
+        WakeStatus.startTrial(now = 1_000)
+        assertEquals(0, WakeStatus.trial.value.heard)
+        // Heard during the test: counted, and the assistant stays shut.
+        assertTrue(WakeStatus.heardInTrial(now = 4_000))
+        assertTrue(WakeStatus.heardInTrial(now = 10_999))
+        assertEquals(2, WakeStatus.trial.value.heard)
+        // The test is over by itself, whether or not anybody ended it: the word opens the assistant again.
+        assertFalse(WakeStatus.heardInTrial(now = 11_000))
+        assertEquals(2, WakeStatus.trial.value.heard)
+        // A new test starts its count again.
+        WakeStatus.startTrial(now = 20_000)
+        assertEquals(0, WakeStatus.trial.value.heard)
     }
 
     @Test

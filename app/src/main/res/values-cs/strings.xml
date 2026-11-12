@@ -412,6 +412,12 @@
     <string name="wake_sensitivity_normal_line">Vlastní nastavení modulu.</string>
     <string name="wake_sensitivity_high">Vysoká</string>
     <string name="wake_sensitivity_high_line">Slyší vás nejsnáze, i z větší dálky. Omylem se spustí častěji.</string>
+    <string name="wake_test">Vyzkoušet budicí slovo</string>
+    <string name="wake_test_line">Deset sekund ukazuje, zda je vaši frázi slyšet, bez otevření asistenta.</string>
+    <string name="wake_test_say">Teď řekněte „%1$s“…</string>
+    <string name="wake_test_heard">Slyšel jsem ji</string>
+    <string name="wake_test_missed">Za deset sekund jsem ji neslyšel. Zkuste to blíž k telefonu, ve chvíli většího ticha nebo s vyšší citlivostí.</string>
+    <string name="wake_test_off">Nejdřív zapněte budicí slovo.</string>
     <string name="wake_screen_only">Jen při zapnuté obrazovce</string>
     <string name="wake_screen_only_line">Vypnuto: poslouchá i při zhasnuté obrazovce, za cenu vyšší spotřeby baterie.</string>
     <string name="wake_battery">Nechat běžet na pozadí</string>

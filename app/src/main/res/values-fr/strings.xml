@@ -412,6 +412,12 @@
     <string name="wake_sensitivity_normal_line">Le réglage propre au moteur.</string>
     <string name="wake_sensitivity_high">Élevée</string>
     <string name="wake_sensitivity_high_line">Vous entend le plus facilement, même de plus loin. Se déclenche plus souvent par erreur.</string>
+    <string name="wake_test">Tester le mot d’activation</string>
+    <string name="wake_test_line">Pendant dix secondes, indique si votre phrase est entendue, sans ouvrir l’assistant.</string>
+    <string name="wake_test_say">Dites « %1$s » maintenant…</string>
+    <string name="wake_test_heard">Entendu</string>
+    <string name="wake_test_missed">Pas entendu en dix secondes. Essayez plus près du téléphone, dans un moment plus calme ou avec une sensibilité plus élevée.</string>
+    <string name="wake_test_off">Activez d’abord le mot d’activation.</string>
     <string name="wake_screen_only">Seulement écran allumé</string>
     <string name="wake_screen_only_line">Désactivé : il écoute aussi écran éteint, au prix de plus de batterie.</string>
     <string name="wake_battery">Le laisser tourner en arrière-plan</string>

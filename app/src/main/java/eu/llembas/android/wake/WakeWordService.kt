@@ -16,6 +16,7 @@ import android.media.AudioRecord
 import android.media.MediaRecorder
 import android.os.Bundle
 import android.os.PowerManager
+import android.os.SystemClock
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
@@ -152,7 +153,8 @@ class WakeWordService : LifecycleService() {
             say = WakeStatus::set,
             engine = { keywords -> WakeEngine.create(this, keywords) },
             microphone = { PhoneMicrophone() },
-            heard = { wake() },
+            // A test in Settings takes the word; otherwise the assistant opens.
+            heard = { if (!WakeStatus.heardInTrial(SystemClock.elapsedRealtime())) wake() },
             log = { message, cause -> Log.w(TAG, message, cause) },
         )
         try {

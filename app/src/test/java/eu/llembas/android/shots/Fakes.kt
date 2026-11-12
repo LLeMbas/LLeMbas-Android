@@ -56,6 +56,9 @@ import eu.llembas.android.ui.scheduled.RunState
 import eu.llembas.android.ui.scheduled.ScheduleState
 import eu.llembas.android.ui.scheduled.ScheduledState
 import eu.llembas.android.ui.settings.SettingsState
+import eu.llembas.android.ui.settings.WakeTestShown
+import eu.llembas.android.wake.WakeFailure
+import eu.llembas.android.wake.WakeState
 import kotlinx.serialization.json.jsonObject
 import java.time.LocalDate
 
@@ -357,14 +360,23 @@ object Fakes {
     val settings = SettingsState(
         instances = listOf(home, work),
         active = home,
-        prefs = Prefs(theme = "", assistantTemporary = true, accountLanguage = "en", notificationSummaries = true),
+        prefs = Prefs(theme = "", assistantTemporary = true, accountLanguage = "en", notificationSummaries = true, wakeWord = true, wakePhrase = "ok_google"),
         hasDistributor = true,
         version = "1.0.0-beta.3",
         selfUpdate = true,
         phoneRecognizer = true,
         wakeAvailable = true,
+        wakeState = WakeState.Listening("OK Google"),
         navApps = listOf("google", "osmand"),
     )
+
+    /** The wake word in trouble, and its test having heard the phrase: what the rows say then. */
+    val settingsWakeFailed = settings.copy(
+        prefs = settings.prefs.copy(wakePhrase = "hey_christopher", wakeSensitivity = "high"),
+        wakeState = WakeState.Failed(WakeFailure.Microphone, "IllegalStateException: recording did not start; another app may have the microphone"),
+        wakeTest = WakeTestShown(done = true),
+    )
+    val settingsWakeTested = settings.copy(wakeTest = WakeTestShown(running = true, heard = 2))
 
     // The assistant's sheet, as it opens and as it answers.
     private val assistBase = AssistUiState(

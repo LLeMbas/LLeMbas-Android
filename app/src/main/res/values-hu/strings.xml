@@ -412,6 +412,12 @@
     <string name="wake_sensitivity_normal_line">A motor saját beállítása.</string>
     <string name="wake_sensitivity_high">Magas</string>
     <string name="wake_sensitivity_high_line">A legkönnyebben hall meg, távolabbról is. Gyakrabban indul el tévedésből.</string>
+    <string name="wake_test">Ébresztőszó kipróbálása</string>
+    <string name="wake_test_line">Tíz másodpercig mutatja, hogy hallja-e a kifejezésedet, az asszisztens megnyitása nélkül.</string>
+    <string name="wake_test_say">Most mondd: „%1$s”…</string>
+    <string name="wake_test_heard">Hallottam</string>
+    <string name="wake_test_missed">Tíz másodperc alatt nem hallottam. Próbáld közelebb a telefonhoz, csendesebb pillanatban vagy nagyobb érzékenységgel.</string>
+    <string name="wake_test_off">Előbb kapcsold be az ébresztőszót.</string>
     <string name="wake_screen_only">Csak bekapcsolt képernyőnél</string>
     <string name="wake_screen_only_line">Kikapcsolva kikapcsolt képernyőnél is figyel, ami több akkumulátort fogyaszt.</string>
     <string name="wake_battery">Futhasson a háttérben</string>

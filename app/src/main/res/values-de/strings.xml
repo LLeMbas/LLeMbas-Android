@@ -412,6 +412,12 @@
     <string name="wake_sensitivity_normal_line">Die eigene Einstellung der Engine.</string>
     <string name="wake_sensitivity_high">Hoch</string>
     <string name="wake_sensitivity_high_line">Hört dich am leichtesten, auch aus größerer Entfernung. Startet öfter versehentlich.</string>
+    <string name="wake_test">Aktivierungswort testen</string>
+    <string name="wake_test_line">Zeigt zehn Sekunden lang, ob dein Satz gehört wird, ohne den Assistenten zu öffnen.</string>
+    <string name="wake_test_say">Sag jetzt „%1$s“…</string>
+    <string name="wake_test_heard">Gehört</string>
+    <string name="wake_test_missed">In zehn Sekunden nicht gehört. Versuch es näher am Telefon, in einem ruhigeren Moment oder mit höherer Empfindlichkeit.</string>
+    <string name="wake_test_off">Schalte zuerst das Aktivierungswort ein.</string>
     <string name="wake_screen_only">Nur bei eingeschaltetem Bildschirm</string>
     <string name="wake_screen_only_line">Aus: Es hört auch bei ausgeschaltetem Bildschirm zu, was mehr Akku kostet.</string>
     <string name="wake_battery">Im Hintergrund laufen lassen</string>

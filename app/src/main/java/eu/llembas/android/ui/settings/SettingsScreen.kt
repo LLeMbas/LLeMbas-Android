@@ -6,6 +6,7 @@ import android.Manifest
 import android.app.Activity
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.os.SystemClock
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -69,6 +70,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -115,6 +117,7 @@ import eu.llembas.android.wake.WakeStatus
 import eu.llembas.android.wake.WakeWordService
 import eu.llembas.android.wake.WakeWords
 import eu.llembas.android.wake.wakeTitle
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /** What the settings page does; every action has a do-nothing default for the screenshots. */
@@ -134,6 +137,7 @@ interface SettingsActions {
     fun wakeWord(on: Boolean) {}
     fun wakePhrase(id: String) {}
     fun wakeSensitivity(id: String) {}
+    fun wakeTest() {}
     fun wakeScreenOnly(on: Boolean) {}
     fun batterySettings() {}
     fun notificationSummaries(on: Boolean) {}
@@ -147,6 +151,9 @@ interface SettingsActions {
     fun updateCheck(on: Boolean) {}
     fun updateBetas(on: Boolean) {}
 }
+
+/** "Test the wake word" as the row shows it: not started, [running], or [done] -- with how often it was [heard]. */
+data class WakeTestShown(val running: Boolean = false, val done: Boolean = false, val heard: Int = 0)
 
 /** What the settings page shows. */
 data class SettingsState(
@@ -168,6 +175,8 @@ data class SettingsState(
     val wakeAvailable: Boolean = false,
     /** What the wake word is doing right now (WakeStatus), said under its switch while it is on. */
     val wakeState: WakeState = WakeState.Off,
+    /** "Test the wake word": whether its ten seconds are running, and how often the phrase landed. */
+    val wakeTest: WakeTestShown = WakeTestShown(),
     /** Whether Android's notification access is given to LLeMbas. */
     val notificationAccess: Boolean = false,
     /** The navigation apps installed: NavApp ids. */
@@ -183,6 +192,17 @@ fun SettingsScreen(onBack: () -> Unit, onAddInstance: () -> Unit) {
     val active by store.active.collectAsState(initial = null)
     val prefs by store.prefs.collectAsState(initial = Prefs())
     val wakeState by WakeStatus.state.collectAsState()
+    // The test's ten seconds: its deadline is WakeStatus's, the clock that watches it is here.
+    val trial by WakeStatus.trial.collectAsState()
+    var clock by remember { mutableStateOf(SystemClock.elapsedRealtime()) }
+    var tested by remember { mutableStateOf(false) }
+    LaunchedEffect(trial.until) {
+        while (SystemClock.elapsedRealtime() < trial.until) {
+            clock = SystemClock.elapsedRealtime()
+            delay(200)
+        }
+        clock = SystemClock.elapsedRealtime()
+    }
     var pushNote by remember { mutableStateOf<String?>(null) }
     var updateNote by remember { mutableStateOf<String?>(null) }
     var updateFound by remember { mutableStateOf<UpdateOffer?>(null) }
@@ -281,6 +301,11 @@ fun SettingsScreen(onBack: () -> Unit, onAddInstance: () -> Unit) {
                 scope.launch { store.savePrefs { it.copy(wakeSensitivity = id) } }
             }
 
+            override fun wakeTest() {
+                tested = true
+                WakeStatus.startTrial(SystemClock.elapsedRealtime())
+            }
+
             override fun wakeScreenOnly(on: Boolean) {
                 scope.launch { store.savePrefs { it.copy(wakeScreenOnly = on) } }
             }
@@ -364,6 +389,7 @@ fun SettingsScreen(onBack: () -> Unit, onAddInstance: () -> Unit) {
             phoneRecognizer = remember { PhoneRecognizer.available(context) },
             wakeAvailable = WakeEngine.AVAILABLE,
             wakeState = wakeState,
+            wakeTest = WakeTestShown(running = clock < trial.until, done = tested && clock >= trial.until, heard = if (tested) trial.heard else 0),
             // Read again each time Settings is composed: the person comes back from the system's page.
             notificationAccess = NotificationReader.granted(context),
             navApps = remember { NavApp.installedApps(context).map { it.id } },
@@ -716,6 +742,8 @@ private fun WakeWordGroup(state: SettingsState, actions: SettingsActions, onChoo
                 onClick = { onChoose(WakeChoice.Sensitivity) },
             )
             Rule()
+            WakeTestRow(state, on, phrase.words, actions)
+            Rule()
             SettingRow(
                 Icons.Filled.ScreenLockPortrait,
                 stringResource(R.string.wake_screen_only),
@@ -901,6 +929,39 @@ private fun languageLabel(prefs: Prefs): String = when (prefs.language) {
     AppLanguage.PHONE -> stringResource(R.string.language_phone_is, phoneLanguage())
 
     else -> AppLanguage.name(prefs.language) ?: stringResource(R.string.language_account)
+}
+
+/**
+ * "Test the wake word": for ten seconds the row says what the wake word is doing and whether the
+ * phrase landed ("Heard it"), while the assistant stays shut -- so the phrase, the sensitivity and
+ * the place can be tried without a sheet opening each time.
+ */
+@Composable
+private fun WakeTestRow(state: SettingsState, on: Boolean, phrase: String, actions: SettingsActions) {
+    val palette = LocalPalette.current
+    val test = state.wakeTest
+    val heard = stringResource(R.string.wake_test_heard) + if (test.heard > 1) " ×${test.heard}" else ""
+    val say = stringResource(R.string.wake_test_say, phrase)
+    SettingRow(
+        if (test.heard > 0) Icons.Filled.CheckCircle else Icons.Filled.Mic,
+        stringResource(R.string.wake_test),
+        subtitle = when {
+            !on -> stringResource(R.string.wake_test_off)
+            test.running && test.heard > 0 -> heard + "\n" + say
+            test.running -> say + "\n" + wakeTitle(LocalContext.current, state.wakeState)
+            test.done && test.heard > 0 -> heard
+            test.done -> stringResource(R.string.wake_test_missed)
+            else -> stringResource(R.string.wake_test_line)
+        },
+        tint = when {
+            !on -> null
+            test.heard > 0 -> palette.accent
+            test.done -> palette.warning
+            else -> null
+        },
+        enabled = on,
+        onClick = actions::wakeTest,
+    )
 }
 
 private const val GOOGLE = "google"

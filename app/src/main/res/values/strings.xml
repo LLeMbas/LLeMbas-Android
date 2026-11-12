@@ -414,6 +414,12 @@
     <string name="wake_sensitivity_normal_line">The engine\'s own setting.</string>
     <string name="wake_sensitivity_high">High</string>
     <string name="wake_sensitivity_high_line">Hears you most easily, also from further away. Starts by mistake more often.</string>
+    <string name="wake_test">Test the wake word</string>
+    <string name="wake_test_line">For ten seconds, shows whether your phrase is heard, without opening the assistant.</string>
+    <string name="wake_test_say">Say “%1$s” now…</string>
+    <string name="wake_test_heard">Heard it</string>
+    <string name="wake_test_missed">Not heard in ten seconds. Try closer to the phone, in a quieter moment, or a higher sensitivity.</string>
+    <string name="wake_test_off">Turn the wake word on first.</string>
     <string name="wake_screen_only">Only while the screen is on</string>
     <string name="wake_screen_only_line">Off: it listens with the screen off too, at more cost to the battery.</string>
     <string name="wake_battery">Let it run in the background</string>

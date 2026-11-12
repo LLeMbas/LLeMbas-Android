@@ -412,6 +412,12 @@
     <string name="wake_sensitivity_normal_line">Vlastné nastavenie modulu.</string>
     <string name="wake_sensitivity_high">Vysoká</string>
     <string name="wake_sensitivity_high_line">Počuje vás najľahšie, aj z väčšej diaľky. Omylom sa spustí častejšie.</string>
+    <string name="wake_test">Vyskúšať budiace slovo</string>
+    <string name="wake_test_line">Desať sekúnd ukazuje, či vašu frázu počuť, bez otvorenia asistenta.</string>
+    <string name="wake_test_say">Teraz povedzte „%1$s“…</string>
+    <string name="wake_test_heard">Počul som ju</string>
+    <string name="wake_test_missed">Za desať sekúnd som ju nepočul. Skúste to bližšie k telefónu, v tichšej chvíli alebo s vyššou citlivosťou.</string>
+    <string name="wake_test_off">Najprv zapnite budiace slovo.</string>
     <string name="wake_screen_only">Len pri zapnutej obrazovke</string>
     <string name="wake_screen_only_line">Vypnuté: počúva aj pri zhasnutej obrazovke, za cenu vyššej spotreby batérie.</string>
     <string name="wake_battery">Nechať bežať na pozadí</string>

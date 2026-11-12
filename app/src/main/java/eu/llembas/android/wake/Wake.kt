@@ -153,14 +153,41 @@ sealed interface WakeState {
     data class Failed(val why: WakeFailure, val detail: String = "") : WakeState
 }
 
+/**
+ * "Test the wake word" (Settings): until [until] (the phone's elapsed time, in ms) a heard phrase
+ * is counted in [heard] instead of opening the assistant. A deadline, not a switch, so a test
+ * nobody ends cannot leave the wake word deaf.
+ */
+data class WakeTrial(val until: Long = 0, val heard: Int = 0)
+
 /** The wake word's state for the whole process: written by the service, read by everything else. */
 object WakeStatus {
     private val _state = MutableStateFlow<WakeState>(WakeState.Off)
     val state: StateFlow<WakeState> = _state.asStateFlow()
 
+    private val _trial = MutableStateFlow(WakeTrial())
+    val trial: StateFlow<WakeTrial> = _trial.asStateFlow()
+
     fun set(now: WakeState) {
         _state.value = now
     }
+
+    /** Start a test at [now]: the next [TRIAL_MS] of heard phrases are counted, not acted on. */
+    fun startTrial(now: Long) {
+        _trial.value = WakeTrial(until = now + TRIAL_MS)
+    }
+
+    /** The phrase was heard at [now]: true when a test took it, so the assistant stays shut. */
+    fun heardInTrial(now: Long): Boolean {
+        var taken = false
+        _trial.update { trial ->
+            taken = now < trial.until
+            if (taken) trial.copy(heard = trial.heard + 1) else trial
+        }
+        return taken
+    }
+
+    const val TRIAL_MS = 10_000L
 }
 
 /**
