@@ -247,8 +247,11 @@
     <string name="schedule_run_again">Spustiť znova</string>
     <string name="card_approval">Povoliť to?</string>
     <string name="card_allow_once">Povoliť raz</string>
-    <string name="card_allow_always">Toto vždy povoliť</string>
+    <string name="card_allow_always">Vždy povoliť</string>
     <string name="card_deny">Odmietnuť</string>
+    <string name="card_deny_reason">Odmietnuť a povedať prečo</string>
+    <string name="plan_approve_edit">Schváliť, pokračovať v režime Upraviť</string>
+    <string name="plan_approve_manual">Schváliť, pokračovať v režime Ručne</string>
     <string name="card_reason">Prečo nie? (nepovinné)</string>
     <string name="card_recommended">odporúčané</string>
     <string name="card_answer">Vaša odpoveď</string>

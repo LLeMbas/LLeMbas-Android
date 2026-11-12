@@ -265,8 +265,11 @@ STRINGS: dict[str, str] = {
     # Cards
     "card_approval": "Allow this?",
     "card_allow_once": "Allow once",
-    "card_allow_always": "Always allow this",
+    "card_allow_always": "Always allow",
     "card_deny": "Deny",
+    "card_deny_reason": "Deny, and say why",
+    "plan_approve_edit": "Approve, continue in Edit",
+    "plan_approve_manual": "Approve, continue in Manual",
     "card_reason": "Why not? (optional)",
     "card_recommended": "recommended",
     "card_answer": "Your answer",

@@ -85,6 +85,7 @@ import eu.llembas.android.api.Message
 import eu.llembas.android.api.ShowCard
 import eu.llembas.android.api.Step
 import eu.llembas.android.api.ToolCall
+import eu.llembas.android.api.end
 import eu.llembas.android.lembas
 import eu.llembas.android.ui.MarkdownText
 import eu.llembas.android.ui.Segment
@@ -224,8 +225,16 @@ fun AssistantMessage(
         if (writing) {
             Writing(Modifier.padding(top = if (steps.isEmpty()) 0.dp else 8.dp), withLine = steps.isEmpty())
         } else {
-            message.error?.let {
-                Text(it, color = palette.danger, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 8.dp))
+            // How a reply that did not finish ended (display.md §4): the progress text alone --
+            // "Stopped: by you", "Failed: …" -- staying at the end of the reply; an error in
+            // the error colour, a stop muted. Nothing else says it a second time.
+            message.end()?.let { end ->
+                Text(
+                    progressLineOf(end, withElapsed = false) ?: message.error.orEmpty(),
+                    color = if (end.phase == "failed") palette.danger else palette.inkMuted,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
             }
             // The actions and the foot share one row: the icons keep their 48 dp, the foot gives.
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 2.dp)) {

@@ -36,7 +36,7 @@ data class Progress(
 ) {
     companion object {
         /** `loop.json` `progress.no_elapsed`: drawn as their text alone. */
-        val NO_ELAPSED = setOf("stopped", "failed")
+        val NO_ELAPSED = END_PHASES
     }
 }
 
@@ -51,14 +51,16 @@ fun interface ProgressWords {
 }
 
 /**
- * The phase's text, its fields filled (`progress.md` §2): numbers as integers, a rate with one
- * decimal in [locale]'s format, `retrying`'s `in` counted down to [now]. Null for a phase this
- * app does not know -- a newer server's -- so the caller falls back to the `status` text.
+ * The phase's text, its fields filled (`progress.md` §2): every count and measure in [locale]'s
+ * own number format (`display.md` §6: the phone's grouping and decimal mark; [Locale.ROOT] is the
+ * spec's plain format), a title that had to be cut ending in `…`, `retrying`'s `in` counted down
+ * to [now]. Null for a phase this app does not know -- a newer server's -- so the caller falls
+ * back to the `status` text.
  */
 fun progressText(progress: Progress, words: ProgressWords, now: Long, locale: Locale = Locale.getDefault()): String? {
     val p = progress
     return when (p.phase) {
-        "queued" -> if (p.ahead != null) words.text("queued_ahead", "${p.ahead}") else words.text("queued")
+        "queued" -> if (p.ahead != null) words.text("queued_ahead", localeNumber(p.ahead.toLong(), locale)) else words.text("queued")
 
         "waiting_for_model" -> {
             val model = p.model ?: return null
@@ -72,7 +74,8 @@ fun progressText(progress: Progress, words: ProgressWords, now: Long, locale: Lo
             val done = p.done
             val total = p.total
             if (done != null && total != null && total > 0) {
-                words.text("reading_prompt", "$done", "$total", "${done.toLong() * 100 / total}")
+                val percent = localeNumber(done.toLong() * 100 / total, locale)
+                words.text("reading_prompt", localeNumber(done.toLong(), locale), localeNumber(total.toLong(), locale), percent)
             } else {
                 words.text("reading_prompt_bare")
             }
@@ -80,11 +83,13 @@ fun progressText(progress: Progress, words: ProgressWords, now: Long, locale: Lo
 
         "thinking" -> words.text("thinking")
 
-        "writing" -> p.rate?.let { words.text("writing", String.format(locale, "%.1f", it)) } ?: words.text("writing_bare")
+        "writing" -> p.rate?.let { words.text("writing", localeNumber(it, 1, locale)) } ?: words.text("writing_bare")
 
         "running_tool" -> {
             val tool = p.tool ?: return null
-            if (!p.what.isNullOrBlank()) words.text("running_tool", tool, p.what.take(80)) else words.text("running_tool_bare", tool)
+            // The call's short title (display.md §1): one line, and `…` where it had to be cut.
+            val what = shortTitle(p.what)
+            if (what != null) words.text("running_tool", tool, what) else words.text("running_tool_bare", tool)
         }
 
         "waiting_for_person" -> {
@@ -96,7 +101,7 @@ fun progressText(progress: Progress, words: ProgressWords, now: Long, locale: Lo
             words.text("waiting_for_person", what)
         }
 
-        "waiting_for_subagents" -> words.text("waiting_for_subagents", "${p.running ?: 0}")
+        "waiting_for_subagents" -> words.text("waiting_for_subagents", localeNumber((p.running ?: 0).toLong(), locale))
 
         "compacting" -> words.text("compacting")
 

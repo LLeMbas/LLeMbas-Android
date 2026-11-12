@@ -376,6 +376,8 @@ data class ToolCall(
     val diff: String? = null,
     val exit: Int? = null,
     val hits: Int? = null,
+    /** How long the call took, in milliseconds (spec 3.7.0: `tool_end`'s `ms`); null where it was not kept. */
+    val ms: Long? = null,
     val path: String? = null,
     val truncated: Boolean = false,
     val job: JsonElement? = null,

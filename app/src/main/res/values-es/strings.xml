@@ -247,8 +247,11 @@
     <string name="schedule_run_again">Ejecutar de nuevo</string>
     <string name="card_approval">¿Permitir esto?</string>
     <string name="card_allow_once">Permitir una vez</string>
-    <string name="card_allow_always">Permitir siempre esto</string>
+    <string name="card_allow_always">Permitir siempre</string>
     <string name="card_deny">Denegar</string>
+    <string name="card_deny_reason">Denegar y decir por qué</string>
+    <string name="plan_approve_edit">Aprobar y continuar en Editar</string>
+    <string name="plan_approve_manual">Aprobar y continuar en Manual</string>
     <string name="card_reason">¿Por qué no? (opcional)</string>
     <string name="card_recommended">recomendado</string>
     <string name="card_answer">Su respuesta</string>

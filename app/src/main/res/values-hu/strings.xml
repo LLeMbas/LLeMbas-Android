@@ -247,8 +247,11 @@
     <string name="schedule_run_again">Futtatás újra</string>
     <string name="card_approval">Engedélyezzük ezt?</string>
     <string name="card_allow_once">Engedélyezés egyszer</string>
-    <string name="card_allow_always">Ennek mindig engedélyezése</string>
+    <string name="card_allow_always">Engedélyezés mindig</string>
     <string name="card_deny">Elutasítás</string>
+    <string name="card_deny_reason">Elutasítás indoklással</string>
+    <string name="plan_approve_edit">Jóváhagyás, folytatás Szerkesztés módban</string>
+    <string name="plan_approve_manual">Jóváhagyás, folytatás Kézi módban</string>
     <string name="card_reason">Miért nem? (opcionális)</string>
     <string name="card_recommended">ajánlott</string>
     <string name="card_answer">Az Ön válasza</string>

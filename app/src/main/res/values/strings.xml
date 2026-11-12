@@ -248,8 +248,11 @@
     <string name="schedule_run_again">Run again</string>
     <string name="card_approval">Allow this?</string>
     <string name="card_allow_once">Allow once</string>
-    <string name="card_allow_always">Always allow this</string>
+    <string name="card_allow_always">Always allow</string>
     <string name="card_deny">Deny</string>
+    <string name="card_deny_reason">Deny, and say why</string>
+    <string name="plan_approve_edit">Approve, continue in Edit</string>
+    <string name="plan_approve_manual">Approve, continue in Manual</string>
     <string name="card_reason">Why not? (optional)</string>
     <string name="card_recommended">recommended</string>
     <string name="card_answer">Your answer</string>

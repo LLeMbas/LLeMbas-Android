@@ -51,6 +51,8 @@ import eu.llembas.android.api.Message
 import eu.llembas.android.api.ShowCard
 import eu.llembas.android.api.Step
 import eu.llembas.android.api.ToolCall
+import eu.llembas.android.api.callDuration
+import eu.llembas.android.api.state
 import eu.llembas.android.ui.MarkdownText
 import eu.llembas.android.ui.theme.LocalPalette
 
@@ -106,6 +108,10 @@ fun ToolCallBlock(call: ToolCall, depth: Int = 0, onShow: ((ShowCard) -> Unit)? 
             )
             call.block.chips.forEach { chip ->
                 Text(chip, style = MaterialTheme.typography.labelSmall, color = palette.inkFaint, modifier = Modifier.padding(start = 6.dp))
+            }
+            // How long a finished call took (display.md §2); a running or a denied one shows none.
+            callDuration(call.state(), call.ms)?.let { took ->
+                Text(took, style = MaterialTheme.typography.labelSmall, color = palette.inkFaint, maxLines = 1, modifier = Modifier.padding(start = 6.dp))
             }
         }
         call.purpose?.takeIf { it.isNotBlank() }?.let {

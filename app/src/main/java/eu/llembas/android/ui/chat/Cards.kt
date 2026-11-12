@@ -124,7 +124,9 @@ private fun Approval(card: Card, onAnswer: (CardAnswer) -> Unit) {
             OutlinedButton(onClick = { onAnswer(CardAnswer(verdict = "allow_always", texts = texts)) }) {
                 Text(stringResource(R.string.card_allow_always))
             }
-            TextButton(onClick = { refusing = true }) { Text(stringResource(R.string.card_deny)) }
+            // The spec's four actions (display.md §5): Deny at once, or with the person's words to the model.
+            TextButton(onClick = { onAnswer(CardAnswer(verdict = "deny")) }) { Text(stringResource(R.string.card_deny)) }
+            TextButton(onClick = { refusing = true }) { Text(stringResource(R.string.card_deny_reason)) }
         }
     }
 }
@@ -204,20 +206,11 @@ private fun toggle(item: CardItem, now: Set<String>?, label: String): Set<String
 @Composable
 private fun PlanCard(card: Card, onAnswer: (CardAnswer) -> Unit) {
     val item = card.items.firstOrNull() ?: return
-    var mode by remember { mutableStateOf("edit") }
     var revising by remember { mutableStateOf(false) }
     var feedback by remember { mutableStateOf("") }
     val plan = item.plan?.let { runCatching { LembasJson.decodeFromJsonElement(Plan.serializer(), it) }.getOrNull() }
     Text(plan?.title?.ifBlank { null } ?: item.title, style = MaterialTheme.typography.titleMedium)
     plan?.let { PlanBody(it) }
-    if (item.modeChoice) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            RadioButton(selected = mode == "edit", onClick = { mode = "edit" })
-            Text(stringResource(R.string.mode_edit))
-            RadioButton(selected = mode == "manual", onClick = { mode = "manual" })
-            Text(stringResource(R.string.mode_manual))
-        }
-    }
     if (revising) {
         OutlinedTextField(
             value = feedback,
@@ -227,14 +220,23 @@ private fun PlanCard(card: Card, onAnswer: (CardAnswer) -> Unit) {
         )
         Button(onClick = { onAnswer(CardAnswer(verdict = "deny", reason = feedback)) }) { Text(stringResource(R.string.card_send)) }
     } else {
+        // Approve together with the mode the work continues in (display.md §5), where the
+        // session may choose one; otherwise Approve alone. And Revise.
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(onClick = {
-                onAnswer(CardAnswer(verdict = "allow", choices = if (item.modeChoice) mapOf(item.key to listOf(mode)) else emptyMap()))
-            }) { Text(stringResource(R.string.plan_approve)) }
-            OutlinedButton(onClick = { revising = true }) { Text(stringResource(R.string.plan_revise)) }
+            if (item.modeChoice) {
+                Button(onClick = { onAnswer(planApproval(item, "edit")) }) { Text(stringResource(R.string.plan_approve_edit)) }
+                OutlinedButton(onClick = { onAnswer(planApproval(item, "manual")) }) { Text(stringResource(R.string.plan_approve_manual)) }
+            } else {
+                Button(onClick = { onAnswer(planApproval(item, null)) }) { Text(stringResource(R.string.plan_approve)) }
+            }
+            TextButton(onClick = { revising = true }) { Text(stringResource(R.string.plan_revise)) }
         }
     }
 }
+
+/** A plan's approval as the server reads it: allow, and the mode to continue in where one was chosen. */
+internal fun planApproval(item: CardItem, mode: String?): CardAnswer =
+    CardAnswer(verdict = "allow", choices = if (item.modeChoice && mode != null) mapOf(item.key to listOf(mode)) else emptyMap())
 
 /** A plan's phases and tasks, ticked as the reply works through them. */
 @Composable

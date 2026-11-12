@@ -63,6 +63,9 @@ fun progressWords(resources: Resources): ProgressWords = ProgressWords { key, ar
     PROGRESS_STRINGS[key]?.let { id -> if (args.isEmpty()) resources.getString(id) else resources.getString(id, *args) }
 }
 
+/** The end of a progress line: the shared `progress.line` separator and [clock], without the text before it. */
+fun progressClock(resources: Resources, clock: String): String = resources.getString(R.string.progress_line, "", clock)
+
 /** The clock a progress line ticks by: now, again on every whole second. */
 @Composable
 fun rememberTick(): Long {
@@ -115,7 +118,8 @@ fun ProgressStatus(progress: Progress?, status: String, style: TextStyle, color:
     }
     Row(modifier, verticalAlignment = Alignment.Top) {
         Text(text, style = style, color = color, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
-        // The spec's separator, `progress.line`'s " · ", before the clock.
-        if (clock != null) Text(" · $clock", style = style, color = color, maxLines = 1, softWrap = false)
+        // The clock after the shared separator: `progress.line` (`{{text}} · {{elapsed}}`) with
+        // the text left out, so the separator is the spec's and not a copy of it.
+        if (clock != null) Text(progressClock(LocalContext.current.resources, clock), style = style, color = color, maxLines = 1, softWrap = false)
     }
 }

@@ -247,8 +247,11 @@
     <string name="schedule_run_again">Erneut ausführen</string>
     <string name="card_approval">Das erlauben?</string>
     <string name="card_allow_once">Einmal erlauben</string>
-    <string name="card_allow_always">Dies immer erlauben</string>
+    <string name="card_allow_always">Immer erlauben</string>
     <string name="card_deny">Ablehnen</string>
+    <string name="card_deny_reason">Ablehnen und begründen</string>
+    <string name="plan_approve_edit">Bestätigen, weiter im Modus Bearbeiten</string>
+    <string name="plan_approve_manual">Bestätigen, weiter im Modus Manuell</string>
     <string name="card_reason">Warum nicht? (optional)</string>
     <string name="card_recommended">empfohlen</string>
     <string name="card_answer">Ihre Antwort</string>

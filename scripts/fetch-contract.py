@@ -26,7 +26,7 @@ SOURCE = "tests/fixtures/api_v2"
 # The harness spec's conformance cases a client draws by, from the server's vendored copy of the
 # spec at the same ref: `harness_<name>.json` beside the fixtures, once the server has them.
 HARNESS = "src/lembas/harness_spec/conformance"
-HARNESS_CASES = ("progress.json",)
+HARNESS_CASES = ("progress.json", "display.json")
 OUT = ROOT / "contract"
 LOCK = OUT / "lock.json"
 

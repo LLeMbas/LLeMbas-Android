@@ -17,6 +17,8 @@ data class LiveReply(
     val status: String = "",
     /** The structured progress beside [status] (spec 3.4.0); null from an older server, or idle. */
     val progress: Progress? = null,
+    /** How the turn ended when it did not finish: the last `stopped` or `failed` progress, with its reason. */
+    val end: Progress? = null,
     val cards: List<Card> = emptyList(),
     val jobs: List<Job> = emptyList(),
     /** The subagent tree (spec 3.4.0), from the `tree` frame; null until there is one. */
@@ -49,7 +51,9 @@ data class LiveReply(
 
         "plan" -> copy(plan = decodePlan(data))
 
-        "status" -> decode(StatusFrame.serializer(), data)?.let { copy(status = it.text, progress = it.progress) } ?: this
+        "status" -> decode(StatusFrame.serializer(), data)?.let { frame ->
+            copy(status = frame.text, progress = frame.progress, end = frame.progress?.takeIf { it.phase in END_PHASES })
+        } ?: this
 
         "ask" -> decode(AskFrame.serializer(), data)?.let { copy(cards = it.cards) } ?: this
 
@@ -59,8 +63,20 @@ data class LiveReply(
 
         "metrics" -> decode(Metrics.serializer(), data)?.let { copy(metrics = it) } ?: this
 
-        "done" -> decode(DoneFrame.serializer(), data)?.let {
-            copy(finished = it.message, title = it.chat.title.ifEmpty { null }, next = it.next, cards = emptyList(), status = "", progress = null)
+        "done" -> decode(DoneFrame.serializer(), data)?.let { done ->
+            // The finished row says that it was stopped or failed; the stream said why (by you,
+            // the step limit, the budget). The reason goes with the row, where its line stays
+            // (display.md §4).
+            val row = done.message
+            val ended = row.stopped || !row.error.isNullOrBlank()
+            copy(
+                finished = if (ended && row.progress == null && end != null) row.copy(progress = end) else row,
+                title = done.chat.title.ifEmpty { null },
+                next = done.next,
+                cards = emptyList(),
+                status = "",
+                progress = null,
+            )
         } ?: this
 
         "close" -> copy(closed = true)

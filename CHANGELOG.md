@@ -29,6 +29,18 @@ is in alpha and releases come off `main`.
 
 ### Changed
 
+- **One display with the web, Desktop and the CLI** (harness spec 3.7.0, `display.md`):
+  - A reply that was stopped or failed keeps the spec's line at its end -- *Stopped: by you*,
+    *Stopped: step limit*, *Stopped: budget*, *Failed: …* -- an error in the error colour, a stop
+    muted. A stopped reply said nothing at all before, and a failed one showed the raw error.
+  - A finished tool call says how long it took (`0.4s`, `1m 05s`, `2h 03m`) where the instance
+    sends the call's time; a running or a denied call shows none.
+  - Counts in the progress line are in the phone's own number format (`12,480`, `12 480`,
+    `12.480`); a tool call's title that had to be cut ends in `…`; the clock is joined by the
+    shared separator instead of a copy of it.
+  - The approval card offers the spec's four actions: *Allow once*, *Always allow*, *Deny*, and
+    *Deny, and say why*. The plan card approves together with the mode to continue in --
+    *Approve, continue in Edit* or *Approve, continue in Manual* -- and *Revise*.
 - **Wake phrases the engine can hear.** "Hey Lembas" is gone: Lembas is not a word the engine's
   model was ever trained on, so it had to be repeated until it happened to land. The phrase is now
   a greeting and a name, each chosen in Settings › Wake word: **Hey**, **OK** or **Hello**, then
