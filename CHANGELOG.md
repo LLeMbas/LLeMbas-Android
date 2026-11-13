@@ -19,7 +19,8 @@ For LLeMbas server 2.0.0-beta.12 (harness spec 3.8.0); an older instance works a
   report, and it is not among your chats.
 - **Notify when** on a scheduled task's form: *Every run* (the model writes a report every
   time, also when nothing was found), *When…* (only when your own words hold; "something needs
-  my attention" to start from) or *Never* (runs are kept in the task's history only).
+  my attention" to start from) or *Never* (runs are kept in the task's history only). Offered
+  where the instance has Reports.
 - A task's runs show the run's own note -- what it found, or why it filed no report -- and a way
   to its report when it filed one. The run's working chat can still be opened from the run.
 

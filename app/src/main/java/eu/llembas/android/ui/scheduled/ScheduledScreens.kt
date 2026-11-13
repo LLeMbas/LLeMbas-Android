@@ -795,6 +795,8 @@ data class EditState(
     /** Notify when (spec 3.8.0): `always`, `when` or `never`, and the person's words for `when` (empty: the default). */
     val notify: String = "when",
     val notifyWhen: String = "",
+    /** Whether the instance has Reports (LLeMbas 2.0.0-beta.12): an older one is neither shown nor sent "notify when". */
+    val reports: Boolean = false,
 )
 
 class ScheduleEditViewModel(app: Application) : AndroidViewModel(app) {
@@ -808,6 +810,12 @@ class ScheduleEditViewModel(app: Application) : AndroidViewModel(app) {
         if (started) return
         started = true
         editing = id
+        // "Notify when" belongs to an instance that files reports; one that has no such route
+        // would refuse the new values, so it is asked first.
+        viewModelScope.launch {
+            val has = runCatching { getApplication<Application>().api().reports(unread = true) }.isSuccess
+            _state.update { it.copy(reports = has) }
+        }
         if (id == null) return
         viewModelScope.launch {
             runCatching { getApplication<Application>().api().schedule(id) }.onSuccess { s ->
@@ -849,7 +857,7 @@ class ScheduleEditViewModel(app: Application) : AndroidViewModel(app) {
                     compiled,
                     now.words.trim(),
                     editing,
-                    notify = now.notify,
+                    notify = now.notify.takeIf { now.reports },
                     notifyWhen = now.notifyWhen,
                 )
                 then(saved.id)
@@ -939,7 +947,7 @@ fun ScheduleEditContent(
             if (state.unsupported) Text(stringResource(R.string.scheduled_unsupported), color = palette.inkMuted)
             state.error?.let { Text(it, color = palette.danger, style = MaterialTheme.typography.bodyMedium) }
             state.compiled?.let { Understood(it) }
-            NotifyWhen(state.notify, state.notifyWhen, onNotify, onNotifyWhen)
+            if (state.reports) NotifyWhen(state.notify, state.notifyWhen, onNotify, onNotifyWhen)
             Spacer(Modifier.height(24.dp))
         }
     }
