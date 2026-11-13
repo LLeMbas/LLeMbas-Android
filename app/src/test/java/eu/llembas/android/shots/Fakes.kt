@@ -61,6 +61,7 @@ import eu.llembas.android.ui.scheduled.ScheduleState
 import eu.llembas.android.ui.scheduled.ScheduledState
 import eu.llembas.android.ui.settings.SettingsState
 import eu.llembas.android.ui.settings.WakeTestShown
+import eu.llembas.android.wake.WakeAttempt
 import eu.llembas.android.wake.WakeFailure
 import eu.llembas.android.wake.WakeState
 import kotlinx.serialization.json.JsonPrimitive
@@ -381,6 +382,24 @@ object Fakes {
         prefs = settings.prefs.copy(wakePhrase = "hey_christopher", wakeSensitivity = "high"),
         wakeState = WakeState.Failed(WakeFailure.Microphone, "IllegalStateException: recording did not start; another app may have the microphone"),
         wakeTest = WakeTestShown(done = true),
+    )
+
+    /** The assistant in name but not connected, and a last wake that says so step by step. */
+    val settingsWakeUnbound = settings.copy(
+        assistantConnected = false,
+        prefs = settings.prefs.copy(
+            wakeLog = listOf(
+                WakeAttempt(
+                    at = 1_773_129_600_000,
+                    phrase = "OK Google",
+                    way = "notification",
+                    outcome = WakeAttempt.OUT_NOT_CONNECTED,
+                    fallback = "notification",
+                    assistant = true,
+                ),
+                WakeAttempt(at = 1_773_126_000_000, phrase = "OK Google", way = "session", outcome = WakeAttempt.OUT_OPENED, assistant = true),
+            ),
+        ),
     )
 
     /** A standard build: the test heard the phrase twice, and notification summaries are in the other build. */

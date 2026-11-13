@@ -217,6 +217,9 @@ class ScreenShots {
         shoot("08-wake-listening", Phone.Scroll) { groups(Fakes.settings) }
         shoot("08-wake-failed", Phone.Scroll) { groups(Fakes.settingsWakeFailed) }
         shoot("08-wake-failed", Phone.SmallScroll, fontScale = 1.5f) { groups(Fakes.settingsWakeFailed) }
+        // The assistant not connected right now, and the last wake that found it so.
+        shoot("08-wake-unbound", Phone.Scroll) { groups(Fakes.settingsWakeUnbound) }
+        shoot("08-wake-unbound", Phone.SmallScroll, fontScale = 1.5f) { groups(Fakes.settingsWakeUnbound) }
         shoot("08-wake-tested", Phone.Scroll) { groups(Fakes.settingsWakeTested) }
         shoot("08-wake-tested", Phone.SmallScroll, fontScale = 1.5f) { groups(Fakes.settingsWakeTested) }
     }

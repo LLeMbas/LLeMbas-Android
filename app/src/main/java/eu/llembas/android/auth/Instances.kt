@@ -9,6 +9,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import eu.llembas.android.api.ApiClient
 import eu.llembas.android.api.LembasJson
+import eu.llembas.android.wake.WakeAttempt
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -93,6 +94,8 @@ data class Prefs(
     val wakePhrase: String = "hey_assistant",
     /** WakeSensitivity's id: low, normal or high. */
     val wakeSensitivity: String = "normal",
+    /** What happened the last times the wake word was heard (WakeLog): shown in Settings, nothing of the account in it. */
+    val wakeLog: List<WakeAttempt> = emptyList(),
     /** Listen only while the screen is on. */
     val wakeScreenOnly: Boolean = true,
     /** The assistant may read the notifications when asked (with Android's notification access). */

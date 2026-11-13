@@ -3,23 +3,28 @@ package eu.llembas.android
 import eu.llembas.android.api.LembasJson
 import eu.llembas.android.auth.Prefs
 import eu.llembas.android.wake.AppVisibility
+import eu.llembas.android.wake.AssistLink
 import eu.llembas.android.wake.AssistPresence
+import eu.llembas.android.wake.WakeAttempt
 import eu.llembas.android.wake.WakeError
 import eu.llembas.android.wake.WakeFailure
-import eu.llembas.android.wake.WakeOpening
 import eu.llembas.android.wake.WakePause
 import eu.llembas.android.wake.WakePhrases
 import eu.llembas.android.wake.WakeSensitivity
 import eu.llembas.android.wake.WakeState
 import eu.llembas.android.wake.WakeStatus
+import eu.llembas.android.wake.WakeWay
 import eu.llembas.android.wake.WakeWords
 import eu.llembas.android.wake.checkKeywords
 import eu.llembas.android.wake.unpackWakeModel
 import eu.llembas.android.wake.wakeBackoff
+import eu.llembas.android.wake.wakeFallback
 import eu.llembas.android.wake.wakeKeywords
-import eu.llembas.android.wake.wakeOpening
+import eu.llembas.android.wake.wakeLogAdd
+import eu.llembas.android.wake.wakeLogConnected
 import eu.llembas.android.wake.wakePause
 import eu.llembas.android.wake.wakeStateAtStart
+import eu.llembas.android.wake.wakeWay
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
@@ -160,13 +165,18 @@ class WakeTest {
 
     @Test
     fun theAssistantIsOpenedOnlyTheWayAndroidAllows() {
-        // The phone's assistant: its own service shows the sheet, on screen or not.
-        assertEquals(WakeOpening.Session, wakeOpening(isAssistant = true, appVisible = false))
-        assertEquals(WakeOpening.Session, wakeOpening(isAssistant = true, appVisible = true))
-        // Not the assistant, but on screen: the sheet's activity may start.
-        assertEquals(WakeOpening.Activity, wakeOpening(isAssistant = false, appVisible = true))
-        // Neither: an activity start is blocked without a word, so the notification is what is relied on.
-        assertEquals(WakeOpening.Notification, wakeOpening(isAssistant = false, appVisible = false))
+        // The assistant service connected and the screen on: it shows its sheet, on screen or not.
+        assertEquals(WakeWay.Session, wakeWay(connected = true, screenOn = true, appVisible = false))
+        assertEquals(WakeWay.Session, wakeWay(connected = true, screenOn = true, appVisible = true))
+        // Connected, the screen off: the sheet's activity through the service, which turns the screen on.
+        assertEquals(WakeWay.AssistantActivity, wakeWay(connected = true, screenOn = false, appVisible = false))
+        // Not connected -- whether or not LLeMbas is the assistant in name: only what the app itself may do.
+        assertEquals(WakeWay.Activity, wakeWay(connected = false, screenOn = true, appVisible = true))
+        assertEquals(WakeWay.Notification, wakeWay(connected = false, screenOn = true, appVisible = false))
+        assertEquals(WakeWay.Notification, wakeWay(connected = false, screenOn = false, appVisible = false))
+        // And when the assistant's own way did not open the sheet.
+        assertEquals(WakeWay.Activity, wakeFallback(appVisible = true))
+        assertEquals(WakeWay.Notification, wakeFallback(appVisible = false))
         repeat(3) { AppVisibility.activityStopped() }
         assertFalse(AppVisibility.visible)
         AppVisibility.activityStarted()
@@ -218,6 +228,45 @@ class WakeTest {
         val paused = WakeState.Paused(WakePause.BatterySaver)
         assertEquals(paused, wakeStateAtStart(running = true, current = paused))
         assertEquals(WakeState.Starting, wakeStateAtStart(running = true, current = WakeState.Off))
+    }
+
+    @Test
+    fun theLastFiveWakesAreKeptNewestFirst() {
+        var log = emptyList<WakeAttempt>()
+        for (i in 1..7) log = wakeLogAdd(log, WakeAttempt(at = i * 1_000L, phrase = "Hey Assistant", way = "session", outcome = WakeAttempt.OUT_OPENED))
+        assertEquals(listOf(7_000L, 6_000L, 5_000L, 4_000L, 3_000L), log.map { it.at })
+        // They live in the phone's settings, and read back as they were written.
+        val saved = LembasJson.encodeToString(Prefs.serializer(), Prefs(wakeLog = log))
+        assertEquals(log, LembasJson.decodeFromString(Prefs.serializer(), saved).wakeLog)
+        assertTrue(Prefs().wakeLog.isEmpty())
+    }
+
+    @Test
+    fun anAttemptThatFoundTheAssistantNotConnectedLearnsThatItCameLater() {
+        val missed = WakeAttempt(at = 5_000, outcome = WakeAttempt.OUT_NOT_CONNECTED, fallback = "notification", assistant = true)
+        val earlier = WakeAttempt(at = 1_000, outcome = WakeAttempt.OUT_NOT_CONNECTED)
+        val told = wakeLogConnected(listOf(missed, earlier), now = 9_000)
+        assertEquals(9_000L, told[0].connectedLater)
+        // Only the newest, only once, and never by a connection from before it.
+        assertEquals(0L, told[1].connectedLater)
+        assertEquals(told, wakeLogConnected(told, now = 12_000))
+        assertEquals(listOf(missed), wakeLogConnected(listOf(missed), now = 4_000))
+        // An attempt that opened, or an empty record, has nothing to learn.
+        val opened = listOf(WakeAttempt(at = 5_000, outcome = WakeAttempt.OUT_OPENED))
+        assertEquals(opened, wakeLogConnected(opened, now = 9_000))
+        assertTrue(wakeLogConnected(emptyList(), now = 9_000).isEmpty())
+    }
+
+    @Test
+    fun theAssistantsLinkIsWhatAndroidLastSaid() {
+        AssistLink.ready(now = 1_000)
+        assertTrue(AssistLink.connected.value)
+        assertEquals(1_000L, AssistLink.readyAt)
+        AssistLink.shutdown(now = 2_000)
+        assertFalse(AssistLink.connected.value)
+        assertEquals(2_000L, AssistLink.shutdownAt)
+        AssistLink.sheetShown(elapsed = 77)
+        assertEquals(77L, AssistLink.shown.value)
     }
 
     @Test

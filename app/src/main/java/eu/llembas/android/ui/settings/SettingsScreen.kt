@@ -4,7 +4,6 @@ package eu.llembas.android.ui.settings
 
 import android.Manifest
 import android.app.Activity
-import android.app.role.RoleManager
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.SystemClock
@@ -40,6 +39,7 @@ import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.Forum
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Hearing
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MyLocation
@@ -93,6 +93,7 @@ import eu.llembas.android.AppLanguage
 import eu.llembas.android.BuildConfig
 import eu.llembas.android.R
 import eu.llembas.android.actions.NavApp
+import eu.llembas.android.assist.LembasAssistService
 import eu.llembas.android.assist.PhoneRecognizer
 import eu.llembas.android.auth.Instance
 import eu.llembas.android.auth.Prefs
@@ -107,6 +108,8 @@ import eu.llembas.android.update.UpdateResult
 import eu.llembas.android.update.Updater
 import eu.llembas.android.update.checksUpdates
 import eu.llembas.android.update.offersBetas
+import eu.llembas.android.wake.AssistLink
+import eu.llembas.android.wake.WakeAttempt
 import eu.llembas.android.wake.WakeEngine
 import eu.llembas.android.wake.WakeFailure
 import eu.llembas.android.wake.WakePause
@@ -117,6 +120,7 @@ import eu.llembas.android.wake.WakeState
 import eu.llembas.android.wake.WakeStatus
 import eu.llembas.android.wake.WakeWordService
 import eu.llembas.android.wake.WakeWords
+import eu.llembas.android.wake.wakeAttemptWords
 import eu.llembas.android.wake.wakeTitle
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -181,6 +185,8 @@ data class SettingsState(
     val wakeTest: WakeTestShown = WakeTestShown(),
     /** Whether LLeMbas is the phone's digital assistant app: only then can the wake word open it over other apps. */
     val isAssistant: Boolean = true,
+    /** Whether Android has the assistant service connected right now: without it the wake word cannot open the sheet by itself. */
+    val assistantConnected: Boolean = true,
     /** Whether Android's notification access is given to LLeMbas. */
     val notificationAccess: Boolean = false,
     /** Whether this build can read notifications at all (only the `notifications` build declares the listener). */
@@ -198,6 +204,7 @@ fun SettingsScreen(onBack: () -> Unit, onAddInstance: () -> Unit) {
     val active by store.active.collectAsState(initial = null)
     val prefs by store.prefs.collectAsState(initial = Prefs())
     val wakeState by WakeStatus.state.collectAsState()
+    val assistantConnected by AssistLink.connected.collectAsState()
     // The test's ten seconds: its deadline is WakeStatus's, the clock that watches it is here.
     val trial by WakeStatus.trial.collectAsState()
     var clock by remember { mutableStateOf(SystemClock.elapsedRealtime()) }
@@ -403,7 +410,8 @@ fun SettingsScreen(onBack: () -> Unit, onAddInstance: () -> Unit) {
             wakeAvailable = WakeEngine.AVAILABLE,
             wakeState = wakeState,
             // Read again each time Settings is composed: the person comes back from the system's page.
-            isAssistant = context.getSystemService(RoleManager::class.java)?.isRoleHeld(RoleManager.ROLE_ASSISTANT) ?: false,
+            isAssistant = LembasAssistService.holdsRole(context),
+            assistantConnected = assistantConnected,
             wakeTest = WakeTestShown(running = clock < trial.until, done = tested && clock >= trial.until, heard = if (tested) trial.heard else 0),
             // Read again each time Settings is composed: the person comes back from the system's page.
             notificationAccess = NotificationAccess.granted(context),
@@ -733,6 +741,17 @@ internal fun WakeWordGroup(state: SettingsState, actions: SettingsActions, onCho
                     subtitle = stringResource(R.string.wake_not_assistant_line),
                     onClick = actions::assistantSettings,
                 )
+            } else if (!state.assistantConnected) {
+                // The assistant in name, but Android holds no connection to it at this moment:
+                // the one thing that lets the sheet open from the background is missing.
+                Rule()
+                SettingRow(
+                    Icons.Filled.Assistant,
+                    stringResource(R.string.wake_assistant_unbound),
+                    subtitle = stringResource(R.string.wake_assistant_unbound_line),
+                    tint = palette.warning,
+                    onClick = actions::assistantSettings,
+                )
             }
         }
         if (state.wakeAvailable) {
@@ -769,6 +788,8 @@ internal fun WakeWordGroup(state: SettingsState, actions: SettingsActions, onCho
             )
             Rule()
             WakeTestRow(state, on, phrase.words, actions)
+            Rule()
+            WakeLogRow(state.prefs.wakeLog)
             Rule()
             SettingRow(
                 Icons.Filled.ScreenLockPortrait,
@@ -1002,6 +1023,28 @@ private fun WakeTestRow(state: SettingsState, on: Boolean, phrase: String, actio
         },
         enabled = on,
         onClick = actions::wakeTest,
+    )
+}
+
+/**
+ * "Last wake": what happened the last time the phrase was heard -- what was tried and how it
+ * went, in plain words, with Android's own where it refused -- and, on a tap, the few before it.
+ */
+@Composable
+private fun WakeLogRow(log: List<WakeAttempt>) {
+    val context = LocalContext.current
+    var all by remember { mutableStateOf(false) }
+    val shown = if (all) log else log.take(1)
+    SettingRow(
+        Icons.Filled.History,
+        stringResource(R.string.wake_last),
+        subtitle = if (log.isEmpty()) {
+            stringResource(R.string.wake_last_none)
+        } else {
+            shown.joinToString("\n\n") { wakeAttemptWords(context, it).joinToString("\n") }
+        },
+        enabled = log.isNotEmpty(),
+        onClick = { all = !all },
     )
 }
 

@@ -14,6 +14,9 @@ import kotlinx.coroutines.launch
 import java.io.File
 import java.io.IOException
 import java.io.InputStream
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.util.Locale
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
@@ -147,27 +150,6 @@ object AssistPresence {
     }
 }
 
-/** How the assistant is opened when the word was heard, from what Android will allow. */
-enum class WakeOpening {
-    /** LLeMbas is the phone's assistant: its voice-interaction service shows the sheet, from anywhere. */
-    Session,
-
-    /** The app is on screen: the sheet's activity may start. */
-    Activity,
-
-    /**
-     * Neither: Android blocks an activity started from the background, and says nothing when it
-     * does -- so it is not relied on, and a notification to tap is posted.
-     */
-    Notification,
-}
-
-fun wakeOpening(isAssistant: Boolean, appVisible: Boolean): WakeOpening = when {
-    isAssistant -> WakeOpening.Session
-    appVisible -> WakeOpening.Activity
-    else -> WakeOpening.Notification
-}
-
 /** Whether the app has an activity on screen: counted from every activity's start and stop (LembasApp). */
 object AppVisibility {
     private val started = AtomicInteger(0)
@@ -299,6 +281,34 @@ object WakeStatus {
     }
 
     const val TRIAL_MS = 10_000L
+}
+
+/**
+ * One [attempt] in plain words, a line each: when and for which phrase; what was tried and how it
+ * went (Android's own words where it refused); what was done instead; and, where the assistant
+ * could not be used, what Android had said of it -- whether LLeMbas held the role, and when the
+ * service was connected and disconnected in this run of the app.
+ */
+fun wakeAttemptWords(context: Context, attempt: WakeAttempt, zone: ZoneId = ZoneId.systemDefault(), locale: Locale = Locale.getDefault()): List<String> {
+    fun time(at: Long): String = DateTimeFormatter.ofPattern("EEE d MMM, HH:mm:ss", locale).format(Instant.ofEpochMilli(at).atZone(zone))
+    val lines = mutableListOf("${time(attempt.at)} · “${attempt.phrase}”")
+    lines += when (attempt.outcome) {
+        WakeAttempt.OUT_OPENED -> context.getString(R.string.wake_out_opened)
+        WakeAttempt.OUT_TESTED -> context.getString(R.string.wake_out_tested)
+        WakeAttempt.OUT_NO_SHEET -> context.getString(R.string.wake_out_no_sheet)
+        WakeAttempt.OUT_REFUSED -> context.getString(R.string.wake_out_refused, attempt.detail)
+        else -> context.getString(R.string.wake_out_not_connected)
+    }
+    when (attempt.fallback) {
+        WakeWay.Activity.id -> lines += context.getString(R.string.wake_out_activity)
+        WakeWay.Notification.id -> lines += context.getString(R.string.wake_out_notification)
+    }
+    if (attempt.outcome == WakeAttempt.OUT_OPENED || attempt.outcome == WakeAttempt.OUT_TESTED) return lines
+    lines += context.getString(if (attempt.assistant) R.string.wake_role_held else R.string.wake_role_not_held)
+    lines += if (attempt.readyAt == 0L) context.getString(R.string.wake_link_never) else context.getString(R.string.wake_link_ready, time(attempt.readyAt))
+    if (attempt.shutdownAt != 0L) lines += context.getString(R.string.wake_link_shutdown, time(attempt.shutdownAt))
+    if (attempt.connectedLater != 0L) lines += context.getString(R.string.wake_link_later, time(attempt.connectedLater))
+    return lines
 }
 
 /**

@@ -24,6 +24,26 @@ For LLeMbas server 2.0.0-beta.12 (harness spec 3.8.0); an older instance works a
 - A task's runs show the run's own note -- what it found, or why it filed no report -- and a way
   to its report when it filed one. The run's working chat can still be opened from the run.
 
+- **Last wake** in Settings › Wake word: when the phrase was last heard, what the app tried
+  (the assistant's sheet, the sheet as a screen of the app, a notification) and exactly how it
+  went -- opened; Android had not connected LLeMbas as the assistant; Android refused, in its
+  own words; or it did not refuse and still no sheet came -- with whether LLeMbas was the
+  digital assistant app then and when Android had connected or dropped it. A tap shows the last
+  five. Nothing from your account is in it.
+
+### Fixed
+
+- **The wake word heard you and only a notification came, though LLeMbas is the assistant.**
+  The app can open the sheet from the background only through a connection Android keeps to
+  the assistant app, and it threw away the reason when that was missing or refused. It now
+  keeps it (*Last wake*), says in Settings when LLeMbas is the assistant but Android has not
+  connected it right now -- with the way to the system's setting -- and checks that the sheet
+  really came up before it counts the wake as opened; when it did not, the notification follows
+  and says *Could not open by itself — tap to ask*. What makes a phone drop that connection is
+  not fixed by this: the record is there to find out.
+- The screen is turned on when the wake word opens the sheet (with *Only while the screen is
+  on* switched off, the phrase can come while it is dark).
+
 ### Changed
 
 - **Notifications come from a report, not from a run**, on a *Reports* channel of their own:

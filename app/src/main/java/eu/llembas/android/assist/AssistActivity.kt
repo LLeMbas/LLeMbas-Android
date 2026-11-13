@@ -6,6 +6,7 @@ import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.os.SystemClock
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -18,6 +19,7 @@ import eu.llembas.android.AppLanguage
 import eu.llembas.android.auth.Prefs
 import eu.llembas.android.lembas
 import eu.llembas.android.ui.theme.LembasTheme
+import eu.llembas.android.wake.AssistLink
 import eu.llembas.android.wake.AssistPresence
 import eu.llembas.android.wake.WakeWordService
 
@@ -75,7 +77,11 @@ class AssistActivity : ComponentActivity() {
         controller = AssistController(this, lifecycleScope)
         keyguard = getSystemService(KeyguardManager::class.java)
         locked.value = keyguard.isKeyguardLocked
+        // Opened by the wake word: the screen comes on with it (a spoken phrase is not a touch,
+        // so nothing else has woken the phone).
+        if (intent?.getBooleanExtra(EXTRA_WAKE, false) == true) setTurnScreenOn(true)
         AssistPresence.shown()
+        AssistLink.sheetShown(SystemClock.elapsedRealtime())
         // The sheet is up: "Heard you. Tap to ask." has been answered, however it was opened.
         getSystemService(NotificationManager::class.java).cancel(WakeWordService.HEARD_ID)
         take(intent)
@@ -171,6 +177,12 @@ class AssistActivity : ComponentActivity() {
 
         /** The sheet, listening. */
         fun listening(context: Context): Intent = Intent(context, AssistActivity::class.java).setAction(ACTION_LISTEN)
+
+        /** On the intent the wake word opens the sheet with: turn the screen on. */
+        const val EXTRA_WAKE = "eu.llembas.android.WAKE"
+
+        /** The sheet, listening, as the wake word opens it. */
+        fun woken(context: Context): Intent = listening(context).putExtra(EXTRA_WAKE, true).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 
         /** The sheet, at the last assistant chat. */
         fun continuing(context: Context): Intent = Intent(context, AssistActivity::class.java).setAction(ACTION_CONTINUE)

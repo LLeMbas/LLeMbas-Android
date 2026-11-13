@@ -2,14 +2,17 @@ package eu.llembas.android.assist
 
 import android.app.KeyguardManager
 import android.app.assist.AssistStructure
+import android.app.role.RoleManager
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
+import android.os.SystemClock
 import android.service.voice.VoiceInteractionService
 import android.service.voice.VoiceInteractionSession
 import android.service.voice.VoiceInteractionSessionService
+import android.util.Log
 import android.view.View
 import android.view.WindowManager
 import androidx.compose.runtime.mutableStateOf
@@ -27,12 +30,15 @@ import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import eu.llembas.android.AppLanguage
 import eu.llembas.android.lembas
 import eu.llembas.android.ui.theme.LembasTheme
+import eu.llembas.android.wake.AssistLink
 import eu.llembas.android.wake.AssistPresence
+import eu.llembas.android.wake.wakeLogConnected
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 
 /**
@@ -46,10 +52,18 @@ class LembasAssistService : VoiceInteractionService() {
     override fun onReady() {
         super.onReady()
         current = this
+        // When Android connected it is kept: the wake word's record says whether it was, and an
+        // attempt that found it not connected is told that it came later.
+        val now = System.currentTimeMillis()
+        AssistLink.ready(now)
+        Log.i(TAG, "assistant service connected by Android")
+        background.launch { runCatching { lembas.instances.savePrefs { it.copy(wakeLog = wakeLogConnected(it.wakeLog, now)) } } }
     }
 
     override fun onShutdown() {
         if (current === this) current = null
+        AssistLink.shutdown(System.currentTimeMillis())
+        Log.i(TAG, "assistant service disconnected by Android")
         super.onShutdown()
     }
 
@@ -62,6 +76,13 @@ class LembasAssistService : VoiceInteractionService() {
         @Volatile
         var current: LembasAssistService? = null
             private set
+
+        private const val TAG = "LLeMbasWake"
+        private val background = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+        /** Whether Android says LLeMbas holds the assistant role (Settings › Default apps › Digital assistant app). */
+        fun holdsRole(context: Context): Boolean =
+            runCatching { context.getSystemService(RoleManager::class.java)?.isRoleHeld(RoleManager.ROLE_ASSISTANT) }.getOrNull() ?: false
     }
 }
 
@@ -132,6 +153,7 @@ class LembasAssistSession(context: Context) :
         super.onShow(args, showFlags)
         registry.currentState = Lifecycle.State.RESUMED
         AssistPresence.shown()
+        AssistLink.sheetShown(SystemClock.elapsedRealtime())
         // The wake word asks for the sheet listening, whatever Settings says about opening.
         controller.opened(locked(), listen = args?.getBoolean(AssistActivity.EXTRA_LISTEN) == true)
     }

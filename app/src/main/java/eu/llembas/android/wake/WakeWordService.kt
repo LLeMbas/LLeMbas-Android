@@ -38,6 +38,7 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.takeWhile
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * Listening for the wake word: opt-in (Settings › Assistant › Wake word), off by default.
@@ -169,7 +170,13 @@ class WakeWordService : LifecycleService() {
             engine = { keywords -> WakeEngine.create(this, keywords) },
             microphone = { PhoneMicrophone() },
             // A test in Settings takes the word; otherwise the assistant opens.
-            heard = { if (!WakeStatus.heardInTrial(SystemClock.elapsedRealtime())) wake() },
+            heard = { phrase ->
+                if (WakeStatus.heardInTrial(SystemClock.elapsedRealtime())) {
+                    record(WakeAttempt(at = System.currentTimeMillis(), phrase = phrase.words, outcome = WakeAttempt.OUT_TESTED))
+                } else {
+                    wake(phrase)
+                }
+            },
             log = { message, cause -> Log.w(TAG, message, cause) },
         )
     }
@@ -197,25 +204,67 @@ class WakeWordService : LifecycleService() {
     }
 
     /**
-     * The word was heard: the assistant opens listening. Through the voice-interaction service
-     * when LLeMbas is the phone's assistant (Android lets it open the sheet from the background);
-     * as an activity while the app is on screen; and otherwise with a notification to tap,
-     * because Android blocks an activity started from the background and says nothing when it
-     * does ([wakeOpening]). The activity is still tried then -- where a phone allows it, it
-     * opens and takes the notification away.
+     * The word was heard: the assistant opens listening, by the first way Android allows
+     * ([wakeWay]) -- and what was tried and how it went is written down ([WakeAttempt], kept in
+     * the settings and shown in Settings › Wake word), because a silent "no" here looks to the
+     * person like a wake word that does not work.
+     *
+     * A way that Android does not refuse is not yet a sheet on screen: the sheet says when it
+     * is up ([AssistLink.shown]), and when it has not said so in time the fallback follows --
+     * the activity while the app is on screen, else a notification to tap (the activity is
+     * still tried then; where a phone allows it, it opens and takes the notification away).
      */
-    private fun wake() {
+    private suspend fun wake(phrase: WakePhrase) {
         // The microphone is the sheet's from here: for a moment by this hold, then for as long as a sheet says it is up.
         AssistPresence.holdFor(SHEET_GRACE_MS)
-        val session = LembasAssistService.current
-        val shownBySystem = session != null &&
-            runCatching { session.showSession(Bundle().apply { putBoolean(AssistActivity.EXTRA_LISTEN, true) }, 0) }.isSuccess
-        val opening = wakeOpening(shownBySystem, AppVisibility.visible)
-        if (opening == WakeOpening.Session) return
-        val started = runCatching { startActivity(AssistActivity.listening(this).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }.isSuccess
-        if (opening == WakeOpening.Notification || !started) {
-            getSystemService(NotificationManager::class.java).notify(HEARD_ID, wakeHeardNotification(this))
+        val asked = SystemClock.elapsedRealtime()
+        val assistant = LembasAssistService.current
+        val way = wakeWay(connected = assistant != null, screenOn = power().isInteractive, appVisible = AppVisibility.visible)
+        var attempt = WakeAttempt(
+            at = System.currentTimeMillis(),
+            phrase = phrase.words,
+            way = way.id,
+            assistant = LembasAssistService.holdsRole(this),
+            readyAt = AssistLink.readyAt,
+            shutdownAt = AssistLink.shutdownAt,
+        )
+        // The assistant's own ways first, where it is connected.
+        val refused: Throwable? = when (way) {
+            WakeWay.Session -> runCatching { assistant?.showSession(Bundle().apply { putBoolean(AssistActivity.EXTRA_LISTEN, true) }, 0) }.exceptionOrNull()
+            WakeWay.AssistantActivity -> runCatching { assistant?.startActivity(AssistActivity.woken(this)) }.exceptionOrNull()
+            else -> null
         }
+        if (way == WakeWay.Session || way == WakeWay.AssistantActivity) {
+            if (refused == null && sheetCame(asked)) return record(attempt.copy(outcome = WakeAttempt.OUT_OPENED))
+            attempt = if (refused != null) {
+                attempt.copy(outcome = WakeAttempt.OUT_REFUSED, detail = WakeError(WakeFailure.Engine, refused).detail)
+            } else {
+                attempt.copy(outcome = WakeAttempt.OUT_NO_SHEET)
+            }
+        } else {
+            attempt = attempt.copy(outcome = WakeAttempt.OUT_NOT_CONNECTED)
+        }
+        // Then what is left: the sheet's activity, relied on only while the app is on screen.
+        val fallback = wakeFallback(AppVisibility.visible)
+        val started = runCatching { startActivity(AssistActivity.woken(this)) }
+        if (fallback == WakeWay.Activity && started.isSuccess && sheetCame(asked)) {
+            return record(attempt.copy(fallback = WakeWay.Activity.id))
+        }
+        getSystemService(NotificationManager::class.java).notify(HEARD_ID, wakeHeardNotification(this, attempt.assistant))
+        record(attempt.copy(fallback = WakeWay.Notification.id))
+    }
+
+    /** Whether a sheet came up since [asked] (the phone's elapsed clock), waiting a moment for it. */
+    private suspend fun sheetCame(asked: Long): Boolean = withTimeoutOrNull(SHEET_WAIT_MS) { AssistLink.shown.first { it >= asked } } != null
+
+    /** Write [attempt] down: in the log under a fixed tag, and first among the last few in the settings. */
+    private suspend fun record(attempt: WakeAttempt) {
+        Log.i(
+            TAG,
+            "wake word heard: way=${attempt.way} outcome=${attempt.outcome} fallback=${attempt.fallback} assistant=${attempt.assistant} " +
+                "readyAt=${attempt.readyAt} shutdownAt=${attempt.shutdownAt} ${attempt.detail}",
+        )
+        runCatching { lembas.instances.savePrefs { it.copy(wakeLog = wakeLogAdd(it.wakeLog, attempt)) } }
     }
 
     private fun power() = getSystemService(PowerManager::class.java)
@@ -234,6 +283,9 @@ class WakeWordService : LifecycleService() {
         private const val NOTIFICATION_ID = 7001
         const val HEARD_ID = 7002
         private const val SHEET_GRACE_MS = 3_000L
+
+        /** How long a sheet has to say it is up before the way that was tried counts as not having opened it. */
+        private const val SHEET_WAIT_MS = 2_500L
         private const val TAG = "LLeMbasWake"
         const val ACTION_STOP = "eu.llembas.android.action.WAKE_STOP"
 
@@ -280,12 +332,14 @@ class WakeWordService : LifecycleService() {
  * "Heard you. Tap to ask.": what the wake word posts when it cannot open the assistant itself.
  * A fixed sentence, nothing from the account; the tap opens the assistant listening.
  */
-fun wakeHeardNotification(context: Context): Notification {
+fun wakeHeardNotification(context: Context, assistant: Boolean = false): Notification {
     val ask = PendingIntent.getActivity(context, 1, AssistActivity.listening(context), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
     return NotificationCompat.Builder(context, WakeWordService.CHANNEL_HEARD)
         .setSmallIcon(R.drawable.ic_notification)
         .setContentTitle(context.getString(R.string.wake_heard))
-        .setContentText(context.getString(R.string.wake_heard_line))
+        // Why it is a notification and not the sheet, in fixed words: LLeMbas is not the phone's
+        // assistant -- or it is, and could not open by itself this time (Settings says which step said no).
+        .setContentText(context.getString(if (assistant) R.string.wake_heard_could_not else R.string.wake_heard_line))
         .setContentIntent(ask)
         .setAutoCancel(true)
         .setCategory(NotificationCompat.CATEGORY_RECOMMENDATION)
