@@ -311,6 +311,10 @@ class PhoneRecognizer(private val context: Context) {
             Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
                 .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
                 .putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+                // How long a silence ends it: a hint, which not every recogniser takes -- the
+                // sheet keeps its own watch as well (phoneWatch).
+                .putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, EndOfSpeech.PAUSE_MS)
+                .putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, EndOfSpeech.PAUSE_MS)
                 .putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, context.packageName),
         )
     }

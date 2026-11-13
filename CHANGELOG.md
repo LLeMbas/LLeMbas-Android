@@ -3,6 +3,24 @@
 What changed in each release of LLeMbas for Android. Versions follow SemVer; until 1.0.0 the app
 is in alpha and releases come off `main`.
 
+## [Unreleased]
+
+### Fixed
+
+- **Listening went on and on in a quiet room.** With the instance's speech-to-text the sheet
+  decided "somebody is speaking" and "it is quiet again" by two fixed loudness levels. A phone
+  whose room noise sat above the quiet level never heard a pause, so it listened until the
+  two-minute limit; and words the speech-to-text invented from silence counted as speech. Now
+  the room's own level is measured from the first moment and followed all the time, and speech
+  and quiet are judged against it: nothing said ends after five seconds, a question ends a
+  second and a half after you stop, a click or a knock is not speech, and the limit is one
+  minute. Silence is no longer sent to be written down while you have said nothing.
+- The phone's own recogniser (Voice input › Phone) is asked for the same pause, and is watched:
+  one that never answers no longer leaves the sheet listening for good.
+- An app that uses the system's recogniser while LLeMbas is the assistant no longer waits the
+  full fifteen seconds every time: it ends at the pause after speech, or says that nothing was
+  said.
+
 ## [1.0.0-beta.9] — 2026-11-13
 
 For LLeMbas server 2.0.0-beta.12 or later.

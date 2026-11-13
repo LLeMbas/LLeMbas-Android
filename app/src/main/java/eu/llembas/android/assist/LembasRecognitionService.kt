@@ -19,7 +19,8 @@ import kotlinx.coroutines.launch
  * Speech recognition through the instance (`/v1/audio/transcriptions`). Android requires a
  * digital assistant to name a recognition service; this is it, and any app that asks the
  * system's recognizer while LLeMbas is the assistant is answered by the instance's
- * speech-to-text. Listening ends when the caller says stop, or after [LIMIT_MS].
+ * speech-to-text. Listening ends when the caller says stop, at a pause after speech or when
+ * nothing is said ([EndOfSpeech], as in the assistant's sheet), or after [LIMIT_MS].
  */
 class LembasRecognitionService : RecognitionService() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -37,7 +38,23 @@ class LembasRecognitionService : RecognitionService() {
         listener.readyForSpeech(Bundle())
         listener.beginningOfSpeech()
         limit = scope.launch {
-            delay(LIMIT_MS)
+            val ear = EndOfSpeech()
+            var waited = 0L
+            while (waited < LIMIT_MS) {
+                delay(EndOfSpeech.TICK_MS)
+                waited += EndOfSpeech.TICK_MS
+                when (ear.tick(recorder.level.value)) {
+                    EndOfSpeech.Verdict.Said -> break
+
+                    // Nothing said is nothing sent: silence written down is an invented sentence.
+                    EndOfSpeech.Verdict.Nothing -> {
+                        silent()
+                        return@launch
+                    }
+
+                    EndOfSpeech.Verdict.Listening -> Unit
+                }
+            }
             finish()
         }
     }
@@ -50,6 +67,16 @@ class LembasRecognitionService : RecognitionService() {
         limit?.cancel()
         callback = null
         scope.launch { recorder.stop() }
+    }
+
+    /** Nobody spoke: the caller is told so, and nothing is written down. */
+    private fun silent() {
+        val listener = callback ?: return
+        callback = null
+        scope.launch {
+            recorder.stop()
+            listener.error(SpeechRecognizer.ERROR_SPEECH_TIMEOUT)
+        }
     }
 
     private fun finish() {

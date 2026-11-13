@@ -136,6 +136,9 @@ class AssistController(private val context: Context, private val scope: Coroutin
     private val route = HeadsetRoute(context)
     private var following: Job? = null
     private var hearing: Job? = null
+
+    /** The ear for the end of speech, while the instance's speech-to-text listens. */
+    private var ear: EndOfSpeech? = null
     private var usingPhone = false
     private var screenText: String? = null
     private var stt: Boolean? = null
@@ -256,8 +259,10 @@ class AssistController(private val context: Context, private val scope: Coroutin
                         }
                     },
                 )
+                watchPhone()
             } else {
                 recorder.preferred = headset
+                ear = EndOfSpeech(TICK_MS)
                 recorder.start()
                 launch { recorder.level.collect { l -> _state.update { it.copy(level = l) } } }
                 launch { writeDownAsSaid() }
@@ -271,7 +276,8 @@ class AssistController(private val context: Context, private val scope: Coroutin
     /**
      * The instance's speech-to-text takes a whole recording, so words "as they are said" are the
      * recording so far, written down again every moment -- one request at a time, only when half
-     * a second more has been said, and not past the first minute.
+     * a second more has been said, not past the first minute -- and not before the microphone
+     * has heard anything above the room: silence written down is an invented sentence.
      */
     private suspend fun writeDownAsSaid() {
         val api = context.lembas.instances.client() ?: return
@@ -279,44 +285,70 @@ class AssistController(private val context: Context, private val scope: Coroutin
         while (scope.isActive) {
             delay(PARTIAL_EVERY_MS)
             val seconds = recorder.seconds
-            if (seconds - sent < 0.5f || seconds > 60f) continue
+            if (seconds - sent < 0.5f || seconds > 60f || ear?.heardSomething != true) continue
             sent = seconds
             val words = runCatching { api.transcribe(recorder.snapshot()) }.getOrNull()
             if (!words.isNullOrBlank() && _state.value.listening) _state.update { it.copy(heard = words) }
         }
     }
 
-    /** Wait for a pause after speech (true) -- or for nothing said at all, which gives up (false). */
+    /**
+     * Wait for a pause after speech (true) -- or for nothing said at all, which gives up (false).
+     * [EndOfSpeech] decides, from the microphone's level against the room's own and the words
+     * written down so far.
+     */
     private suspend fun untilQuiet(): Boolean {
-        var spoke = false
-        var quietFor = 0L
-        var waited = 0L
-        // The words written down so far are the second ear, for a quiet microphone: words the
-        // instance heard mean speech, and the same words for a while mean it ended.
-        var words = ""
-        var sameWordsFor = 0L
+        val ear = ear ?: return false
         while (true) {
             delay(TICK_MS)
-            waited += TICK_MS
-            val level = recorder.level.value
-            if (level >= SPEAKING) {
-                spoke = true
-                quietFor = 0
-            } else if (level < QUIET) {
-                quietFor += TICK_MS
+            when (ear.tick(recorder.level.value, _state.value.heard)) {
+                EndOfSpeech.Verdict.Said -> return true
+                EndOfSpeech.Verdict.Nothing -> return false
+                EndOfSpeech.Verdict.Listening -> Unit
             }
+        }
+    }
+
+    /**
+     * The phone's recogniser finds the end of speech itself -- and is watched all the same
+     * ([phoneWatch]): one that never calls back would leave the sheet listening for good.
+     */
+    private suspend fun watchPhone() {
+        var waited = 0L
+        var words = ""
+        var sameFor = 0L
+        var asked = false
+        while (_state.value.listening) {
+            delay(TICK_MS)
+            waited += TICK_MS
             val heard = _state.value.heard
-            if (heard.isNotBlank()) spoke = true
             if (heard != words) {
                 words = heard
-                sameWordsFor = 0
-            } else if (heard.isNotBlank()) {
-                sameWordsFor += TICK_MS
+                sameFor = 0
+            } else {
+                sameFor += TICK_MS
             }
-            if (spoke && quietFor >= PAUSE_MS) return true
-            if (sameWordsFor >= SAME_WORDS_MS) return true
-            if (!spoke && waited >= NOTHING_SAID_MS) return false
-            if (waited >= LONGEST_MS) return spoke
+            when (phoneWatch(waited, heard.isNotBlank(), sameFor)) {
+                PhoneWatch.Wait -> Unit
+
+                PhoneWatch.Finish -> if (!asked) {
+                    asked = true
+                    phone.finish()
+                }
+
+                PhoneWatch.Take -> {
+                    phone.stop()
+                    _state.update { it.copy(listening = false, level = 0f, heard = "") }
+                    askOrStop(heard)
+                    return
+                }
+
+                PhoneWatch.GiveUp -> {
+                    phone.stop()
+                    _state.update { it.copy(listening = false, level = 0f, heard = "", conversation = false) }
+                    return
+                }
+            }
         }
     }
 
@@ -600,16 +632,9 @@ class AssistController(private val context: Context, private val scope: Coroutin
         private const val TITLE_WAIT_MS = 20_000L
         private const val TITLE_ASK_MS = 4_000L
 
-        // Listening, for the instance's speech-to-text (the phone's recogniser finds the end of
-        // speech itself). Levels are the RMS of 16-bit samples, 0..1: a room is under 0.01,
-        // a voice near the phone 0.02 and up. Not tuned on many phones: the stop button always works.
-        private const val TICK_MS = 100L
-        private const val SPEAKING = 0.02f
-        private const val QUIET = 0.01f
-        private const val PAUSE_MS = 1_800L
-        private const val SAME_WORDS_MS = 4_500L
-        private const val NOTHING_SAID_MS = 8_000L
-        private const val LONGEST_MS = 120_000L
+        // Listening: how often the end of speech is looked for (EndOfSpeech has the rules and
+        // their numbers), and how often the recording so far is written down.
+        private const val TICK_MS = EndOfSpeech.TICK_MS
         private const val PARTIAL_EVERY_MS = 1_200L
 
         /** A reply's words, for a voice: its text steps, without the markup. */
