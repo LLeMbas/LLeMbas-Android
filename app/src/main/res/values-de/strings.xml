@@ -432,6 +432,9 @@
     <string name="assist_stop_words">stopp|stop|das wars|das war\'s|das ist alles|genug|ende|tschüss|auf wiedersehen|danke das wars|abbrechen</string>
     <string name="assistant_conversation">Ein gesprochenes Gespräch fortführen</string>
     <string name="assistant_conversation_line">Nachdem eine gesprochene Antwort vorgelesen wurde, hört der Assistent wieder zu — bis du „Stopp“ sagst, auf Beenden tippst oder ein paar Sekunden nichts sagst. Funktioniert mit einem Headset.</string>
+    <string name="experimental">Experimentell</string>
+    <string name="wake_experimental_line">Neu und bisher nur auf wenigen Telefonen erprobt. Es kann den Satz überhören, versehentlich starten oder dich hören und den Assistenten trotzdem nicht öffnen.</string>
+    <string name="assistant_voice_experimental_line">Experimentell: Das selbstständige Zuhören beim Öffnen des Assistenten, das Erkennen, wann du fertig gesprochen hast, und das gesprochene Gespräch sind neu und funktionieren noch nicht auf jedem Telefon gut. Eine Frage tippen und die Mikrofontaste funktionieren immer.</string>
     <string name="assist_wake_word_hint">Kein Aktivierungswort, außer du willst eines: Einstellungen › Assistent › Aktivierungswort schaltet das eigene von LLeMbas ein, auf diesem Telefon.</string>
     <string name="channel_wake">Aktivierungswort</string>
     <string name="wake_word">Aktivierungswort</string>

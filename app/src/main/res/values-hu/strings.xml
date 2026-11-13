@@ -432,6 +432,9 @@
     <string name="assist_stop_words">állj|stop|ennyi|ennyi volt|elég|vége|viszlát|köszönöm ennyi|mégse</string>
     <string name="assistant_conversation">Szóbeli beszélgetés folytatása</string>
     <string name="assistant_conversation_line">Egy szóbeli válasz felolvasása után az asszisztens újra figyel — amíg nem mondod, hogy „állj”, nem koppintasz a Befejezésre, vagy néhány másodpercig nem szólsz. Headsettel is működik.</string>
+    <string name="experimental">Kísérleti</string>
+    <string name="wake_experimental_line">Új, és eddig csak néhány telefonon próbáltuk ki. Előfordulhat, hogy nem hallja meg a kifejezést, tévedésből elindul, vagy meghall, és mégsem nyitja meg az asszisztenst.</string>
+    <string name="assistant_voice_experimental_line">Kísérleti: az önálló hallgatás az asszisztens megnyitásakor, annak észlelése, hogy befejezted a beszédet, és a szóbeli beszélgetés új, és még nem minden telefonon működik jól. Kérdést beírni és a mikrofon gombot használni mindig lehet.</string>
     <string name="assist_wake_word_hint">Nincs ébresztőszó, hacsak nem kérsz: Beállítások › Asszisztens › Ébresztőszó bekapcsolja a LLeMbas sajátját, ezen a telefonon.</string>
     <string name="channel_wake">Ébresztőszó</string>
     <string name="wake_word">Ébresztőszó</string>

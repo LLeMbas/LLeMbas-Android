@@ -618,6 +618,7 @@ fun SettingsContent(state: SettingsState, actions: SettingsActions, onBack: () -
                     SettingRow(
                         Icons.Filled.Mic,
                         stringResource(R.string.assistant_listens),
+                        badge = stringResource(R.string.experimental),
                         onClick = { actions.assistantListens(!state.prefs.assistantListens) },
                         trailing = { Switch(checked = state.prefs.assistantListens, onCheckedChange = actions::assistantListens) },
                     )
@@ -633,6 +634,7 @@ fun SettingsContent(state: SettingsState, actions: SettingsActions, onBack: () -
                         Icons.Filled.Forum,
                         stringResource(R.string.assistant_conversation),
                         subtitle = stringResource(R.string.assistant_conversation_line),
+                        badge = stringResource(R.string.experimental),
                         enabled = state.prefs.readAloudSpoken,
                         onClick = { actions.assistantConversation(!state.prefs.assistantConversation) },
                         trailing = {
@@ -644,6 +646,13 @@ fun SettingsContent(state: SettingsState, actions: SettingsActions, onBack: () -
                         },
                     )
                 }
+                // Said plainly: which parts of the voice assistant are not to be relied on yet.
+                Text(
+                    stringResource(R.string.assistant_voice_experimental_line),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = palette.inkMuted,
+                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp),
+                )
                 Text(
                     stringResource(R.string.assistant_samsung),
                     style = MaterialTheme.typography.bodySmall,
@@ -747,11 +756,15 @@ enum class WakeChoice { Greeting, Name, Sensitivity }
 internal fun WakeWordGroup(state: SettingsState, actions: SettingsActions, onChoose: (WakeChoice) -> Unit) {
     val palette = LocalPalette.current
     val on = state.prefs.wakeWord && state.wakeAvailable
-    Group(stringResource(R.string.wake_word)) {
+    Group(stringResource(R.string.wake_word), badge = stringResource(R.string.experimental)) {
         SettingRow(
             Icons.Filled.Hearing,
             stringResource(R.string.wake_word_listen),
-            subtitle = stringResource(if (state.wakeAvailable) R.string.wake_word_line else R.string.wake_word_unavailable),
+            subtitle = if (state.wakeAvailable) {
+                stringResource(R.string.wake_word_line) + "\n" + stringResource(R.string.wake_experimental_line)
+            } else {
+                stringResource(R.string.wake_word_unavailable)
+            },
             enabled = state.wakeAvailable,
             onClick = { actions.wakeWord(!on) },
             trailing = { Switch(checked = on, enabled = state.wakeAvailable, onCheckedChange = actions::wakeWord) },
@@ -965,18 +978,35 @@ internal fun NotificationSummaryGroup(state: SettingsState, actions: SettingsAct
     }
 }
 
+/** A group's header and its rows; [badge] is a label beside the title ("Experimental"). */
 @Composable
-private fun Group(title: String, content: @Composable () -> Unit) {
+private fun Group(title: String, badge: String? = null, content: @Composable () -> Unit) {
     val palette = LocalPalette.current
-    Text(
-        title,
-        style = MaterialTheme.typography.labelLarge,
-        fontWeight = FontWeight.SemiBold,
-        color = palette.accent,
-        modifier = Modifier.padding(start = 16.dp, top = 24.dp, bottom = 8.dp),
-    )
+    // The title gives when the two do not fit; the label keeps its size.
+    Row(Modifier.padding(start = 16.dp, end = 16.dp, top = 24.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            title,
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.SemiBold,
+            color = palette.accent,
+            modifier = Modifier.weight(1f, fill = false),
+        )
+        if (badge != null) {
+            Spacer(Modifier.width(8.dp))
+            Badge(badge)
+        }
+    }
     Surface(shape = RoundedCornerShape(20.dp), color = palette.surfaceRaised, contentColor = palette.ink, modifier = Modifier.fillMaxWidth()) {
         Column { content() }
+    }
+}
+
+/** A small label: "Experimental". */
+@Composable
+private fun Badge(text: String) {
+    val palette = LocalPalette.current
+    Surface(shape = RoundedCornerShape(8.dp), color = palette.accentSoft, contentColor = palette.accent) {
+        Text(text, style = MaterialTheme.typography.labelSmall, maxLines = 1, modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp))
     }
 }
 
@@ -996,6 +1026,7 @@ private fun SettingRow(
     tint: Color? = null,
     enabled: Boolean = true,
     showIcon: Boolean = true,
+    badge: String? = null,
     trailing: (@Composable () -> Unit)? = null,
 ) {
     val palette = LocalPalette.current
@@ -1014,6 +1045,8 @@ private fun SettingRow(
         Spacer(Modifier.width(16.dp))
         Column(Modifier.weight(1f)) {
             Text(title, style = MaterialTheme.typography.bodyLarge, color = ink)
+            // On a line of its own, under the title: nothing has to fit beside words that wrap.
+            badge?.let { Box(Modifier.padding(top = 2.dp, bottom = 2.dp)) { Badge(it) } }
             subtitle?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = palette.inkMuted) }
         }
         if (trailing != null) {

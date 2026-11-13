@@ -432,6 +432,9 @@
     <string name="assist_stop_words">basta|stop|è tutto|fine|ciao|arrivederci|grazie è tutto|annulla|smetti</string>
     <string name="assistant_conversation">Continuare una conversazione a voce</string>
     <string name="assistant_conversation_line">Dopo aver letto ad alta voce una risposta a voce, l’assistente ascolta di nuovo, finché non dici «basta», tocchi Termina o non dici nulla per qualche secondo. Funziona con le cuffie.</string>
+    <string name="experimental">Sperimentale</string>
+    <string name="wake_experimental_line">Nuovo e provato finora su pochi telefoni. Può non sentire la frase, attivarsi per errore, oppure sentirti e non aprire comunque l’assistente.</string>
+    <string name="assistant_voice_experimental_line">Sperimentale: l’ascolto automatico all’apertura dell’assistente, il riconoscimento di quando hai finito di parlare e la conversazione a voce sono nuovi e non funzionano ancora bene su tutti i telefoni. Scrivere una domanda e il pulsante del microfono funzionano sempre.</string>
     <string name="assist_wake_word_hint">Nessuna parola di attivazione, a meno che tu non la voglia: Impostazioni › Assistente › Parola di attivazione attiva quella di LLeMbas, su questo telefono.</string>
     <string name="channel_wake">Parola di attivazione</string>
     <string name="wake_word">Parola di attivazione</string>

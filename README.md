@@ -46,6 +46,9 @@ hotword detection for the system's own preinstalled assistant, so LLeMbas listen
 on-device engine in a microphone service, with a notification up the whole time; nothing leaves
 the phone before the word. Not in the F-Droid build.
 
+The wake word and the hands-free parts of the voice assistant (listening by itself, the spoken
+conversation) are **experimental**: new, and tried on few phones. Settings marks them so.
+
 ## Build
 
 Builds run on GitHub Actions (`.github/workflows/ci.yml`); locally it is

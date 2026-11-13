@@ -434,6 +434,9 @@
     <string name="assist_stop_words">stop|that\'s all|that is all|that\'s it|goodbye|bye|enough|end|thank you that\'s all|cancel</string>
     <string name="assistant_conversation">Keep a spoken conversation going</string>
     <string name="assistant_conversation_line">After a spoken answer is read aloud, the assistant listens again — until you say “stop”, tap End, or say nothing for a few seconds. Works with a headset.</string>
+    <string name="experimental">Experimental</string>
+    <string name="wake_experimental_line">New, and tried on few phones so far. It may miss the phrase, start by mistake, or hear you and still not open the assistant.</string>
+    <string name="assistant_voice_experimental_line">Experimental: listening by itself when the assistant opens, noticing when you have finished speaking, and the spoken conversation are new and do not work well on every phone yet. Typing a question and the microphone button always work.</string>
     <string name="assist_wake_word_hint">No wake word unless you want one: Settings › Assistant › Wake word turns on LLeMbas\'s own, on this phone.</string>
     <string name="channel_wake">Wake word</string>
     <string name="wake_word">Wake word</string>

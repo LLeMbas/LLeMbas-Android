@@ -13,6 +13,15 @@ is in alpha and releases come off `main`.
   alone. It holds for every way in: the sheet, the wake word, Share. Picking a model in the
   sheet still changes it too.
 
+### Changed
+
+- **The wake word and the hands-free parts of the voice assistant are marked Experimental** in
+  Settings: the wake word as a whole, and with the assistant *Start listening when the
+  assistant opens* and *Keep a spoken conversation going*. They are new and have been tried on
+  few phones: the wake word may miss the phrase, start by mistake, or hear you and still not
+  open the assistant; listening may stop too early or too late. Typing a question and the
+  microphone button are the parts to rely on.
+
 ### Fixed
 
 - **The wake word with the screen off: the sheet showed for a moment and was gone.** A phone

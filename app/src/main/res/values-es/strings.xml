@@ -432,6 +432,9 @@
     <string name="assist_stop_words">para|stop|basta|eso es todo|ya está|adiós|terminar|fin|gracias eso es todo|cancelar</string>
     <string name="assistant_conversation">Mantener una conversación hablada</string>
     <string name="assistant_conversation_line">Después de leer en voz alta una respuesta hablada, el asistente vuelve a escuchar, hasta que digas «para», toques Terminar o no digas nada durante unos segundos. Funciona con auriculares.</string>
+    <string name="experimental">Experimental</string>
+    <string name="wake_experimental_line">Nuevo y probado por ahora en pocos teléfonos. Puede no oír la frase, activarse por error u oírte y aun así no abrir el asistente.</string>
+    <string name="assistant_voice_experimental_line">Experimental: escuchar por sí solo al abrir el asistente, notar cuándo has terminado de hablar y la conversación hablada son nuevos y todavía no funcionan bien en todos los teléfonos. Escribir una pregunta y el botón del micrófono funcionan siempre.</string>
     <string name="assist_wake_word_hint">Sin palabra de activación salvo que quieras una: Ajustes › Asistente › Palabra de activación activa la propia de LLeMbas, en este teléfono.</string>
     <string name="channel_wake">Palabra de activación</string>
     <string name="wake_word">Palabra de activación</string>

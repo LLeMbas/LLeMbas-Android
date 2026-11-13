@@ -432,6 +432,9 @@
     <string name="assist_stop_words">stop|dosť|to je všetko|koniec|dovidenia|ďakujem to je všetko|zrušiť|prestaň</string>
     <string name="assistant_conversation">Pokračovať v hovorenom rozhovore</string>
     <string name="assistant_conversation_line">Po prečítaní hovorenej odpovede asistent znova počúva — kým nepoviete „stop“, neťuknete na Ukončiť alebo pár sekúnd nič nepoviete. Funguje aj so slúchadlami.</string>
+    <string name="experimental">Experimentálne</string>
+    <string name="wake_experimental_line">Novinka, zatiaľ vyskúšaná len na niekoľkých telefónoch. Môže frázu prepočuť, spustiť sa omylom, alebo vás začuť a asistenta aj tak neotvoriť.</string>
+    <string name="assistant_voice_experimental_line">Experimentálne: samočinné počúvanie po otvorení asistenta, rozpoznanie, že ste dohovorili, a hovorený rozhovor sú nové a zatiaľ nefungujú dobre na každom telefóne. Napísať otázku a tlačidlo mikrofónu fungujú vždy.</string>
     <string name="assist_wake_word_hint">Budiace slovo len ak chcete: Nastavenia › Asistent › Budiace slovo zapne vlastné slovo LLeMbas, priamo v tomto telefóne.</string>
     <string name="channel_wake">Budiace slovo</string>
     <string name="wake_word">Budiace slovo</string>

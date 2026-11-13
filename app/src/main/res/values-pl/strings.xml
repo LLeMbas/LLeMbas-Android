@@ -432,6 +432,9 @@
     <string name="assist_stop_words">stop|wystarczy|to wszystko|koniec|do widzenia|dzięki to wszystko|anuluj|przestań</string>
     <string name="assistant_conversation">Prowadź rozmowę głosową</string>
     <string name="assistant_conversation_line">Po odczytaniu odpowiedzi na głos asystent znów słucha — dopóki nie powiesz „stop”, nie dotkniesz Zakończ albo nie będziesz milczeć przez kilka sekund. Działa ze słuchawkami.</string>
+    <string name="experimental">Eksperymentalne</string>
+    <string name="wake_experimental_line">Nowość, sprawdzona na razie na niewielu telefonach. Może nie usłyszeć frazy, uruchomić się przez pomyłkę albo usłyszeć Cię i mimo to nie otworzyć asystenta.</string>
+    <string name="assistant_voice_experimental_line">Eksperymentalne: samoczynne słuchanie po otwarciu asystenta, rozpoznawanie, że skończyłeś mówić, oraz rozmowa głosowa są nowe i nie na każdym telefonie działają jeszcze dobrze. Wpisanie pytania i przycisk mikrofonu działają zawsze.</string>
     <string name="assist_wake_word_hint">Bez słowa aktywującego, chyba że chcesz: Ustawienia › Asystent › Słowo aktywujące włącza własne słowo LLeMbas, na tym telefonie.</string>
     <string name="channel_wake">Słowo aktywujące</string>
     <string name="wake_word">Słowo aktywujące</string>

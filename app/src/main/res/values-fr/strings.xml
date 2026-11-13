@@ -432,6 +432,9 @@
     <string name="assist_stop_words">stop|arrête|c\'est tout|ça suffit|au revoir|fin|terminé|merci c\'est tout|annuler</string>
     <string name="assistant_conversation">Poursuivre une conversation orale</string>
     <string name="assistant_conversation_line">Après la lecture d’une réponse orale, l’assistant écoute à nouveau — jusqu’à ce que vous disiez « stop », touchiez Terminer ou ne disiez rien pendant quelques secondes. Fonctionne avec un casque.</string>
+    <string name="experimental">Expérimental</string>
+    <string name="wake_experimental_line">Nouveau, et essayé sur peu de téléphones pour l’instant. Il peut ne pas entendre la phrase, se déclencher par erreur, ou vous entendre sans pour autant ouvrir l’assistant.</string>
+    <string name="assistant_voice_experimental_line">Expérimental : l’écoute automatique à l’ouverture de l’assistant, la détection de la fin de votre phrase et la conversation orale sont nouvelles et ne fonctionnent pas encore bien sur tous les téléphones. Écrire une question et le bouton du micro fonctionnent toujours.</string>
     <string name="assist_wake_word_hint">Pas de mot d’activation sauf si vous en voulez un : Paramètres › Assistant › Mot d’activation active celui de LLeMbas, sur ce téléphone.</string>
     <string name="channel_wake">Mot d’activation</string>
     <string name="wake_word">Mot d’activation</string>
