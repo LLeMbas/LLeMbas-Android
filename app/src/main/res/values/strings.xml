@@ -426,6 +426,8 @@
     <string name="assist_say_it">Say it, then pause</string>
     <string name="assist_type">Type instead</string>
     <string name="assist_writing_down">Writing down what you said…</string>
+    <string name="assist_unlock_to_send">Unlock to send</string>
+    <string name="assist_locked_line">The phone is locked. Nothing is sent, and no answer is shown, until you unlock it.</string>
     <string name="assist_conversation">In conversation</string>
     <string name="assist_conversation_line">I listen again after each answer. Say “stop” to end.</string>
     <string name="assist_conversation_end">End</string>

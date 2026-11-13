@@ -424,6 +424,8 @@
     <string name="assist_say_it">Powiedz to i zrób pauzę</string>
     <string name="assist_type">Zamiast tego pisz</string>
     <string name="assist_writing_down">Zapisuję, co powiedziałeś…</string>
+    <string name="assist_unlock_to_send">Odblokuj, aby wysłać</string>
+    <string name="assist_locked_line">Telefon jest zablokowany. Dopóki go nie odblokujesz, nic nie zostanie wysłane ani żadna odpowiedź nie zostanie pokazana.</string>
     <string name="assist_conversation">Rozmowa</string>
     <string name="assist_conversation_line">Po każdej odpowiedzi słucham znowu. Powiedz „stop”, aby zakończyć.</string>
     <string name="assist_conversation_end">Zakończ</string>

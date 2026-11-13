@@ -451,6 +451,8 @@ STRINGS: dict[str, str] = {
     "assist_say_it": "Say it, then pause",
     "assist_type": "Type instead",
     "assist_writing_down": "Writing down what you said…",
+    "assist_unlock_to_send": "Unlock to send",
+    "assist_locked_line": "The phone is locked. Nothing is sent, and no answer is shown, until you unlock it.",
     "assist_conversation": "In conversation",
     "assist_conversation_line": "I listen again after each answer. Say “stop” to end.",
     "assist_conversation_end": "End",

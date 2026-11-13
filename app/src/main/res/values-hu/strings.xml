@@ -424,6 +424,8 @@
     <string name="assist_say_it">Mondja, aztán tartson szünetet</string>
     <string name="assist_type">Inkább gépelés</string>
     <string name="assist_writing_down">Lejegyzem, amit mondott…</string>
+    <string name="assist_unlock_to_send">Feloldás és küldés</string>
+    <string name="assist_locked_line">A telefon zárolva van. Amíg fel nem oldod, semmi sem megy el, és válasz sem jelenik meg.</string>
     <string name="assist_conversation">Beszélgetés</string>
     <string name="assist_conversation_line">Minden válasz után újra figyelek. A befejezéshez mondd: „állj”.</string>
     <string name="assist_conversation_end">Befejezés</string>

@@ -18,6 +18,7 @@ fun AssistPanel(
     onOpenApp: () -> Unit,
     onNeedMic: () -> Unit,
     onDismiss: () -> Unit,
+    onUnlock: () -> Unit = {},
 ) {
     val state by controller.state.collectAsState()
     AssistSheetFrame(onDismiss = onDismiss) { handle, _ ->
@@ -27,6 +28,7 @@ fun AssistPanel(
             locked = locked,
             handle = handle,
             onOpenApp = onOpenApp,
+            onUnlock = onUnlock,
             onSend = { text -> if (locked) onUnlockAndAsk(text) else controller.ask(text) },
             onMic = {
                 when {

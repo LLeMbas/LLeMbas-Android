@@ -335,6 +335,13 @@ class ScreenShots {
         shoot("20-assistant-answered", content = over(Fakes.assistAnswered, false))
         shoot("21-assistant-writing", content = over(Fakes.assistWriting, false))
         shoot("22-assistant-locked", content = over(Fakes.assistOpened, true))
+        // Over the lock screen after the wake word: listening, then the question waiting for the
+        // unlock; and a conversation that was up when the phone locked is not shown.
+        shoot("22-assistant-locked-listening", content = over(Fakes.assistListening, true))
+        val waiting = Fakes.assistOpened.copy(waiting = "How far is it to the next town?")
+        shoot("22-assistant-locked-waiting", content = over(waiting, true))
+        shoot("22-assistant-locked-waiting", Phone.Small, fontScale = 1.5f, content = over(waiting, true))
+        shoot("22-assistant-locked-answered", content = over(Fakes.assistAnswered, true))
         shoot("23-assistant-offline", Phone.Small, content = over(Fakes.assistOffline, false))
         shoot("24-assistant-conversation", content = over(Fakes.assistConversation, false))
         shoot("24-assistant-conversation", Phone.Small, fontScale = 1.5f, content = over(Fakes.assistConversation, false))

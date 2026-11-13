@@ -424,6 +424,8 @@
     <string name="assist_say_it">Dígalo y haga una pausa</string>
     <string name="assist_type">Escribir en su lugar</string>
     <string name="assist_writing_down">Escribiendo lo que ha dicho…</string>
+    <string name="assist_unlock_to_send">Desbloquear para enviar</string>
+    <string name="assist_locked_line">El teléfono está bloqueado. Hasta que lo desbloquees no se envía nada ni se muestra ninguna respuesta.</string>
     <string name="assist_conversation">En conversación</string>
     <string name="assist_conversation_line">Vuelvo a escuchar después de cada respuesta. Di «para» para terminar.</string>
     <string name="assist_conversation_end">Terminar</string>

@@ -424,6 +424,8 @@
     <string name="assist_say_it">Lo dica, poi faccia una pausa</string>
     <string name="assist_type">Scrivi invece</string>
     <string name="assist_writing_down">Trascrivo ciò che ha detto…</string>
+    <string name="assist_unlock_to_send">Sblocca per inviare</string>
+    <string name="assist_locked_line">Il telefono è bloccato. Finché non lo sblocchi non viene inviato nulla e non viene mostrata alcuna risposta.</string>
     <string name="assist_conversation">In conversazione</string>
     <string name="assist_conversation_line">Ascolto di nuovo dopo ogni risposta. Di’ «basta» per finire.</string>
     <string name="assist_conversation_end">Termina</string>

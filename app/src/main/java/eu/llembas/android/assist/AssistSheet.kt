@@ -46,6 +46,7 @@ import androidx.compose.material.icons.filled.Forum
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Keyboard
 import androidx.compose.material.icons.filled.Lightbulb
+import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.ScreenshotMonitor
@@ -197,7 +198,9 @@ fun AssistSheetFrame(onDismiss: () -> Unit, content: @Composable ColumnScope.(ha
  * - **the foot**: Use screen, then the microphone first -- while listening, the words as they are
  *   heard and how loud -- or the words typed, and Send.
  *
- * Nothing from the account is on it while the phone is [locked]: no model list, no last chat.
+ * Nothing from the account is on it while the phone is [locked]: no model list, no last chat,
+ * no question asked earlier and no answer. A question heard over the lock screen is shown -- the
+ * person's own words -- with the way to unlock, which sends it ([onUnlock]).
  */
 @Composable
 fun ColumnScope.AssistSheetContent(
@@ -206,6 +209,7 @@ fun ColumnScope.AssistSheetContent(
     locked: Boolean,
     handle: Modifier = Modifier,
     onOpenApp: () -> Unit = {},
+    onUnlock: () -> Unit = {},
     onSend: (String) -> Unit = actions::ask,
     onMic: () -> Unit = actions::listen,
 ) {
@@ -267,10 +271,15 @@ fun ColumnScope.AssistSheetContent(
         Modifier.weight(1f).fillMaxWidth().verticalScroll(scroll).padding(horizontal = 16.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        if (state.empty) {
-            Starting(state, actions, locked)
-        } else {
-            state.turns.forEachIndexed { i, turn ->
+        when {
+            locked && state.waiting.isNotBlank() -> Waiting(state.waiting, onUnlock)
+
+            // A conversation that was on the sheet when the phone locked: not for the lock screen.
+            locked && !state.empty -> Text(stringResource(R.string.assist_locked_line), style = MaterialTheme.typography.bodyMedium, color = palette.inkMuted)
+
+            state.empty -> Starting(state, actions, locked)
+
+            else -> state.turns.forEachIndexed { i, turn ->
                 Turn(turn, last = i == state.turns.lastIndex, state, actions, onOpenApp)
             }
         }
@@ -466,6 +475,31 @@ private fun QuickAction(icon: androidx.compose.ui.graphics.vector.ImageVector, l
         border = BorderStroke(1.dp, palette.border),
         modifier = Modifier.heightIn(min = 40.dp),
     )
+}
+
+/**
+ * Over the lock screen: the question that was heard, as its bubble, and the one thing to do about
+ * it. Unlocking sends it; nothing is sent and no answer shown before.
+ */
+@Composable
+private fun Waiting(question: String, onUnlock: () -> Unit) {
+    val palette = LocalPalette.current
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
+            Surface(color = palette.bubbleUser, contentColor = palette.ink, shape = RoundedCornerShape(20.dp), modifier = Modifier.widthIn(max = 300.dp)) {
+                Text(question, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp))
+            }
+        }
+        Text(stringResource(R.string.assist_locked_line), style = MaterialTheme.typography.bodyMedium, color = palette.inkMuted)
+        AssistChip(
+            onClick = onUnlock,
+            label = { Text(stringResource(R.string.assist_unlock_to_send)) },
+            leadingIcon = { Icon(Icons.Filled.LockOpen, contentDescription = null, modifier = Modifier.size(18.dp)) },
+            colors = AssistChipDefaults.assistChipColors(containerColor = palette.surfaceRaised, leadingIconContentColor = palette.accent),
+            border = BorderStroke(1.dp, palette.border),
+            modifier = Modifier.heightIn(min = 48.dp),
+        )
+    }
 }
 
 /** One question, as a bubble on the right, and its answer at full width -- as in the app's chats. */

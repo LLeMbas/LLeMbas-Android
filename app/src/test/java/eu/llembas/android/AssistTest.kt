@@ -6,9 +6,12 @@ import eu.llembas.android.api.Step
 import eu.llembas.android.api.Tail
 import eu.llembas.android.assist.AssistController
 import eu.llembas.android.assist.AssistTurn
+import eu.llembas.android.assist.LockedStart
+import eu.llembas.android.assist.Opening
 import eu.llembas.android.assist.Recorder
 import eu.llembas.android.assist.SheetStop
 import eu.llembas.android.assist.isStopPhrase
+import eu.llembas.android.assist.lockedStart
 import eu.llembas.android.assist.settle
 import eu.llembas.android.assist.usePhoneRecognizer
 import eu.llembas.android.auth.Prefs
@@ -68,6 +71,25 @@ class AssistTest {
         // A chosen model the instance no longer has falls back the same way, and none is none.
         assertEquals("large", AssistController.assistantModelFor("retired", "large", models))
         assertEquals(null, AssistController.assistantModelFor("quick", null, emptyList()))
+    }
+
+    @Test
+    fun overTheLockScreenAWayInThatMeansToSpeakStaysAndListens() {
+        // The wake word with the screen off: nobody is there to unlock. It listens; sending waits.
+        assertEquals(LockedStart.Listen, lockedStart(locked = true, Opening.Listen, question = false, micAllowed = true))
+        // A question handed over (heard by the assistant's own sheet, or typed there) is held, not dropped.
+        assertEquals(LockedStart.Hold, lockedStart(locked = true, Opening.Sheet, question = true, micAllowed = true))
+        assertEquals(LockedStart.Hold, lockedStart(locked = true, Opening.Listen, question = true, micAllowed = false))
+        // Anything else over the lock screen asks to unlock first, as before: the plain sheet,
+        // the last chat (which is the account's), and the microphone's permission prompt.
+        assertEquals(LockedStart.Unlock, lockedStart(locked = true, Opening.Sheet, question = false, micAllowed = true))
+        assertEquals(LockedStart.Unlock, lockedStart(locked = true, Opening.Continue, question = false, micAllowed = true))
+        assertEquals(LockedStart.Unlock, lockedStart(locked = true, Opening.Listen, question = false, micAllowed = false))
+        // Unlocked, the way in decides alone.
+        for (opening in Opening.entries) {
+            assertEquals(LockedStart.Go, lockedStart(locked = false, opening, question = false, micAllowed = true))
+            assertEquals(LockedStart.Go, lockedStart(locked = false, opening, question = true, micAllowed = false))
+        }
     }
 
     @Test

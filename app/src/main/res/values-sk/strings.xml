@@ -424,6 +424,8 @@
     <string name="assist_say_it">Povedzte to a odmlčte sa</string>
     <string name="assist_type">Radšej písať</string>
     <string name="assist_writing_down">Zapisujem, čo ste povedali…</string>
+    <string name="assist_unlock_to_send">Odomknúť a odoslať</string>
+    <string name="assist_locked_line">Telefón je zamknutý. Kým ho neodomknete, nič sa neodošle a žiadna odpoveď sa nezobrazí.</string>
     <string name="assist_conversation">Rozhovor</string>
     <string name="assist_conversation_line">Po každej odpovedi znova počúvam. Povedzte „stop“ a skončíme.</string>
     <string name="assist_conversation_end">Ukončiť</string>

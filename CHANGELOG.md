@@ -15,6 +15,16 @@ is in alpha and releases come off `main`.
 
 ### Fixed
 
+- **The wake word with the screen off: the sheet showed for a moment and was gone.** A phone
+  whose screen is off is locked, and a sheet opened over the lock screen asked Android to unlock
+  first and closed itself when that was turned down -- which is what happens when nobody is
+  there to unlock. Opened to listen (the wake word, a headset's button), the sheet now stays up
+  over the lock screen and listens. What it heard is shown as your question, with **Unlock to
+  send**, and Android is asked to unlock at once: a face or a fingerprint sends it. Leave it,
+  and it stays until the screen goes off. Nothing is asked and no answer is shown or spoken
+  while the phone is locked -- an answer over the lock screen is not offered.
+- A conversation that was on the assistant's sheet when the phone locked is no longer readable
+  over the lock screen.
 - **A new assistant chat could start on the wrong model.** After *Continue the last chat*, *New
   chat* kept that chat's model instead of going back to the assistant's own; and a question
   sent the moment the sheet opened, before the instance had said which models it has, went to

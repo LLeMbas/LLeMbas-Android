@@ -424,6 +424,8 @@
     <string name="assist_say_it">Sprechen Sie, dann kurz Pause</string>
     <string name="assist_type">Lieber tippen</string>
     <string name="assist_writing_down">Ihr Gesagtes wird aufgeschrieben…</string>
+    <string name="assist_unlock_to_send">Entsperren und senden</string>
+    <string name="assist_locked_line">Das Telefon ist gesperrt. Bis du es entsperrst, wird nichts gesendet und keine Antwort angezeigt.</string>
     <string name="assist_conversation">Im Gespräch</string>
     <string name="assist_conversation_line">Nach jeder Antwort höre ich wieder zu. Sag „Stopp“, um zu beenden.</string>
     <string name="assist_conversation_end">Beenden</string>

@@ -88,6 +88,11 @@ data class AssistUiState(
     val conversation: Boolean = false,
     /** Whether the person let the assistant read the notifications when asked (Settings and Android both). */
     val canReadNotifications: Boolean = false,
+    /**
+     * A question that waits for the phone to be unlocked: heard (or typed) over the lock screen,
+     * the person's own words and nothing from the account. Asked once the phone is unlocked.
+     */
+    val waiting: String = "",
 ) {
     val screenAvailable: Boolean get() = screenText || screenshot != null
     val modelInfo: ModelInfo? get() = models.firstOrNull { it.id == modelId }
@@ -155,6 +160,12 @@ class AssistController(private val context: Context, private val scope: Coroutin
      * that chat's own; a new chat goes back to this one.
      */
     private var newChatModel: String? = null
+
+    /** Over the lock screen: what is heard is held ([AssistUiState.waiting]), not asked. */
+    private var overLock = false
+
+    /** Whether the held question was spoken (and is answered aloud like one). */
+    private var waitingSpoken = false
     private val ready: Job
 
     init {
@@ -225,6 +236,36 @@ class AssistController(private val context: Context, private val scope: Coroutin
                 if (listen || s.empty) listen()
             }
         }
+    }
+
+    /**
+     * The sheet came up over the lock screen by a way in that means to speak -- the wake word, a
+     * headset's button: it listens, and what it hears is held for the unlock ([hold]), never
+     * asked from here. The reply is not for the lock screen (nothing from the account shows there).
+     */
+    fun listenOverLock() {
+        overLock = true
+        scope.launch {
+            ready.join()
+            val s = _state.value
+            if (overLock && s.signedIn && s.canListen && !s.listening && s.waiting.isBlank() && micAllowed()) listen()
+        }
+    }
+
+    /** Keep [question] until the phone is unlocked ([unlocked]). */
+    fun hold(question: String, spoken: Boolean) {
+        if (question.isBlank()) return
+        overLock = true
+        waitingSpoken = spoken
+        _state.update { it.copy(waiting = question, conversation = false) }
+    }
+
+    /** The phone is unlocked: the question that waited is asked now -- unless [ask] says another one takes its place. */
+    fun unlocked(ask: Boolean = true) {
+        overLock = false
+        val waited = _state.value.waiting
+        _state.update { it.copy(waiting = "") }
+        if (ask && waited.isNotBlank()) ask(waited, spoken = waitingSpoken)
     }
 
     /** Open at the last assistant chat, once it is known which that is. */
@@ -416,6 +457,7 @@ class AssistController(private val context: Context, private val scope: Coroutin
 
     /** What was said: in a conversation, "stop" (or the like) ends it; anything else is asked. */
     private fun askOrStop(words: String) {
+        if (overLock) return hold(words, spoken = true)
         val phrases = context.getString(R.string.assist_stop_words).split("|")
         if (_state.value.conversation && isStopPhrase(words, phrases)) endConversation() else ask(words, spoken = true)
     }

@@ -36,9 +36,11 @@ import eu.llembas.android.wake.AssistPresence
 import eu.llembas.android.wake.wakeLogConnected
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 
@@ -144,6 +146,9 @@ class LembasAssistSession(context: Context) :
     /** Whether this session's sheet is up, as far as the wake word's pause is concerned. */
     private var up = false
 
+    /** Over the lock screen: waiting for what is heard, to hand it to the sheet's activity. */
+    private var handing: Job? = null
+
     override val lifecycle: Lifecycle get() = registry
     override val savedStateRegistry: SavedStateRegistry get() = saved.savedStateRegistry
 
@@ -203,7 +208,18 @@ class LembasAssistSession(context: Context) :
         // this one was slow to come, goes now that this one is here.
         AssistActivity.closeWoken()
         // The wake word asks for the sheet listening, whatever Settings says about opening.
-        controller.opened(locked(), listen = args?.getBoolean(AssistActivity.EXTRA_LISTEN) == true)
+        val listen = args?.getBoolean(AssistActivity.EXTRA_LISTEN) == true
+        if (listen && locked()) {
+            // Over the lock screen too: it listens, and what it hears goes to the sheet's
+            // activity, which shows it and asks Android to unlock before anything is sent.
+            val showing = controller
+            showing.listenOverLock()
+            // Once: Android may call onShow again while the sheet is up.
+            handing?.cancel()
+            handing = scope.launch { handOff(showing.state.map { it.waiting }.first { it.isNotBlank() }, spoken = true) }
+        } else {
+            controller.opened(locked(), listen = listen)
+        }
     }
 
     /**
@@ -261,10 +277,11 @@ class LembasAssistSession(context: Context) :
      * which asks Android to unlock first and only then sends it. The microphone's permission
      * prompt needs an activity too.
      */
-    private fun handOff(text: String, listen: Boolean = false) {
+    private fun handOff(text: String, listen: Boolean = false, spoken: Boolean = false) {
         startAssistantActivity(
             Intent(context, AssistActivity::class.java)
                 .putExtra(AssistActivity.EXTRA_QUESTION, text)
+                .putExtra(AssistActivity.EXTRA_SPOKEN, spoken)
                 .putExtra(AssistActivity.EXTRA_LISTEN, listen)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
         )
