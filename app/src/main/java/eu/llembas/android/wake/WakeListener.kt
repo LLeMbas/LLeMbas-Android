@@ -46,6 +46,8 @@ class WakeListener(
 
     /** Listen as [plans] say, until the flow ends or this is cancelled; the engine is released on the way out. */
     suspend fun follow(plans: Flow<WakePlan>) = coroutineScope {
+        // Where a heard word is answered: beside the listening, so a pause does not cancel the answer.
+        val answers = this
         var hearing: Job? = null
         try {
             plans.distinctUntilChanged().collect { plan ->
@@ -54,7 +56,7 @@ class WakeListener(
                 if (plan.pause != WakePause.None) {
                     say(WakeState.Paused(plan.pause))
                 } else {
-                    hearing = launch { hear(plan) }
+                    hearing = launch { hear(plan) { phrase -> answers.launch { heard(phrase) } } }
                 }
             }
         } finally {
@@ -80,14 +82,17 @@ class WakeListener(
     fun retryNow() = nudges.update { it + 1 }
 
     /** Listen for [plan]'s phrase until cancelled: after the word, again; after a failure, again later. */
-    private suspend fun hear(plan: WakePlan) {
+    private suspend fun hear(plan: WakePlan, heardIt: (WakePhrase) -> Unit) {
         var failures = 0
         while (true) {
             try {
                 listened = 0
                 listen(plan)
                 failures = 0
-                heard(plan.phrase)
+                // Handed to the caller's scope, not run here: answering the word usually pauses
+                // the listening (the sheet takes the microphone), which cancels this very loop --
+                // and must not cancel the answer with it.
+                heardIt(plan.phrase)
                 // The sheet takes the microphone now (a new plan cancels this); otherwise listen again.
                 delay(HEARD_REST_MS)
             } catch (e: CancellationException) {

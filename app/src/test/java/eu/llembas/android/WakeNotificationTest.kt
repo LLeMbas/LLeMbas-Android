@@ -118,28 +118,40 @@ class WakeNotificationTest {
             listOf("Tue 10 Mar, 08:00:00 · “Hey Assistant”", "Opened the assistant."),
             words(WakeAttempt(at = at, phrase = "Hey Assistant", way = "session", outcome = WakeAttempt.OUT_OPENED, assistant = true, readyAt = at - 60_000)),
         )
-        // The assistant in name, never connected in this run of the app: said step by step.
+        // The assistant in name, but Android was not using it: said step by step.
+        val missed = words(
+            WakeAttempt(
+                at = at,
+                phrase = "Hey Assistant",
+                way = "notification",
+                outcome = WakeAttempt.OUT_NOT_CONNECTED,
+                fallback = "notification",
+                assistant = true,
+                connectedLater =
+                at + 30_000,
+            ),
+        )
         assertEquals(
             listOf(
                 "Tue 10 Mar, 08:00:00 · “Hey Assistant”",
                 "Android had not connected LLeMbas as the assistant, so it could not open the sheet.",
                 "Posted a notification to tap instead.",
-                "LLeMbas was the digital assistant app.",
+                "LLeMbas was chosen as the digital assistant app, but Android was not using it as its voice assistant.",
                 "Android had not connected the assistant since the app started.",
                 "Android connected it again at Tue 10 Mar, 08:00:30.",
+                "screen=on locked=false visible=false created=- destroyed=- prepared=false",
             ),
-            words(
-                WakeAttempt(
-                    at = at,
-                    phrase = "Hey Assistant",
-                    way = "notification",
-                    outcome = WakeAttempt.OUT_NOT_CONNECTED,
-                    fallback = "notification",
-                    assistant = true,
-                    connectedLater =
-                    at + 30_000,
-                ),
-            ),
+            missed,
+        )
+        // Active and held, and still not connected: the plain "was the assistant" line, and that it was waited for.
+        val waited =
+            words(WakeAttempt(at = at, phrase = "Hey Assistant", outcome = WakeAttempt.OUT_NOT_CONNECTED, assistant = true, active = true, waited = true))
+        assertEquals("LLeMbas was the digital assistant app.", waited[2])
+        assertEquals("Waited a moment for Android to connect it.", waited[3])
+        // A sheet that came says how long it took.
+        assertEquals(
+            "The sheet was up after 180 ms.",
+            words(WakeAttempt(at = at, phrase = "Hey Assistant", way = "session", outcome = WakeAttempt.OUT_OPENED, sheetMs = 180))[2],
         )
         // Android's own words where it refused, and when it had connected and dropped the service.
         val refused = words(

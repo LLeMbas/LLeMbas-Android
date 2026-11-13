@@ -491,6 +491,13 @@
     <string name="wake_link_ready">Android pripojil asistenta o %1$s.</string>
     <string name="wake_link_shutdown">Android ho odpojil o %1$s.</string>
     <string name="wake_link_later">Android ho znova pripojil o %1$s.</string>
+    <string name="wake_sheet_ms">Panel sa zobrazil po %1$s ms.</string>
+    <string name="wake_no_recognizers">Tento telefón nemá rozpoznávače hlasu, preto na ňom Android nespúšťa službu hlasového asistenta.</string>
+    <string name="wake_not_active">LLeMbas bol vybraný ako aplikácia digitálneho asistenta, no Android ho nepoužíval ako hlasového asistenta.</string>
+    <string name="wake_waited">Chvíľu čakal, kým ho Android pripojí.</string>
+    <string name="wake_show_failed">Android oznámil, že panel asistenta nedokázal zobraziť.</string>
+    <string name="wake_assistant_inactive">Android práve nepoužíva LLeMbas ako hlasového asistenta</string>
+    <string name="wake_assistant_inactive_line">Vyberte LLeMbas ako aplikáciu digitálneho asistenta znova: ťuknite sem, zvoľte inú aplikáciu a potom LLeMbas. Dovtedy ho dlhé stlačenie otvára ako bežnú obrazovku a budiace slovo môže poslať len oznámenie.</string>
     <string name="wake_assistant_unbound">LLeMbas je asistent, no Android ho práve nemá pripojeného</string>
     <string name="wake_assistant_unbound_line">Kým ho nepripojí, budiace slovo nemôže panel otvoriť samo. Ťuknutím otvoríte systémové nastavenie asistenta: vyberte inú aplikáciu a potom znova LLeMbas, tým sa pripojí.</string>
     <string name="wake_heard_could_not">Nepodarilo sa otvoriť samo — ťuknite a pýtajte sa</string>

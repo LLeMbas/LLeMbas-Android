@@ -13,6 +13,7 @@ import eu.llembas.android.wake.wakeKeywords
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -137,6 +138,33 @@ class WakeListenerTest {
         assertEquals(WakeState.Failed(WakeFailure.Microphone, "IllegalStateException: recording did not start"), states.last())
         advanceTimeBy(2_001)
         assertEquals(2, opens)
+        job.cancelAndJoin()
+    }
+
+    @Test
+    fun answeringTheWordIsNotCancelledByThePauseItCauses() = runTest {
+        // What a real wake does: its first step pauses the listening (the sheet takes the
+        // microphone), then it waits for the sheet, then it writes down what happened.
+        val plans = MutableStateFlow(plan)
+        var written = false
+        val listener = WakeListener(
+            say = { states += it },
+            engine = { Detector(hearOn = 2) },
+            microphone = { Mic() },
+            heard = {
+                plans.value = plan.copy(pause = WakePause.Assistant)
+                delay(2_500)
+                written = true
+            },
+            work = StandardTestDispatcher(testScheduler),
+        )
+        val job = launch { listener.follow(plans) }
+        runCurrent()
+        // The listening is paused, as asked...
+        assertEquals(WakeState.Paused(WakePause.Assistant), states.last())
+        // ...and the answer goes on to its end all the same.
+        advanceTimeBy(2_501)
+        assertTrue(written)
         job.cancelAndJoin()
     }
 

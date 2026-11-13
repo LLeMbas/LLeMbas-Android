@@ -3,6 +3,7 @@ package eu.llembas.android.assist
 import android.app.KeyguardManager
 import android.app.assist.AssistStructure
 import android.app.role.RoleManager
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
@@ -49,6 +50,11 @@ import kotlinx.coroutines.runBlocking
  * preinstalled assistant (`CAPTURE_AUDIO_HOTWORD` is a privileged permission).
  */
 class LembasAssistService : VoiceInteractionService() {
+    override fun onCreate() {
+        super.onCreate()
+        AssistLink.created(System.currentTimeMillis())
+    }
+
     override fun onReady() {
         super.onReady()
         current = this
@@ -61,10 +67,31 @@ class LembasAssistService : VoiceInteractionService() {
     }
 
     override fun onShutdown() {
-        if (current === this) current = null
-        AssistLink.shutdown(System.currentTimeMillis())
+        // Only the instance that is the current one disconnects it: an old one going away late
+        // must not say "not connected" over a new one.
+        if (current === this) {
+            current = null
+            AssistLink.shutdown(System.currentTimeMillis())
+        }
         Log.i(TAG, "assistant service disconnected by Android")
         super.onShutdown()
+    }
+
+    override fun onDestroy() {
+        AssistLink.destroyed(System.currentTimeMillis())
+        super.onDestroy()
+    }
+
+    /** Android 14+: Android is about to show a session it was asked for -- or, below, could not. Kept for the wake word's record. */
+    override fun onPrepareToShowSession(args: Bundle, showFlags: Int) {
+        AssistLink.prepared(SystemClock.elapsedRealtime())
+        super.onPrepareToShowSession(args, showFlags)
+    }
+
+    override fun onShowSessionFailed(args: Bundle) {
+        AssistLink.showFailed(SystemClock.elapsedRealtime())
+        Log.w(TAG, "Android could not show the assistant's session")
+        super.onShowSessionFailed(args)
     }
 
     companion object {
@@ -79,6 +106,16 @@ class LembasAssistService : VoiceInteractionService() {
 
         private const val TAG = "LLeMbasWake"
         private val background = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+        /**
+         * Whether Android itself uses this service as its voice-interaction service right now.
+         * Holding the assistant role is not the same: Android keeps the service only while a
+         * speech recogniser is set that it accepts, and resets it at start-up otherwise -- the
+         * long press then opens the assistant as an ordinary screen, and nothing is connected
+         * that could open it from the background.
+         */
+        fun isActive(context: Context): Boolean =
+            runCatching { VoiceInteractionService.isActiveService(context, ComponentName(context, LembasAssistService::class.java)) }.getOrDefault(false)
 
         /** Whether Android says LLeMbas holds the assistant role (Settings › Default apps › Digital assistant app). */
         fun holdsRole(context: Context): Boolean =
@@ -103,6 +140,9 @@ class LembasAssistSession(context: Context) :
     private var scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var controller = AssistController(context, scope)
     private val current = mutableStateOf(controller)
+
+    /** Whether this session's sheet is up, as far as the wake word's pause is concerned. */
+    private var up = false
 
     override val lifecycle: Lifecycle get() = registry
     override val savedStateRegistry: SavedStateRegistry get() = saved.savedStateRegistry
@@ -152,8 +192,16 @@ class LembasAssistSession(context: Context) :
     override fun onShow(args: Bundle?, showFlags: Int) {
         super.onShow(args, showFlags)
         registry.currentState = Lifecycle.State.RESUMED
-        AssistPresence.shown()
+        // Android calls this again for a show asked for while the sheet is up, and hides once:
+        // the sheet is counted as up once.
+        if (!up) {
+            up = true
+            AssistPresence.shown()
+        }
         AssistLink.sheetShown(SystemClock.elapsedRealtime())
+        // One sheet, never two: a sheet the wake word opened as a screen of the app, because
+        // this one was slow to come, goes now that this one is here.
+        AssistActivity.closeWoken()
         // The wake word asks for the sheet listening, whatever Settings says about opening.
         controller.opened(locked(), listen = args?.getBoolean(AssistActivity.EXTRA_LISTEN) == true)
     }
@@ -165,7 +213,10 @@ class LembasAssistSession(context: Context) :
      */
     override fun onHide() {
         super.onHide()
-        AssistPresence.hidden()
+        if (up) {
+            up = false
+            AssistPresence.hidden()
+        }
         controller.close()
         scope.cancel()
         scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)

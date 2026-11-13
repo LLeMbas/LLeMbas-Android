@@ -187,6 +187,8 @@ data class SettingsState(
     val isAssistant: Boolean = true,
     /** Whether Android has the assistant service connected right now: without it the wake word cannot open the sheet by itself. */
     val assistantConnected: Boolean = true,
+    /** Whether Android itself uses LLeMbas's service as its voice assistant (the role can be held without it). */
+    val assistantActive: Boolean = true,
     /** Whether Android's notification access is given to LLeMbas. */
     val notificationAccess: Boolean = false,
     /** Whether this build can read notifications at all (only the `notifications` build declares the listener). */
@@ -412,6 +414,7 @@ fun SettingsScreen(onBack: () -> Unit, onAddInstance: () -> Unit) {
             // Read again each time Settings is composed: the person comes back from the system's page.
             isAssistant = LembasAssistService.holdsRole(context),
             assistantConnected = assistantConnected,
+            assistantActive = LembasAssistService.isActive(context),
             wakeTest = WakeTestShown(running = clock < trial.until, done = tested && clock >= trial.until, heard = if (tested) trial.heard else 0),
             // Read again each time Settings is composed: the person comes back from the system's page.
             notificationAccess = NotificationAccess.granted(context),
@@ -739,6 +742,18 @@ internal fun WakeWordGroup(state: SettingsState, actions: SettingsActions, onCho
                     Icons.Filled.Assistant,
                     stringResource(R.string.wake_not_assistant),
                     subtitle = stringResource(R.string.wake_not_assistant_line),
+                    onClick = actions::assistantSettings,
+                )
+            } else if (!state.assistantActive) {
+                // Chosen as the assistant, yet Android does not run it as its voice assistant:
+                // the long press opens it as an ordinary screen, and nothing is connected that
+                // could open it from the background. Choosing it again puts that right.
+                Rule()
+                SettingRow(
+                    Icons.Filled.Assistant,
+                    stringResource(R.string.wake_assistant_inactive),
+                    subtitle = stringResource(R.string.wake_assistant_inactive_line),
+                    tint = palette.warning,
                     onClick = actions::assistantSettings,
                 )
             } else if (!state.assistantConnected) {

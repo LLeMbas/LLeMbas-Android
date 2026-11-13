@@ -493,6 +493,13 @@
     <string name="wake_link_ready">Android had connected the assistant at %1$s.</string>
     <string name="wake_link_shutdown">Android had disconnected it at %1$s.</string>
     <string name="wake_link_later">Android connected it again at %1$s.</string>
+    <string name="wake_sheet_ms">The sheet was up after %1$s ms.</string>
+    <string name="wake_no_recognizers">This phone has no voice recognisers, so Android runs no voice assistant service on it.</string>
+    <string name="wake_not_active">LLeMbas was chosen as the digital assistant app, but Android was not using it as its voice assistant.</string>
+    <string name="wake_waited">Waited a moment for Android to connect it.</string>
+    <string name="wake_show_failed">Android said it could not show the assistant\'s sheet.</string>
+    <string name="wake_assistant_inactive">Android is not using LLeMbas as its voice assistant right now</string>
+    <string name="wake_assistant_inactive_line">Choose LLeMbas as the digital assistant app again: tap here, pick another app, then LLeMbas. Until then the long press opens it as an ordinary screen, and the wake word can only send a notification.</string>
     <string name="wake_assistant_unbound">LLeMbas is the assistant, but Android has not connected it right now</string>
     <string name="wake_assistant_unbound_line">Until it does, the wake word cannot open the sheet by itself. Tap for the system\'s assistant setting: choosing another app and then LLeMbas again connects it.</string>
     <string name="wake_heard_could_not">Could not open by itself — tap to ask</string>

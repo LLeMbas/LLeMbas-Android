@@ -303,11 +303,30 @@ fun wakeAttemptWords(context: Context, attempt: WakeAttempt, zone: ZoneId = Zone
         WakeWay.Activity.id -> lines += context.getString(R.string.wake_out_activity)
         WakeWay.Notification.id -> lines += context.getString(R.string.wake_out_notification)
     }
-    if (attempt.outcome == WakeAttempt.OUT_OPENED || attempt.outcome == WakeAttempt.OUT_TESTED) return lines
-    lines += context.getString(if (attempt.assistant) R.string.wake_role_held else R.string.wake_role_not_held)
+    if (attempt.outcome == WakeAttempt.OUT_TESTED) return lines
+    if (attempt.sheetMs >= 0) lines += context.getString(R.string.wake_sheet_ms, attempt.sheetMs.toString())
+    if (attempt.outcome == WakeAttempt.OUT_OPENED) return lines
+    // Why the assistant's own way was not there, from what Android itself said at that moment.
+    lines += when {
+        !attempt.assistant -> context.getString(R.string.wake_role_not_held)
+        !attempt.recognizers -> context.getString(R.string.wake_no_recognizers)
+        !attempt.active -> context.getString(R.string.wake_not_active)
+        else -> context.getString(R.string.wake_role_held)
+    }
+    if (attempt.waited) lines += context.getString(R.string.wake_waited)
+    if (attempt.showFailed) lines += context.getString(R.string.wake_show_failed)
     lines += if (attempt.readyAt == 0L) context.getString(R.string.wake_link_never) else context.getString(R.string.wake_link_ready, time(attempt.readyAt))
     if (attempt.shutdownAt != 0L) lines += context.getString(R.string.wake_link_shutdown, time(attempt.shutdownAt))
     if (attempt.connectedLater != 0L) lines += context.getString(R.string.wake_link_later, time(attempt.connectedLater))
+    // The rest as it was noted, for whoever looks for the cause: names and values, not a sentence.
+    lines += listOf(
+        "screen=${if (attempt.screenOn) "on" else "off"}",
+        "locked=${attempt.locked}",
+        "visible=${attempt.visible}",
+        "created=${if (attempt.createdAt == 0L) "-" else time(attempt.createdAt)}",
+        "destroyed=${if (attempt.destroyedAt == 0L) "-" else time(attempt.destroyedAt)}",
+        "prepared=${attempt.prepared}",
+    ).joinToString(" ")
     return lines
 }
 

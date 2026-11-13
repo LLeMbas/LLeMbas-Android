@@ -1,6 +1,7 @@
 package eu.llembas.android.wake
 
 import android.Manifest
+import android.app.KeyguardManager
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -31,6 +32,8 @@ import eu.llembas.android.lembas
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.drop
@@ -38,6 +41,7 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.takeWhile
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 
 /**
@@ -172,7 +176,8 @@ class WakeWordService : LifecycleService() {
             // A test in Settings takes the word; otherwise the assistant opens.
             heard = { phrase ->
                 if (WakeStatus.heardInTrial(SystemClock.elapsedRealtime())) {
-                    record(WakeAttempt(at = System.currentTimeMillis(), phrase = phrase.words, outcome = WakeAttempt.OUT_TESTED))
+                    val tested = WakeAttempt(at = System.currentTimeMillis(), phrase = phrase.words, outcome = WakeAttempt.OUT_TESTED)
+                    wakeScope.launch { record(this@WakeWordService, tested) }
                 } else {
                     wake(phrase)
                 }
@@ -204,68 +209,56 @@ class WakeWordService : LifecycleService() {
     }
 
     /**
-     * The word was heard: the assistant opens listening, by the first way Android allows
-     * ([wakeWay]) -- and what was tried and how it went is written down ([WakeAttempt], kept in
-     * the settings and shown in Settings › Wake word), because a silent "no" here looks to the
+     * The word was heard: the assistant opens listening ([WakeOpener] decides how and checks that
+     * it did), and what was tried and how it went is written down ([WakeAttempt], kept in the
+     * settings and shown in Settings › Wake word), because a silent "no" here looks to the
      * person like a wake word that does not work.
      *
-     * A way that Android does not refuse is not yet a sheet on screen: the sheet says when it
-     * is up ([AssistLink.shown]), and when it has not said so in time the fallback follows --
-     * the activity while the app is on screen, else a notification to tap (the activity is
-     * still tried then; where a phone allows it, it opens and takes the notification away).
+     * It runs on the app's own scope, never inside the listening loop: the hold below pauses
+     * the listener, which cancels the loop that heard the word -- and a wake that ran in that
+     * loop was cancelled by its own first step. One at a time: a word heard while the last one
+     * is still being answered is let go.
      */
-    private suspend fun wake(phrase: WakePhrase) {
-        // The microphone is the sheet's from here: for a moment by this hold, then for as long as a sheet says it is up.
-        AssistPresence.holdFor(SHEET_GRACE_MS)
-        val asked = SystemClock.elapsedRealtime()
-        val assistant = LembasAssistService.current
-        val way = wakeWay(connected = assistant != null, screenOn = power().isInteractive, appVisible = AppVisibility.visible)
-        var attempt = WakeAttempt(
-            at = System.currentTimeMillis(),
-            phrase = phrase.words,
-            way = way.id,
-            assistant = LembasAssistService.holdsRole(this),
-            readyAt = AssistLink.readyAt,
-            shutdownAt = AssistLink.shutdownAt,
-        )
-        // The assistant's own ways first, where it is connected.
-        val refused: Throwable? = when (way) {
-            WakeWay.Session -> runCatching { assistant?.showSession(Bundle().apply { putBoolean(AssistActivity.EXTRA_LISTEN, true) }, 0) }.exceptionOrNull()
-            WakeWay.AssistantActivity -> runCatching { assistant?.startActivity(AssistActivity.woken(this)) }.exceptionOrNull()
-            else -> null
-        }
-        if (way == WakeWay.Session || way == WakeWay.AssistantActivity) {
-            if (refused == null && sheetCame(asked)) return record(attempt.copy(outcome = WakeAttempt.OUT_OPENED))
-            attempt = if (refused != null) {
-                attempt.copy(outcome = WakeAttempt.OUT_REFUSED, detail = WakeError(WakeFailure.Engine, refused).detail)
-            } else {
-                attempt.copy(outcome = WakeAttempt.OUT_NO_SHEET)
+    private fun wake(phrase: WakePhrase) {
+        if (waking?.isActive == true) return
+        // The microphone is the sheet's from here, for as long as the attempt can take; once it
+        // is over, for a moment more, and then for as long as a sheet says it is up.
+        AssistPresence.holdFor(WakeOpener.ATTEMPT_MAX_MS)
+        waking = wakeScope.launch {
+            try {
+                val asked = SystemClock.elapsedRealtime()
+                val opener = WakeOpener(
+                    facts = { wakeFacts(this@WakeWordService) },
+                    awaitConnected = { ms -> withTimeoutOrNull(ms) { AssistLink.connected.first { it } } != null },
+                    showSession = {
+                        val assistant = LembasAssistService.current ?: error("the assistant service is not connected")
+                        assistant.showSession(Bundle().apply { putBoolean(AssistActivity.EXTRA_LISTEN, true) }, 0)
+                    },
+                    // Through the assistant service where it is connected (the same permission either way: Android lets
+                    // the whole app start activities while it holds the service bound).
+                    startActivity = { (LembasAssistService.current ?: this@WakeWordService).startActivity(AssistActivity.woken(this@WakeWordService)) },
+                    sheetCame = { ms ->
+                        withTimeoutOrNull(ms) { AssistLink.shown.first { it >= asked } }?.let { (it - asked).coerceAtLeast(0) }
+                    },
+                    notify = { attempt ->
+                        getSystemService(NotificationManager::class.java).notify(HEARD_ID, wakeHeardNotification(this@WakeWordService, attempt.assistant))
+                    },
+                    showSignals = { (AssistLink.preparedAt >= asked) to (AssistLink.showFailedAt >= asked) },
+                )
+                val link = WakeAttempt(
+                    createdAt = AssistLink.createdAt,
+                    destroyedAt = AssistLink.destroyedAt,
+                    readyAt = AssistLink.readyAt,
+                    shutdownAt = AssistLink.shutdownAt,
+                )
+                record(this@WakeWordService, opener.open(phrase.words, link))
+            } finally {
+                AssistPresence.holdFor(SHEET_GRACE_MS)
             }
-        } else {
-            attempt = attempt.copy(outcome = WakeAttempt.OUT_NOT_CONNECTED)
         }
-        // Then what is left: the sheet's activity, relied on only while the app is on screen.
-        val fallback = wakeFallback(AppVisibility.visible)
-        val started = runCatching { startActivity(AssistActivity.woken(this)) }
-        if (fallback == WakeWay.Activity && started.isSuccess && sheetCame(asked)) {
-            return record(attempt.copy(fallback = WakeWay.Activity.id))
-        }
-        getSystemService(NotificationManager::class.java).notify(HEARD_ID, wakeHeardNotification(this, attempt.assistant))
-        record(attempt.copy(fallback = WakeWay.Notification.id))
     }
 
-    /** Whether a sheet came up since [asked] (the phone's elapsed clock), waiting a moment for it. */
-    private suspend fun sheetCame(asked: Long): Boolean = withTimeoutOrNull(SHEET_WAIT_MS) { AssistLink.shown.first { it >= asked } } != null
-
-    /** Write [attempt] down: in the log under a fixed tag, and first among the last few in the settings. */
-    private suspend fun record(attempt: WakeAttempt) {
-        Log.i(
-            TAG,
-            "wake word heard: way=${attempt.way} outcome=${attempt.outcome} fallback=${attempt.fallback} assistant=${attempt.assistant} " +
-                "readyAt=${attempt.readyAt} shutdownAt=${attempt.shutdownAt} ${attempt.detail}",
-        )
-        runCatching { lembas.instances.savePrefs { it.copy(wakeLog = wakeLogAdd(it.wakeLog, attempt)) } }
-    }
+    private var waking: Job? = null
 
     private fun power() = getSystemService(PowerManager::class.java)
 
@@ -284,8 +277,29 @@ class WakeWordService : LifecycleService() {
         const val HEARD_ID = 7002
         private const val SHEET_GRACE_MS = 3_000L
 
-        /** How long a sheet has to say it is up before the way that was tried counts as not having opened it. */
-        private const val SHEET_WAIT_MS = 2_500L
+        /** The app's own scope: a wake and its record outlive the listening loop, and the service too. */
+        private val wakeScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+
+        /** What is true at this moment, for the opener and the record. */
+        fun wakeFacts(context: Context): WakeFacts = WakeFacts(
+            connected = LembasAssistService.current != null,
+            active = LembasAssistService.isActive(context),
+            role = LembasAssistService.holdsRole(context),
+            recognizers = context.packageManager.hasSystemFeature(PackageManager.FEATURE_VOICE_RECOGNIZERS),
+            screenOn = context.getSystemService(PowerManager::class.java).isInteractive,
+            locked = context.getSystemService(KeyguardManager::class.java).isKeyguardLocked,
+            visible = AppVisibility.visible,
+        )
+
+        /**
+         * Write [attempt] down: in the log under a fixed tag, and first among the last few in the
+         * settings. Not cancellable: what happened is kept whatever ends meanwhile.
+         */
+        suspend fun record(context: Context, attempt: WakeAttempt) = withContext(NonCancellable) {
+            Log.i(TAG, "wake word heard: $attempt")
+            runCatching { context.lembas.instances.savePrefs { it.copy(wakeLog = wakeLogAdd(it.wakeLog, attempt)) } }
+            Unit
+        }
         private const val TAG = "LLeMbasWake"
         const val ACTION_STOP = "eu.llembas.android.action.WAKE_STOP"
 

@@ -491,6 +491,13 @@
     <string name="wake_link_ready">Az Android ekkor csatlakoztatta az asszisztenst: %1$s.</string>
     <string name="wake_link_shutdown">Az Android ekkor választotta le: %1$s.</string>
     <string name="wake_link_later">Az Android ekkor csatlakoztatta újra: %1$s.</string>
+    <string name="wake_sheet_ms">A panel %1$s ms után jelent meg.</string>
+    <string name="wake_no_recognizers">Ezen a telefonon nincs hangfelismerő, ezért az Android nem futtat rajta hangasszisztens-szolgáltatást.</string>
+    <string name="wake_not_active">A LLeMbas volt kiválasztva digitális asszisztens alkalmazásnak, de az Android nem használta hangasszisztensként.</string>
+    <string name="wake_waited">Várt egy pillanatot, hogy az Android csatlakoztassa.</string>
+    <string name="wake_show_failed">Az Android jelezte, hogy nem tudta megjeleníteni az asszisztens paneljét.</string>
+    <string name="wake_assistant_inactive">Az Android most nem használja a LLeMbast hangasszisztensként</string>
+    <string name="wake_assistant_inactive_line">Válaszd újra a LLeMbast digitális asszisztens alkalmazásnak: koppints ide, válassz másik alkalmazást, majd a LLeMbast. Addig a hosszú nyomás közönséges képernyőként nyitja meg, az ébresztőszó pedig csak értesítést tud küldeni.</string>
     <string name="wake_assistant_unbound">A LLeMbas az asszisztens, de az Android most nem csatlakoztatta</string>
     <string name="wake_assistant_unbound_line">Amíg nem csatlakoztatja, az ébresztőszó nem tudja magától megnyitni a panelt. Koppints a rendszer asszisztensbeállításához: ha másik alkalmazást, majd újra a LLeMbast választod, csatlakozik.</string>
     <string name="wake_heard_could_not">Nem tudott magától megnyílni — koppints a kérdezéshez</string>

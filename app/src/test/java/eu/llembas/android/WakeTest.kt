@@ -18,7 +18,6 @@ import eu.llembas.android.wake.WakeWords
 import eu.llembas.android.wake.checkKeywords
 import eu.llembas.android.wake.unpackWakeModel
 import eu.llembas.android.wake.wakeBackoff
-import eu.llembas.android.wake.wakeFallback
 import eu.llembas.android.wake.wakeKeywords
 import eu.llembas.android.wake.wakeLogAdd
 import eu.llembas.android.wake.wakeLogConnected
@@ -174,9 +173,6 @@ class WakeTest {
         assertEquals(WakeWay.Activity, wakeWay(connected = false, screenOn = true, appVisible = true))
         assertEquals(WakeWay.Notification, wakeWay(connected = false, screenOn = true, appVisible = false))
         assertEquals(WakeWay.Notification, wakeWay(connected = false, screenOn = false, appVisible = false))
-        // And when the assistant's own way did not open the sheet.
-        assertEquals(WakeWay.Activity, wakeFallback(appVisible = true))
-        assertEquals(WakeWay.Notification, wakeFallback(appVisible = false))
         repeat(3) { AppVisibility.activityStopped() }
         assertFalse(AppVisibility.visible)
         AppVisibility.activityStarted()

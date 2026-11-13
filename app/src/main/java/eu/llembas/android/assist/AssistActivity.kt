@@ -22,6 +22,7 @@ import eu.llembas.android.ui.theme.LembasTheme
 import eu.llembas.android.wake.AssistLink
 import eu.llembas.android.wake.AssistPresence
 import eu.llembas.android.wake.WakeWordService
+import java.lang.ref.WeakReference
 
 /** What a way into the sheet asks for. */
 enum class Opening {
@@ -61,6 +62,8 @@ enum class Opening {
 class AssistActivity : ComponentActivity() {
     private lateinit var controller: AssistController
     private lateinit var keyguard: KeyguardManager
+    private var started = false
+    private var byWake = false
 
     /** Whether the phone is locked: the sheet shows nothing from the account until it is not. */
     private val locked = mutableStateOf(false)
@@ -79,11 +82,7 @@ class AssistActivity : ComponentActivity() {
         locked.value = keyguard.isKeyguardLocked
         // Opened by the wake word: the screen comes on with it (a spoken phrase is not a touch,
         // so nothing else has woken the phone).
-        if (intent?.getBooleanExtra(EXTRA_WAKE, false) == true) setTurnScreenOn(true)
-        AssistPresence.shown()
-        AssistLink.sheetShown(SystemClock.elapsedRealtime())
-        // The sheet is up: "Heard you. Tap to ask." has been answered, however it was opened.
-        getSystemService(NotificationManager::class.java).cancel(WakeWordService.HEARD_ID)
+        woken(intent)
         take(intent)
         setContent {
             val prefs by lembas.instances.prefs.collectAsState(initial = Prefs())
@@ -113,11 +112,46 @@ class AssistActivity : ComponentActivity() {
         }
     }
 
-    /** Opened again while it is up -- the headset's button pressed twice, the tile again. */
+    /** Opened again while it is up -- the headset's button pressed twice, the tile again, the wake word. */
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        woken(intent)
+        // The same sheet answers again: it is up, and whoever asked for it is told so.
+        if (started) AssistLink.sheetShown(SystemClock.elapsedRealtime())
         take(intent)
+    }
+
+    /**
+     * Opened by the wake word: the screen comes on with it (a spoken phrase is not a touch, so
+     * nothing else has woken the phone), and the sheet is remembered as the wake word's, so that
+     * the assistant's own sheet can take its place if that one comes after all.
+     */
+    private fun woken(intent: Intent?) {
+        byWake = intent?.getBooleanExtra(EXTRA_WAKE, false) == true
+        if (byWake) setTurnScreenOn(true)
+    }
+
+    /**
+     * On screen: only now is the sheet "up" -- for the wake word's pause (which must end when the
+     * sheet is left with Home, not only when it is destroyed) and for whoever waits to hear that
+     * it opened.
+     */
+    override fun onStart() {
+        super.onStart()
+        started = true
+        open = WeakReference(this)
+        AssistPresence.shown()
+        AssistLink.sheetShown(SystemClock.elapsedRealtime())
+        // "Heard you. Tap to ask." has been answered, however the sheet was opened.
+        getSystemService(NotificationManager::class.java).cancel(WakeWordService.HEARD_ID)
+    }
+
+    override fun onStop() {
+        started = false
+        if (open?.get() === this) open = null
+        AssistPresence.hidden()
+        super.onStop()
     }
 
     /**
@@ -158,7 +192,6 @@ class AssistActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
-        AssistPresence.hidden()
         controller.close()
         super.onDestroy()
     }
@@ -177,6 +210,15 @@ class AssistActivity : ComponentActivity() {
 
         /** The sheet, listening. */
         fun listening(context: Context): Intent = Intent(context, AssistActivity::class.java).setAction(ACTION_LISTEN)
+
+        /** The sheet that is on screen now, if this activity is it. */
+        @Volatile
+        private var open: WeakReference<AssistActivity>? = null
+
+        /** The assistant's own sheet came up: a sheet the wake word had opened in its place goes. */
+        fun closeWoken() {
+            open?.get()?.takeIf { it.byWake }?.finish()
+        }
 
         /** On the intent the wake word opens the sheet with: turn the screen on. */
         const val EXTRA_WAKE = "eu.llembas.android.WAKE"

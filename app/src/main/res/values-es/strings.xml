@@ -491,6 +491,13 @@
     <string name="wake_link_ready">Android había conectado el asistente a las %1$s.</string>
     <string name="wake_link_shutdown">Android lo había desconectado a las %1$s.</string>
     <string name="wake_link_later">Android volvió a conectarlo a las %1$s.</string>
+    <string name="wake_sheet_ms">El panel apareció tras %1$s ms.</string>
+    <string name="wake_no_recognizers">Este teléfono no tiene reconocedores de voz, así que Android no ejecuta en él ningún servicio de asistente de voz.</string>
+    <string name="wake_not_active">LLeMbas estaba elegido como app de asistente digital, pero Android no lo usaba como asistente de voz.</string>
+    <string name="wake_waited">Esperó un momento a que Android lo conectara.</string>
+    <string name="wake_show_failed">Android dijo que no pudo mostrar el panel del asistente.</string>
+    <string name="wake_assistant_inactive">Android no está usando LLeMbas como asistente de voz ahora mismo</string>
+    <string name="wake_assistant_inactive_line">Elige de nuevo LLeMbas como app de asistente digital: toca aquí, elige otra app y luego LLeMbas. Hasta entonces la pulsación larga lo abre como una pantalla normal y la palabra de activación solo puede enviar una notificación.</string>
     <string name="wake_assistant_unbound">LLeMbas es el asistente, pero Android no lo tiene conectado ahora mismo</string>
     <string name="wake_assistant_unbound_line">Hasta que lo conecte, la palabra de activación no puede abrir el panel por sí sola. Toca para ir al ajuste del asistente del sistema: elegir otra app y luego LLeMbas de nuevo lo conecta.</string>
     <string name="wake_heard_could_not">No pudo abrirse por sí solo: toca para preguntar</string>
