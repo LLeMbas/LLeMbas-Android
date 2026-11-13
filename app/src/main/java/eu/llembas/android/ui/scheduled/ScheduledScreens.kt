@@ -614,7 +614,12 @@ private fun notifyWords(schedule: Schedule): String? = when (schedule.notify) {
     "always" -> stringResource(R.string.notify_always)
 
     // "When…" with the person's own words (spec 3.8.0); a server before it said "matters".
-    "when" -> stringResource(R.string.notify_when_words, schedule.notifyWhen.ifBlank { stringResource(R.string.notify_when_default) })
+    "when" -> stringResource(
+        R.string.notify_when_words,
+        schedule.notifyWhen.ifBlank {
+            schedule.notifyDefault.ifBlank { stringResource(R.string.notify_when_default) }
+        },
+    )
 
     "matters" -> stringResource(R.string.notify_matters)
 
@@ -797,6 +802,8 @@ data class EditState(
     val notifyWhen: String = "",
     /** Whether the instance has Reports (LLeMbas 2.0.0-beta.12): an older one is neither shown nor sent "notify when". */
     val reports: Boolean = false,
+    /** The server's default condition in the account's language, when it said one. */
+    val notifyDefault: String = "",
 )
 
 class ScheduleEditViewModel(app: Application) : AndroidViewModel(app) {
@@ -819,7 +826,16 @@ class ScheduleEditViewModel(app: Application) : AndroidViewModel(app) {
         if (id == null) return
         viewModelScope.launch {
             runCatching { getApplication<Application>().api().schedule(id) }.onSuccess { s ->
-                _state.update { it.copy(words = s.request.ifBlank { s.instruction }, notify = notifyChoice(s.notify), notifyWhen = s.notifyWhen) }
+                _state.update {
+                    it.copy(
+                        words = s.request.ifBlank {
+                            s.instruction
+                        },
+                        notify = notifyChoice(s.notify),
+                        notifyWhen = s.notifyWhen,
+                        notifyDefault = s.notifyDefault,
+                    )
+                }
             }
         }
     }
@@ -947,7 +963,7 @@ fun ScheduleEditContent(
             if (state.unsupported) Text(stringResource(R.string.scheduled_unsupported), color = palette.inkMuted)
             state.error?.let { Text(it, color = palette.danger, style = MaterialTheme.typography.bodyMedium) }
             state.compiled?.let { Understood(it) }
-            if (state.reports) NotifyWhen(state.notify, state.notifyWhen, onNotify, onNotifyWhen)
+            if (state.reports) NotifyWhen(state.notify, state.notifyWhen, state.notifyDefault, onNotify, onNotifyWhen)
             Spacer(Modifier.height(24.dp))
         }
     }
@@ -959,7 +975,7 @@ fun ScheduleEditContent(
  * task's history. "When…" opens a field with the default already in it.
  */
 @Composable
-private fun NotifyWhen(notify: String, words: String, onNotify: (String) -> Unit, onWords: (String) -> Unit) {
+private fun NotifyWhen(notify: String, words: String, default: String, onNotify: (String) -> Unit, onWords: (String) -> Unit) {
     val palette = LocalPalette.current
     val choices = listOf(
         Triple("always", R.string.notify_every_run, R.string.notify_every_run_line),
@@ -986,7 +1002,7 @@ private fun NotifyWhen(notify: String, words: String, onNotify: (String) -> Unit
                     }
                 }
                 if (value == "when" && notify == "when") {
-                    val usual = stringResource(R.string.notify_when_default)
+                    val usual = default.ifBlank { stringResource(R.string.notify_when_default) }
                     OutlinedTextField(
                         value = words.ifEmpty { usual },
                         onValueChange = onWords,

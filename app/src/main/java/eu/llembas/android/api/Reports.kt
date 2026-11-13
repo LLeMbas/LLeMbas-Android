@@ -38,6 +38,9 @@ data class Report(
     @JsonNames("created_at") val created: String? = null,
     val unread: Boolean = false,
     val body: String? = null,
+    /** The body as text: every page in it replaced by its one line, `[page: Title]`. */
+    val text: String? = null,
+    val model: String? = null,
     val chat: JsonElement? = null,
 ) {
     val high: Boolean get() = importance == "high"
@@ -47,7 +50,14 @@ data class Report(
 }
 
 @Serializable
-data class ReportList(val reports: List<Report> = emptyList(), val more: Boolean = false)
+data class ReportList(val reports: List<Report> = emptyList(), val unread: Int? = null) {
+    /** How many reports are unread: the server's count, else as many as it listed unread. */
+    val unreadCount: Int get() = unread ?: reports.count { it.unread }
+}
+
+/** `GET /events`, frame `reports`: the count of the unread, and the newest report. */
+@Serializable
+data class ReportsFrame(val unread: Int = 0, val newest: Report? = null)
 
 /** `POST /reports/{id}/reply`: the chat the conversation about the report is in. */
 @Serializable

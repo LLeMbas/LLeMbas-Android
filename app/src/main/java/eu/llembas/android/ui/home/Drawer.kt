@@ -139,7 +139,7 @@ class ChatsViewModel(app: Application) : AndroidViewModel(app) {
                 // Folders are a side dish: the chats show without them if they cannot be read.
                 val folders = runCatching { api.folders() }.getOrDefault(_state.value.folders)
                 // So is the count of unread reports: an instance before Reports simply has none.
-                val unread = runCatching { api.reports(unread = true).size }.getOrDefault(0)
+                val unread = runCatching { api.unreadReports() }.getOrDefault(0)
                 _state.value = ChatsState(chats = page.chats, more = page.more, folders = folders, unreadReports = unread)
             } catch (e: Exception) {
                 _state.update { it.copy(loading = false, error = getApplication<Application>().explain(e)) }

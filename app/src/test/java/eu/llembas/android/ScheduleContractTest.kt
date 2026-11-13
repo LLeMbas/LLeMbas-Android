@@ -51,7 +51,10 @@ class ScheduleContractTest {
         assertEquals("2026-01-12T07:30:00+00:00", s.nextRun)
         assertEquals(5, s.nextRuns.size)
         assertEquals("fresh", s.mode)
-        assertEquals("matters", s.notify)
+        // Spec 3.8.0: when the person's own words hold -- none here, so the server's default.
+        assertEquals("when", s.notify)
+        assertEquals("", s.notifyWhen)
+        assertEquals("something needs my attention", s.notifyDefault)
         assertEquals("one", s.catchUp)
         assertNull(s.graceMinutes)
         assertEquals("qwen", s.model)
@@ -80,6 +83,9 @@ class ScheduleContractTest {
         assertEquals("msg2", run.messageId)
         assertEquals("All the waybread is wrapped.", run.preview)
         assertTrue(run.notified)
+        // The run filed a report, and left its line for the history.
+        assertEquals("rep1", run.reportId)
+        assertEquals("Filed a report: two cakes are unwrapped.", run.note)
     }
 
     @Test
@@ -87,7 +93,7 @@ class ScheduleContractTest {
         assertWaybread(read("schedules", ScheduleList.serializer()).schedules.single())
         assertWaybread(read("schedule", ScheduleEnvelope.serializer()).schedule)
         val frame = read("event_schedules", SchedulesFrame.serializer())
-        assertEquals("8bee85746004dc19", frame.version)
+        assertEquals("d55e588277f6c90b", frame.version)
         assertWaybread(frame.schedules.single())
     }
 
@@ -226,9 +232,20 @@ class ScheduleContractTest {
 
     @Test
     fun theServersNotificationWordsAndRunAgain() {
-        // `push_schedule.json`: the task's name and first lines unlocked, Finished on the lock
-        // screen, Open and Run again with the owner's labels.
-        val done = ScheduledNotice.from(read("push_schedule", PushPayload.serializer()))!!
+        // What a server before 3.8.0 sent for a finished run (it sends a report's push now):
+        // the task's name and first lines unlocked, Finished on the lock screen, Open and Run
+        // again with the owner's labels. Such an instance is still talked to.
+        val done = ScheduledNotice.from(
+            LembasJson.decodeFromString(
+                PushPayload.serializer(),
+                """{"schedule_id":"sched1","run_id":"run1","chat_id":"chat1","status":"ok","visibility":"private",
+                   "actions":["open","run_again"],"ask":"",
+                   "notification":{"title":"Waybread check","body":"All the waybread is wrapped.",
+                     "public":{"title":"Waybread check","body":"Finished"},"actions":["open","run_again"],
+                     "labels":{"open":"Open","run_again":"Run again"},"ask":""},
+                   "title":"LLeMbas","body":"A scheduled task has finished.","url":"/scheduled/sched1?run=run1","kind":"schedule"}""",
+            ),
+        )!!
         assertEquals("Waybread check", done.title)
         assertEquals("All the waybread is wrapped.", done.body)
         assertEquals("Waybread check", done.publicTitle)
@@ -248,9 +265,10 @@ class ScheduleContractTest {
         assertEquals("Failed", failed.publicBody)
         assertEquals("run3", failed.runId)
 
-        // The run's own copy (the schedules frame) says the same.
+        // The run's own copy of its notification is the report's now: Open alone.
         val run = read("schedule_run", RunResult.serializer()).run
-        assertEquals(listOf("open", "run_again"), run.notification!!.actions)
+        assertEquals(listOf("open"), run.notification!!.actions)
+        assertEquals("high", run.notification!!.importance)
     }
 
     @Test

@@ -398,6 +398,9 @@ class ApiClient(val base: String, private val token: String, val http: OkHttpCli
         return get<ReportList>(if (asked.isEmpty()) "/reports" else "/reports?" + asked).reports
     }
 
+    /** How many reports are unread: the drawer's badge. */
+    suspend fun unreadReports(): Int = get<ReportList>("/reports?unread=1").unreadCount
+
     /** One report with its body. Read as the report itself, or as `{report: …}` around it. */
     suspend fun report(id: String): Report {
         val answer = get<JsonObject>("/reports/${segment(id)}")

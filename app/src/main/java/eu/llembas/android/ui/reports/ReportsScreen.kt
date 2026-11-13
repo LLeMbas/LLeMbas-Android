@@ -357,8 +357,11 @@ fun ReportScreen(id: String, onBack: () -> Unit, onReply: (chat: String, title: 
 }
 
 /** What Share hands over: the title, then the report as text -- a page in it as its one line, never its source. */
-fun shareText(report: Report): String =
-    listOf(report.title, pageProjection(report.body.orEmpty(), untitled = "Page")).filter { it.isNotBlank() }.joinToString("\n\n")
+fun shareText(report: Report): String {
+    // The server's own text of the body where it sends one; else the same made here.
+    val text = report.text?.trim()?.ifBlank { null } ?: pageProjection(report.body.orEmpty(), untitled = "Page")
+    return listOf(report.title, text).filter { it.isNotBlank() }.joinToString("\n\n")
+}
 
 /**
  * A report, read as a page: its title, where it came from and when, then the body -- Markdown a

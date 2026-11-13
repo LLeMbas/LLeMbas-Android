@@ -99,6 +99,8 @@ data class Schedule(
     val mode: String = "",
     val notify: String = "",
     @SerialName("notify_when") val notifyWhen: String = "",
+    /** What "When…" means while [notifyWhen] is empty, in the account's language. */
+    @SerialName("notify_default") val notifyDefault: String = "",
     @SerialName("catch_up") val catchUp: String = "",
     @SerialName("grace_minutes") val graceMinutes: Int? = null,
     val model: String? = null,
