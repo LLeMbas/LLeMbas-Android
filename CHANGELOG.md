@@ -5,6 +5,8 @@ is in alpha and releases come off `main`.
 
 ## [Unreleased]
 
+## [1.0.0-beta.10] — 2026-11-13
+
 ### Added
 
 - **Assistant model** in Settings › Assistant: the model the assistant's new chats start on --
