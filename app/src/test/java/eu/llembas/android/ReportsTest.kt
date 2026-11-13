@@ -199,19 +199,27 @@ class ReportsTest {
     }
 
     @Test
-    fun aPageInAnAnswerIsNeverItsSource() {
+    fun aPageBeingWrittenIsNeverItsSource() {
+        // The open step of a reply as it streams, in a chat where pages are written: the fence is a page already.
         val reply = "Sales by month:\n\n```html-view Monthly   sales\n<!doctype html>\n<html><script>alert(1)</script></html>\n```\n\nThat is all."
-        val split = splitFences(reply)
+        val split = splitFences(reply, pages = true)
         assertEquals(listOf(Segment.Prose("Sales by month:"), Segment.Page("Monthly sales"), Segment.Prose("That is all.")), split)
         // The word is exact: these are ordinary code blocks.
-        assertEquals(listOf(Segment.Code("html", "<p>")), splitFences("```html\n<p>\n```"))
-        assertEquals(listOf(Segment.Code("html-views", "<p>")), splitFences("```html-views\n<p>\n```"))
-        // Tildes, no title, and one still being written.
-        assertEquals(listOf(Segment.Page("")), splitFences("~~~html-view\n<html></html>\n~~~"))
-        assertEquals(listOf(Segment.Page("Chart", closed = false)), splitFences("```html-view Chart\n<html>"))
+        assertEquals(listOf(Segment.Code("html", "<p>")), splitFences("```html\n<p>\n```", pages = true))
+        assertEquals(listOf(Segment.Code("html-views", "<p>")), splitFences("```html-views\n<p>\n```", pages = true))
+        // Tildes, no title, and one not closed yet.
+        assertEquals(listOf(Segment.Page("")), splitFences("~~~html-view\n<html></html>\n~~~", pages = true))
+        assertEquals(listOf(Segment.Page("Chart", closed = false)), splitFences("```html-view Chart\n<html>", pages = true))
         // Backticks inside a page do not end it unless a line is the closing fence.
-        assertEquals(listOf(Segment.Page("T")), splitFences("````html-view T\nconst a = `x`\n```\nstill the page\n````"))
-        // The server's own line in a page's place.
+        assertEquals(listOf(Segment.Page("T")), splitFences("````html-view T\nconst a = `x`\n```\nstill the page\n````", pages = true))
+    }
+
+    @Test
+    fun whichFenceIsAPageIsTheServersToSay() {
+        // Anywhere else -- a finished step, a report -- a fence is a page only if the server
+        // said so, and then it sent the one line in its place. A fence it did not list (written
+        // while pages were not offered) is the code block it is.
+        assertEquals(listOf(Segment.Code("html-view", "<p>x</p>")), splitFences("```html-view Cakes\n<p>x</p>\n```"))
         assertEquals(
             listOf(Segment.Prose("Before."), Segment.Page("Monthly sales"), Segment.Prose("After.")),
             splitFences("Before.\n\n[page: Monthly sales]\n\nAfter."),
@@ -221,12 +229,18 @@ class ReportsTest {
 
     @Test
     fun whatIsCopiedOrSharedSaysThereIsAPage() {
-        val reply = "Sales:\n\n```html-view Monthly sales\n<html>secret markup</html>\n```\n\n```sh\nmake\n```"
-        val text = pageProjection(reply, untitled = "Page")
+        val text = pageProjection("Sales:\n\n[page: Monthly sales]\n\n```sh\nmake\n```", untitled = "Page")
         assertEquals("Sales:\n\n[page: Monthly sales]\n\n```sh\nmake\n```", text)
-        assertFalse(text.contains("secret markup"))
-        assertEquals("[page: Page]", pageProjection("```html-view\n<html></html>\n```", untitled = "Page"))
-        val report = Report(id = "rep1", title = "Two tenders opened", body = "Bids are due.\n\n```html-view Chart\n<svg></svg>\n```")
+        assertEquals("[page: Page]", pageProjection("[page: ]", untitled = "Page"))
+        // A report is shared by the server's text of it, where each page is its one line.
+        val report =
+            Report(
+                id = "rep1",
+                title = "Two tenders opened",
+                body = "Bids are due.\n\n```html-view Chart\n<svg></svg>\n```",
+                text = "Bids are due.\n\n[page: Chart]\n",
+            )
         assertEquals("Two tenders opened\n\nBids are due.\n\n[page: Chart]", shareText(report))
+        assertFalse(shareText(report).contains("<svg>"))
     }
 }

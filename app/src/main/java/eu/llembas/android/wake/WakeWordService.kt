@@ -277,6 +277,9 @@ class WakeWordService : LifecycleService() {
         const val HEARD_ID = 7002
         private const val SHEET_GRACE_MS = 3_000L
 
+        /** `PackageManager.FEATURE_VOICE_RECOGNIZERS`, which the SDK does not name for apps: without it Android runs no voice-interaction service. */
+        private const val FEATURE_VOICE_RECOGNIZERS = "android.software.voice_recognizers"
+
         /** The app's own scope: a wake and its record outlive the listening loop, and the service too. */
         private val wakeScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
@@ -285,7 +288,7 @@ class WakeWordService : LifecycleService() {
             connected = LembasAssistService.current != null,
             active = LembasAssistService.isActive(context),
             role = LembasAssistService.holdsRole(context),
-            recognizers = context.packageManager.hasSystemFeature(PackageManager.FEATURE_VOICE_RECOGNIZERS),
+            recognizers = context.packageManager.hasSystemFeature(FEATURE_VOICE_RECOGNIZERS),
             screenOn = context.getSystemService(PowerManager::class.java).isInteractive,
             locked = context.getSystemService(KeyguardManager::class.java).isKeyguardLocked,
             visible = AppVisibility.visible,

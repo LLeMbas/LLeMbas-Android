@@ -10,9 +10,13 @@ package eu.llembas.android.ui
  * is in the middle of is already a code block, not markdown that changes shape when it closes.
  *
  * **A page** (harness spec 3.8.0, `pages.md`: a whole HTML document in an `html-view` fence) is
- * not drawn on a phone and its source is never shown: the fence becomes [Segment.Page] with its
- * title, and so does the line the server puts in a page's place where a reply is read as text,
- * `[page: Title]`. One still being written is a page already ([Segment.Page.closed] false).
+ * not drawn on a phone and its source is never shown as the answer. Which fence is a page is the
+ * server's to say: a block is one only in a reply written while pages were offered, and the
+ * server then puts the one line `[page: Title]` in its place in the text it gives a client that
+ * draws no pages. That line is what becomes [Segment.Page]. A fence is taken for a page here
+ * only where the caller says pages are being written ([splitFences]' `pages`: the open step of
+ * a reply as it streams, which the server has not turned into text yet); anywhere else an
+ * `html-view` fence is the code block it is.
  */
 sealed interface Segment {
     data class Prose(val markdown: String) : Segment
@@ -41,7 +45,7 @@ private fun pageTitle(raw: String?): String = raw.orEmpty().trim().replace(Regex
  * Share and read-aloud take, so a page's source never leaves as "the answer". [untitled] names
  * a page without a title.
  */
-fun pageProjection(markdown: String, untitled: String): String = splitFences(markdown).joinToString("\n\n") { segment ->
+fun pageProjection(markdown: String, untitled: String, pages: Boolean = false): String = splitFences(markdown, pages).joinToString("\n\n") { segment ->
     when (segment) {
         is Segment.Prose -> segment.markdown
         is Segment.Code -> "```${segment.language}\n${segment.code}\n```"
@@ -51,7 +55,7 @@ fun pageProjection(markdown: String, untitled: String): String = splitFences(mar
 
 private val OPENING = Regex("^ {0,3}(`{3,}|~{3,})\\s*([^`\\s]*).*$")
 
-fun splitFences(markdown: String): List<Segment> {
+fun splitFences(markdown: String, pages: Boolean = false): List<Segment> {
     val out = mutableListOf<Segment>()
     val prose = StringBuilder()
     val lines = markdown.split("\n")
@@ -79,7 +83,7 @@ fun splitFences(markdown: String): List<Segment> {
         flushProse()
         val fence = open.groupValues[1]
         val language = open.groupValues[2]
-        val page = PAGE_OPENING.matchEntire(lines[i])
+        val page = if (pages) PAGE_OPENING.matchEntire(lines[i]) else null
         val closing = Regex("^ {0,3}${Regex.escape(fence.substring(0, 1))}{${fence.length},}\\s*$")
         val code = mutableListOf<String>()
         i++

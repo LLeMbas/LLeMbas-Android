@@ -710,9 +710,7 @@ object Fakes {
                 |1. **Austria**: 200 MW, bids due on 15 May.
                 |2. **A smaller one** closes on Friday; see the [notice](https://example.org/notice).
                 |
-                |```html-view Storage tenders by month
-                |<!doctype html><html><body><svg></svg></body></html>
-                |```
+                |[page: Storage tenders by month]
                 |
                 |```text
                 |storage tender: 200 MW, deadline 2026-05-15

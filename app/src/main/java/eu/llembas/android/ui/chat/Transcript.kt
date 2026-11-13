@@ -388,7 +388,9 @@ fun StepsCompact(steps: List<Step>, modifier: Modifier = Modifier, onShow: ((Sho
             when (step.kind) {
                 "thinking" -> ThinkingChip(step)
 
-                "text" -> RichMarkdown(step.shownMarkdown, onLongPress = onLongPress)
+                // A closed step's pages are the server's to name (its `text`); in the step still
+                // being written a page's fence is a page already, not source scrolling by.
+                "text" -> RichMarkdown(step.shownMarkdown, onLongPress = onLongPress, pages = step.open)
 
                 // A page the server took out of the text as a step of its own: the same card.
                 "page" -> PageCard(step.title.orEmpty())
@@ -403,8 +405,8 @@ fun StepsCompact(steps: List<Step>, modifier: Modifier = Modifier, onShow: ((Sho
 
 /** Markdown with its fenced code taken out into [CodeBlock]s, each with its own Copy. */
 @Composable
-fun RichMarkdown(markdown: String, modifier: Modifier = Modifier, onLongPress: (() -> Unit)? = null) {
-    val segments = remember(markdown) { splitFences(markdown) }
+fun RichMarkdown(markdown: String, modifier: Modifier = Modifier, onLongPress: (() -> Unit)? = null, pages: Boolean = false) {
+    val segments = remember(markdown, pages) { splitFences(markdown, pages) }
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         segments.forEach { segment ->
             when (segment) {

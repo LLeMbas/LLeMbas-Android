@@ -41,8 +41,10 @@ data class Report(
     @JsonNames("created_at") val created: String? = null,
     val unread: Boolean = false,
     val body: String? = null,
-    /** The body as text: every page in it replaced by its one line, `[page: Title]`. */
+    /** The body as text: every page in it replaced by its one line, `[page: Title]`; the body itself where it has none. */
     val text: String? = null,
+    /** The pages the body has: only these are pages -- an `html-view` fence the server does not list is a code block. */
+    val pages: List<StepPage> = emptyList(),
     val model: String? = null,
     val chat: JsonElement? = null,
 ) {
@@ -63,7 +65,7 @@ data class ReportList(val reports: List<Report> = emptyList(), val unread: Int? 
 
 /** `GET /events`, frame `reports`: the count of the unread, and the newest report. */
 @Serializable
-data class ReportsFrame(val unread: Int = 0, val newest: Report? = null)
+data class ReportsFrame(val unread: Int = 0, val newest: Report? = null, @SerialName("latest_created") val latestCreated: String? = null)
 
 /** `POST /reports/{id}/reply`: the chat the conversation about the report is in. */
 @Serializable

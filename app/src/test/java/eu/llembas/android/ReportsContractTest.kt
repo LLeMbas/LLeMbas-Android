@@ -49,6 +49,7 @@ class ReportsContractTest {
         val frame = read("event_reports", ReportsFrame.serializer())
         assertEquals(1, frame.unread)
         assertEquals("rep1", frame.newest?.id)
+        assertEquals("2026-01-02T03:04:05+00:00", frame.latestCreated)
     }
 
     @Test
@@ -57,8 +58,10 @@ class ReportsContractTest {
         val report = LembasJson.decodeFromJsonElement(Report.serializer(), LembasJson.parseToJsonElement(text("report")).jsonObject.getValue("report"))
         assertEquals("chat9", report.chatId)
         assertEquals("gpt-oss", report.model)
-        // The body carries the page's source; the phone draws a card in its place, never the source.
-        val drawn = splitFences(report.body!!)
+        // The body carries the page's source; the phone draws the server's text, where the page
+        // is its one line and becomes a card -- never the source.
+        assertEquals("Cakes", report.pages.single().title)
+        val drawn = splitFences(report.text!!)
         assertEquals(Segment.Page("Cakes"), drawn.last())
         assertFalse(drawn.any { it is Segment.Code })
         // Share takes the server's own text, where the page is its one line.
