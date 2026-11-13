@@ -342,6 +342,9 @@ class ScreenShots {
         shoot("22-assistant-locked-waiting", content = over(waiting, true))
         shoot("22-assistant-locked-waiting", Phone.Small, fontScale = 1.5f, content = over(waiting, true))
         shoot("22-assistant-locked-answered", content = over(Fakes.assistAnswered, true))
+        // Heard where the instance writes speech down: it waits as a recording, with no words.
+        shoot("22-assistant-locked-recording", content = over(Fakes.assistOpened.copy(waitingRecording = true), true))
+        shoot("22-assistant-locked-recording", Phone.Small, fontScale = 1.5f, content = over(Fakes.assistOpened.copy(waitingRecording = true), true))
         shoot("23-assistant-offline", Phone.Small, content = over(Fakes.assistOffline, false))
         shoot("24-assistant-conversation", content = over(Fakes.assistConversation, false))
         shoot("24-assistant-conversation", Phone.Small, fontScale = 1.5f, content = over(Fakes.assistConversation, false))

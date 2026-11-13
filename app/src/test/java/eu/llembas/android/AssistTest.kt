@@ -4,8 +4,12 @@ import eu.llembas.android.api.LiveReply
 import eu.llembas.android.api.ModelInfo
 import eu.llembas.android.api.Step
 import eu.llembas.android.api.Tail
+import eu.llembas.android.assist.AssistActivity
 import eu.llembas.android.assist.AssistController
+import eu.llembas.android.assist.AssistHandOff
 import eu.llembas.android.assist.AssistTurn
+import eu.llembas.android.assist.AssistUiState
+import eu.llembas.android.assist.Held
 import eu.llembas.android.assist.LockedStart
 import eu.llembas.android.assist.Opening
 import eu.llembas.android.assist.Recorder
@@ -90,6 +94,50 @@ class AssistTest {
             assertEquals(LockedStart.Go, lockedStart(locked = false, opening, question = false, micAllowed = true))
             assertEquals(LockedStart.Go, lockedStart(locked = false, opening, question = true, micAllowed = false))
         }
+    }
+
+    @Test
+    fun onlyTheAppsOwnIntentsAskForMoreThanTheSheet() {
+        val voiceButton = "android.intent.action.VOICE_COMMAND"
+        val handsFree = "android.speech.action.VOICE_SEARCH_HANDS_FREE"
+        // The app's own: the widget's microphone, the last chat, the session's "listen".
+        assertEquals(Opening.Listen, Opening.of(AssistActivity.ACTION_LISTEN, listenExtra = false, own = true))
+        assertEquals(Opening.Continue, Opening.of(AssistActivity.ACTION_CONTINUE, listenExtra = false, own = true))
+        assertEquals(Opening.Listen, Opening.of(null, listenExtra = true, own = true))
+        // The same from any other app: just the sheet.
+        assertEquals(Opening.Sheet, Opening.of(AssistActivity.ACTION_LISTEN, listenExtra = true, own = false))
+        assertEquals(Opening.Sheet, Opening.of(AssistActivity.ACTION_CONTINUE, listenExtra = false, own = false))
+        assertEquals(Opening.Sheet, Opening.of("android.intent.action.ASSIST", listenExtra = true, own = false))
+        // Android's own actions for a headset's button are anybody's, and listen.
+        assertEquals(Opening.Listen, Opening.of(voiceButton, listenExtra = false, own = false))
+        assertEquals(Opening.Listen, Opening.of(handsFree, listenExtra = false, own = false))
+        assertEquals(Opening.Sheet, Opening.of("android.intent.action.ASSIST", listenExtra = false, own = true))
+    }
+
+    @Test
+    fun aHandedOverQuestionIsTakenOnceAndOnlyWithItsTicket() {
+        val question = Held("How far is it to the next town?", null, spoken = true)
+        val ticket = AssistHandOff.leave(question)
+        // No ticket, a made-up one, one of another length: nothing.
+        assertEquals(null, AssistHandOff.take(null))
+        assertEquals(null, AssistHandOff.take("0".repeat(ticket.length)))
+        assertEquals(null, AssistHandOff.take(ticket.dropLast(1)))
+        // The ticket: the question, once.
+        assertTrue(AssistHandOff.take(ticket) === question)
+        assertEquals(null, AssistHandOff.take(ticket))
+        // A newer question takes the older one's place, and the older ticket is worth nothing.
+        val older = AssistHandOff.leave(question)
+        val newer = AssistHandOff.leave(Held("", ByteArray(4), spoken = true))
+        assertTrue(older != newer)
+        assertEquals(null, AssistHandOff.take(older))
+        assertTrue(AssistHandOff.take(newer)?.wav != null)
+    }
+
+    @Test
+    fun aQuestionWaitsAsWordsOrAsARecording() {
+        assertFalse(AssistUiState().held)
+        assertTrue(AssistUiState(waiting = "Why?").held)
+        assertTrue(AssistUiState(waitingRecording = true).held)
     }
 
     @Test

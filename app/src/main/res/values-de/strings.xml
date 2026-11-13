@@ -425,6 +425,8 @@
     <string name="assist_type">Lieber tippen</string>
     <string name="assist_writing_down">Ihr Gesagtes wird aufgeschrieben…</string>
     <string name="assist_unlock_to_send">Entsperren und senden</string>
+    <string name="assist_question_heard">Frage aufgenommen</string>
+    <string name="assist_recording_waits_line">Das Telefon ist gesperrt. Deine Frage wartet als Aufnahme auf diesem Telefon; es wurde nichts gesendet. Nach dem Entsperren geht sie an deine Instanz, die sie aufschreibt und beantwortet.</string>
     <string name="assist_locked_line">Das Telefon ist gesperrt. Bis du es entsperrst, wird nichts gesendet und keine Antwort angezeigt.</string>
     <string name="assist_conversation">Im Gespräch</string>
     <string name="assist_conversation_line">Nach jeder Antwort höre ich wieder zu. Sag „Stopp“, um zu beenden.</string>

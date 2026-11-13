@@ -104,7 +104,11 @@ class ShareActivity :
                     into
                 } else {
                     val prefs = store.prefs.first()
-                    val made = api.createChat(message, files, model = prefs.assistantModel.ifBlank { null })
+                    // The assistant's model while the instance still has it; a model that is
+                    // gone is not asked for (the instance's default answers instead).
+                    val chosen = prefs.assistantModel
+                    val gone = chosen.isNotBlank() && runCatching { api.models() }.getOrNull()?.none { it.id == chosen } == true
+                    val made = api.createChat(message, files, model = chosen.takeIf { it.isNotBlank() && !gone })
                     store.savePrefs {
                         it.copy(
                             lastAssistChat = made.chat.id,

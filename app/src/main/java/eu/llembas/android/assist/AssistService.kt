@@ -5,7 +5,6 @@ import android.app.assist.AssistStructure
 import android.app.role.RoleManager
 import android.content.ComponentName
 import android.content.Context
-import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
@@ -40,7 +39,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 
@@ -181,12 +179,12 @@ class LembasAssistSession(context: Context) :
                     AssistPanel(
                         controller = current.value,
                         locked = locked(),
-                        onUnlockAndAsk = { text -> handOff(text) },
+                        onUnlockAndAsk = { text -> handOff(Held(text, null, spoken = false).takeIf { text.isNotBlank() }) },
                         onOpenApp = {
                             startAssistantActivity(current.value.appIntent())
                             hide()
                         },
-                        onNeedMic = { handOff("", listen = true) },
+                        onNeedMic = { handOff(null, listen = true) },
                         onDismiss = { hide() },
                     )
                 }
@@ -207,18 +205,17 @@ class LembasAssistSession(context: Context) :
         // One sheet, never two: a sheet the wake word opened as a screen of the app, because
         // this one was slow to come, goes now that this one is here.
         AssistActivity.closeWoken()
-        // The wake word asks for the sheet listening, whatever Settings says about opening.
-        val listen = args?.getBoolean(AssistActivity.EXTRA_LISTEN) == true
-        if (listen && locked()) {
-            // Over the lock screen too: it listens, and what it hears goes to the sheet's
-            // activity, which shows it and asks Android to unlock before anything is sent.
-            val showing = controller
-            showing.listenOverLock()
-            // Once: Android may call onShow again while the sheet is up.
-            handing?.cancel()
-            handing = scope.launch { handOff(showing.state.map { it.waiting }.first { it.isNotBlank() }, spoken = true) }
-        } else {
-            controller.opened(locked(), listen = listen)
+        // The wake word asks for the sheet listening, whatever Settings says about opening --
+        // over the lock screen too, where what it hears is held and not asked.
+        val showing = controller
+        showing.opened(listen = args?.getBoolean(AssistActivity.EXTRA_LISTEN) == true)
+        // A question that waits for the unlock (heard, or typed, over the lock screen) goes to
+        // the sheet's activity, which can ask Android to unlock. Once: Android may call onShow
+        // again while the sheet is up.
+        handing?.cancel()
+        handing = scope.launch {
+            showing.state.first { it.held && locked() }
+            showing.takeHeld()?.let { handOff(it) }
         }
     }
 
@@ -274,17 +271,12 @@ class LembasAssistSession(context: Context) :
 
     /**
      * Over the lock screen nothing is sent from here: the question goes to [AssistActivity],
-     * which asks Android to unlock first and only then sends it. The microphone's permission
+     * which asks Android to unlock first and only then sends it. It is left in the app's own
+     * memory ([AssistHandOff]) and the intent carries its ticket. The microphone's permission
      * prompt needs an activity too.
      */
-    private fun handOff(text: String, listen: Boolean = false, spoken: Boolean = false) {
-        startAssistantActivity(
-            Intent(context, AssistActivity::class.java)
-                .putExtra(AssistActivity.EXTRA_QUESTION, text)
-                .putExtra(AssistActivity.EXTRA_SPOKEN, spoken)
-                .putExtra(AssistActivity.EXTRA_LISTEN, listen)
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-        )
+    private fun handOff(question: Held?, listen: Boolean = false) {
+        startAssistantActivity(AssistActivity.handedOver(context, question?.let { AssistHandOff.leave(it) }, listen))
         hide()
     }
 }

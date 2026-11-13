@@ -63,10 +63,14 @@
 
         <!-- The assistant's sheet as an activity: the tile, the widget, the shortcuts,
              ACTION_ASSIST, a headset's voice button, and the lock-screen path (it asks to
-             unlock before sending anything). -->
+             unlock before sending anything). Exported for Android's own actions; what only the
+             app's own parts may ask of it is told apart in OwnIntents.kt. It handles
+             configuration changes itself (Compose redraws): turned, folded or switched to the
+             dark theme, it is not made again, and neither is the question it holds. -->
         <activity
             android:name=".assist.AssistActivity"
             android:exported="true"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboard|keyboardHidden|navigation|uiMode|density|fontScale"
             android:excludeFromRecents="true"
             android:launchMode="singleTask"
             android:taskAffinity=""

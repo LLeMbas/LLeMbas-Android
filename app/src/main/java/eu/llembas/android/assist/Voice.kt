@@ -107,6 +107,22 @@ class Recorder(private val scope: CoroutineScope) {
         return if (body.isEmpty()) body else wav(body)
     }
 
+    /**
+     * Stop and keep nothing, at once and without a coroutine: for when the scope that would
+     * run [stop] is already cancelled (the sheet is going), and the microphone must still be
+     * let go.
+     */
+    fun stopNow() {
+        val audio = record ?: return
+        record = null
+        job?.cancel()
+        // Stop returns the blocked `read`; the loop then sees it is cancelled, or reads an error.
+        runCatching { audio.stop() }
+        runCatching { audio.release() }
+        _level.value = 0f
+        pcm.reset()
+    }
+
     companion object {
         const val RATE = 16_000
         private const val MAX_BYTES = RATE * 2 * 120 // two minutes
@@ -255,53 +271,66 @@ private fun words(text: String): List<String> = text.lowercase()
 class PhoneRecognizer(private val context: Context) {
     private var recognizer: SpeechRecognizer? = null
 
-    fun start(onPartial: (String) -> Unit, onLevel: (Float) -> Unit, onResult: (String) -> Unit, onFail: (Int) -> Unit) {
+    /** [onActive]: a sign that somebody is speaking -- "speech began", or a loud level -- for a recogniser that shows no words meanwhile. */
+    fun start(onPartial: (String) -> Unit, onLevel: (Float) -> Unit, onResult: (String) -> Unit, onFail: (Int) -> Unit, onActive: () -> Unit = {}) {
         stop()
-        startWith(onDevice(context), onPartial, onLevel, onResult, onFail)
+        startWith(onDevice(context), Heard(onPartial, onLevel, onResult, onFail, onActive))
     }
 
+    private class Heard(
+        val onPartial: (String) -> Unit,
+        val onLevel: (Float) -> Unit,
+        val onResult: (String) -> Unit,
+        val onFail: (Int) -> Unit,
+        val onActive: () -> Unit,
+    )
+
     // `onFail`, not `onError`: inside the listener below that name is the listener's own method.
-    private fun startWith(onDevice: Boolean, onPartial: (String) -> Unit, onLevel: (Float) -> Unit, onResult: (String) -> Unit, onFail: (Int) -> Unit) {
+    private fun startWith(onDevice: Boolean, to: Heard) {
         val other = component(context)
         val made = when {
             onDevice && Build.VERSION.SDK_INT >= 31 -> SpeechRecognizer.createOnDeviceSpeechRecognizer(context)
             other != null -> SpeechRecognizer.createSpeechRecognizer(context, other)
-            else -> return onFail(SpeechRecognizer.ERROR_CLIENT)
+            else -> return to.onFail(SpeechRecognizer.ERROR_CLIENT)
         }
         recognizer = made
         made.setRecognitionListener(
             object : RecognitionListener {
                 override fun onReadyForSpeech(params: Bundle?) {}
 
-                override fun onBeginningOfSpeech() {}
+                override fun onBeginningOfSpeech() = to.onActive()
 
                 // About -2 dB in silence to 10 dB speaking: the meter's 0..1.
-                override fun onRmsChanged(rmsdB: Float) = onLevel(((rmsdB + 2f) / 12f).coerceIn(0f, 1f))
+                override fun onRmsChanged(rmsdB: Float) {
+                    val level = ((rmsdB + 2f) / 12f).coerceIn(0f, 1f)
+                    to.onLevel(level)
+                    if (level >= LOUD) to.onActive()
+                }
 
                 override fun onBufferReceived(buffer: ByteArray?) {}
 
-                override fun onEndOfSpeech() = onLevel(0f)
+                override fun onEndOfSpeech() = to.onLevel(0f)
 
                 override fun onError(error: Int) {
                     // The on-device recogniser lacks this language: another app's may have it.
                     if (onDevice && other != null && (error == LANGUAGE_NOT_SUPPORTED || error == LANGUAGE_UNAVAILABLE)) {
                         stop()
-                        startWith(false, onPartial, onLevel, onResult, onFail)
+                        startWith(false, to)
                         return
                     }
                     stop()
-                    onFail(error)
+                    to.onFail(error)
                 }
 
                 override fun onResults(results: Bundle?) {
                     val text = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull().orEmpty()
                     stop()
-                    onResult(text)
+                    to.onResult(text)
                 }
 
                 override fun onPartialResults(partialResults: Bundle?) {
                     partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()
-                        ?.takeIf { it.isNotBlank() }?.let(onPartial)
+                        ?.takeIf { it.isNotBlank() }?.let(to.onPartial)
                 }
 
                 override fun onEvent(eventType: Int, params: Bundle?) {}
@@ -336,6 +365,9 @@ class PhoneRecognizer(private val context: Context) {
         // SpeechRecognizer.ERROR_LANGUAGE_NOT_SUPPORTED and ERROR_LANGUAGE_UNAVAILABLE (API 31).
         private const val LANGUAGE_NOT_SUPPORTED = 12
         private const val LANGUAGE_UNAVAILABLE = 13
+
+        /** Half of the meter: a level that is a voice, not a room. */
+        private const val LOUD = 0.5f
 
         private fun onDevice(context: Context): Boolean = Build.VERSION.SDK_INT >= 31 && SpeechRecognizer.isOnDeviceRecognitionAvailable(context)
 

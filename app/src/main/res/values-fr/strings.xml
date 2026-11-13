@@ -425,6 +425,8 @@
     <string name="assist_type">Taper plutôt</string>
     <string name="assist_writing_down">Transcription de ce que vous avez dit…</string>
     <string name="assist_unlock_to_send">Déverrouiller pour envoyer</string>
+    <string name="assist_question_heard">Question entendue</string>
+    <string name="assist_recording_waits_line">Le téléphone est verrouillé. Votre question attend sur ce téléphone sous forme d’enregistrement ; rien n’a été envoyé. Au déverrouillage, elle est envoyée à votre instance pour être transcrite et recevoir une réponse.</string>
     <string name="assist_locked_line">Le téléphone est verrouillé. Rien n’est envoyé et aucune réponse n’est affichée tant que vous ne l’avez pas déverrouillé.</string>
     <string name="assist_conversation">En conversation</string>
     <string name="assist_conversation_line">J’écoute à nouveau après chaque réponse. Dites « stop » pour arrêter.</string>

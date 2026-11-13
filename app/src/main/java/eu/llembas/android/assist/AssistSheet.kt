@@ -199,8 +199,9 @@ fun AssistSheetFrame(onDismiss: () -> Unit, content: @Composable ColumnScope.(ha
  *   heard and how loud -- or the words typed, and Send.
  *
  * Nothing from the account is on it while the phone is [locked]: no model list, no last chat,
- * no question asked earlier and no answer. A question heard over the lock screen is shown -- the
- * person's own words -- with the way to unlock, which sends it ([onUnlock]).
+ * no question asked earlier, no answer, no failure's words. A question heard over the lock
+ * screen waits -- shown as the person's own words where the phone wrote them down, as "Question
+ * heard" where it waits as a recording -- with the way to unlock, which sends it ([onUnlock]).
  */
 @Composable
 fun ColumnScope.AssistSheetContent(
@@ -272,7 +273,7 @@ fun ColumnScope.AssistSheetContent(
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         when {
-            locked && state.waiting.isNotBlank() -> Waiting(state.waiting, onUnlock)
+            locked && state.held -> Waiting(state.waiting, onUnlock)
 
             // A conversation that was on the sheet when the phone locked: not for the lock screen.
             locked && !state.empty -> Text(stringResource(R.string.assist_locked_line), style = MaterialTheme.typography.bodyMedium, color = palette.inkMuted)
@@ -283,7 +284,8 @@ fun ColumnScope.AssistSheetContent(
                 Turn(turn, last = i == state.turns.lastIndex, state, actions, onOpenApp)
             }
         }
-        state.error?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = palette.danger) }
+        // Not over the lock screen: a failure's words may name the instance.
+        if (!locked) state.error?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = palette.danger) }
     }
 
     // The foot.
@@ -485,12 +487,22 @@ private fun QuickAction(icon: androidx.compose.ui.graphics.vector.ImageVector, l
 private fun Waiting(question: String, onUnlock: () -> Unit) {
     val palette = LocalPalette.current
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        // The words, where the phone itself wrote them down or they were typed; a question the
+        // instance will write down waits as a recording, and there are no words to show yet.
         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
             Surface(color = palette.bubbleUser, contentColor = palette.ink, shape = RoundedCornerShape(20.dp), modifier = Modifier.widthIn(max = 300.dp)) {
-                Text(question, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp))
+                Text(
+                    question.ifBlank { stringResource(R.string.assist_question_heard) },
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                )
             }
         }
-        Text(stringResource(R.string.assist_locked_line), style = MaterialTheme.typography.bodyMedium, color = palette.inkMuted)
+        Text(
+            stringResource(if (question.isBlank()) R.string.assist_recording_waits_line else R.string.assist_locked_line),
+            style = MaterialTheme.typography.bodyMedium,
+            color = palette.inkMuted,
+        )
         AssistChip(
             onClick = onUnlock,
             label = { Text(stringResource(R.string.assist_unlock_to_send)) },

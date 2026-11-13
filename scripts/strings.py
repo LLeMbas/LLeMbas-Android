@@ -452,6 +452,8 @@ STRINGS: dict[str, str] = {
     "assist_type": "Type instead",
     "assist_writing_down": "Writing down what you said…",
     "assist_unlock_to_send": "Unlock to send",
+    "assist_question_heard": "Question heard",
+    "assist_recording_waits_line": "The phone is locked. Your question waits on this phone as a recording; nothing has been sent. Unlocking sends it to your instance to be written down and answered.",
     "assist_locked_line": "The phone is locked. Nothing is sent, and no answer is shown, until you unlock it.",
     "assist_conversation": "In conversation",
     "assist_conversation_line": "I listen again after each answer. Say “stop” to end.",

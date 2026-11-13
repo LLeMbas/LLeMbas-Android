@@ -41,20 +41,22 @@ enum class Opening {
     companion object {
         /**
          * A headset's voice button sends `VOICE_COMMAND` (or, locked, `VOICE_SEARCH_HANDS_FREE`):
-         * the person means to speak, so the sheet opens listening whatever Settings says.
+         * the person means to speak, so the sheet opens listening whatever Settings says. Those
+         * two are Android's, and anybody's to send. The app's own ways in -- listening for the
+         * widget's microphone and the wake word, the last chat -- count only on an intent the
+         * app made itself ([own], [OwnIntents]); from anyone else they are just the sheet.
          */
-        fun of(intent: Intent): Opening = when {
-            intent.getBooleanExtra(AssistActivity.EXTRA_LISTEN, false) -> Listen
-            intent.action == AssistActivity.ACTION_CONTINUE -> Continue
-            intent.action in LISTENING -> Listen
+        fun of(action: String?, listenExtra: Boolean, own: Boolean): Opening = when {
+            own && listenExtra -> Listen
+            own && action == AssistActivity.ACTION_CONTINUE -> Continue
+            own && action == AssistActivity.ACTION_LISTEN -> Listen
+            action in PUBLIC_LISTENING -> Listen
             else -> Sheet
         }
 
-        private val LISTENING = setOf(
-            AssistActivity.ACTION_LISTEN,
-            Intent.ACTION_VOICE_COMMAND,
-            "android.speech.action.VOICE_SEARCH_HANDS_FREE",
-        )
+        fun of(intent: Intent, own: Boolean): Opening = of(intent.action, own && intent.getBooleanExtra(AssistActivity.EXTRA_LISTEN, false), own)
+
+        private val PUBLIC_LISTENING = setOf(Intent.ACTION_VOICE_COMMAND, "android.speech.action.VOICE_SEARCH_HANDS_FREE")
     }
 }
 
@@ -104,6 +106,9 @@ class AssistActivity : ComponentActivity() {
     private var started = false
     private var byWake = false
 
+    /** The screen went off since the sheet was last seen: on the way back, the lock is looked at again. */
+    private var wentOff = false
+
     /** Whether the phone is locked: the sheet shows nothing from the account until it is not. */
     private val locked = mutableStateOf(false)
     private val mic = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -112,14 +117,23 @@ class AssistActivity : ComponentActivity() {
 
     /**
      * The phone was unlocked by the person themselves (a fingerprint while the sheet is up): the
-     * question that waited is sent. And the screen went off over the lock screen: the sheet goes,
-     * so that it is not what the phone shows when it is next picked up.
+     * question that waited is sent. And the screen went off: the microphone and the voice stop
+     * at once, whatever the lock says yet, and nothing of the conversation is left in the
+     * picture the phone keeps of the sheet; a sheet that was over the lock screen goes, so that
+     * it is not what the phone shows when it is next picked up.
      */
     private val screen = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             when (intent.action) {
                 Intent.ACTION_USER_PRESENT -> unlockedNow()
-                Intent.ACTION_SCREEN_OFF -> if (locked.value) finish()
+
+                Intent.ACTION_SCREEN_OFF -> {
+                    val overLock = locked.value
+                    wentOff = true
+                    if (keyguard.isKeyguardLocked) controller.lockedNow() else controller.screenOff()
+                    locked.value = true
+                    if (overLock) finish()
+                }
             }
         }
     }
@@ -145,20 +159,27 @@ class AssistActivity : ComponentActivity() {
         // A question waits for the unlock: Android is asked for it at once (a face or a
         // fingerprint is then enough), and the sheet stays if nobody answers.
         lifecycleScope.launch {
-            controller.state.map { it.waiting }.distinctUntilChanged().collect { waiting ->
-                if (waiting.isNotBlank() && locked.value) askToUnlock()
+            controller.state.map { it.held }.distinctUntilChanged().collect { held ->
+                if (held && locked.value) askToUnlock()
             }
         }
-        // The lock screen turns the display off after a few seconds: not in the middle of a question.
+        // The lock screen turns the display off after a few seconds: not in the middle of a
+        // question, and not in the middle of an answer read aloud (the screen going off stops it).
         lifecycleScope.launch {
-            controller.state.map { it.listening || it.busy }.distinctUntilChanged().collect { on ->
+            controller.state.map { it.listening || it.busy || it.speaking }.distinctUntilChanged().collect { on ->
                 if (on) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) else window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
             }
         }
         // Opened by the wake word: the screen comes on with it (a spoken phrase is not a touch,
         // so nothing else has woken the phone).
         woken(intent)
-        take(intent)
+        // Once: made again by Android (after the app was put away and brought back), the sheet
+        // must not ask the same question a second time. What waited for the unlock is kept.
+        if (savedInstanceState == null) {
+            take(intent)
+        } else {
+            savedInstanceState.getString(STATE_WAITING)?.let { controller.hold(Held(it, null, savedInstanceState.getBoolean(STATE_SPOKEN))) }
+        }
         setContent {
             val prefs by lembas.instances.prefs.collectAsState(initial = Prefs())
             LembasTheme(prefs.theme) {
@@ -166,9 +187,13 @@ class AssistActivity : ComponentActivity() {
                     controller = controller,
                     locked = locked.value,
                     onUnlockAndAsk = { text ->
-                        askToUnlock(askWaiting = text.isBlank()) {
-                            if (text.isBlank()) controller.opened(locked = false) else controller.ask(text)
-                        }
+                        // Typed over the lock screen: held (in the place of a question that
+                        // waited already), so that whichever way the unlock is heard of first,
+                        // one question is asked, once.
+                        val waited = controller.state.value.held
+                        if (text.isNotBlank()) controller.ask(text)
+                        // A first held question asks Android to unlock by itself (onCreate).
+                        if (waited || text.isBlank()) askToUnlock { if (text.isBlank()) controller.opened() }
                     },
                     onOpenApp = {
                         startActivity(controller.appIntent())
@@ -198,7 +223,7 @@ class AssistActivity : ComponentActivity() {
      * the assistant's own sheet can take its place if that one comes after all.
      */
     private fun woken(intent: Intent?) {
-        byWake = intent?.getBooleanExtra(EXTRA_WAKE, false) == true
+        byWake = OwnIntents.isOwn(this, intent) && intent?.getBooleanExtra(EXTRA_WAKE, false) == true
         if (byWake) setTurnScreenOn(true)
     }
 
@@ -211,7 +236,15 @@ class AssistActivity : ComponentActivity() {
         super.onStart()
         started = true
         // The phone may have locked, or been unlocked, while the sheet was out of sight.
-        if (keyguard.isKeyguardLocked) locked.value = true else unlockedNow()
+        if (keyguard.isKeyguardLocked) {
+            // Found locked: the controller is told, unless the sheet was opened over the lock
+            // screen in the first place (and is listening there).
+            if (!locked.value || wentOff) controller.lockedNow()
+            locked.value = true
+        } else {
+            unlockedNow()
+        }
+        wentOff = false
         open = WeakReference(this)
         AssistPresence.shown()
         AssistLink.sheetShown(SystemClock.elapsedRealtime())
@@ -227,32 +260,35 @@ class AssistActivity : ComponentActivity() {
     }
 
     /**
-     * What the way in asked for: a question handed over by the session, listening (the headset's
-     * voice button, the widget's microphone, the Speak shortcut, the wake word), the last
-     * assistant chat (the widget, the shortcut), or just the sheet. Over the lock screen:
-     * [lockedStart].
+     * What the way in asked for: a question handed over by the session ([AssistHandOff]),
+     * listening (the headset's voice button, the widget's microphone, the Speak shortcut, the
+     * wake word), the last assistant chat (the widget, the shortcut), or just the sheet. Over
+     * the lock screen: [lockedStart]. Only an intent the app made itself ([OwnIntents]) can
+     * hand over a question or ask for more than Android's own actions do.
      */
     private fun take(intent: Intent) {
-        val opening = Opening.of(intent)
-        val waiting = intent.getStringExtra(EXTRA_QUESTION).orEmpty()
+        val own = OwnIntents.isOwn(this, intent)
+        val opening = Opening.of(intent, own)
+        val handed = if (own) AssistHandOff.take(intent.getStringExtra(EXTRA_HANDOFF)) else null
         val go = {
             when {
-                waiting.isNotBlank() -> controller.ask(waiting, spoken = intent.getBooleanExtra(EXTRA_SPOKEN, false))
+                handed != null -> controller.hold(handed)
                 opening == Opening.Continue -> controller.continueWhenReady()
                 opening == Opening.Listen && !controller.micAllowed() -> mic.launch(Manifest.permission.RECORD_AUDIO)
-                opening == Opening.Listen -> controller.opened(locked = false, listen = true)
-                else -> controller.opened(locked = false)
+                opening == Opening.Listen -> controller.opened(listen = true)
+                else -> controller.opened()
             }
         }
         val isLocked = keyguard.isKeyguardLocked
         if (isLocked) locked.value = true
-        when (lockedStart(isLocked, opening, waiting.isNotBlank(), controller.micAllowed())) {
+        when (lockedStart(isLocked, opening, handed != null, controller.micAllowed())) {
+            // Not locked, a handed-over question is asked at once ([AssistController.hold]).
             LockedStart.Go -> go()
 
-            LockedStart.Listen -> controller.listenOverLock()
+            LockedStart.Listen -> controller.opened(listen = true)
 
             // Shown, and Android asked to unlock (the collector in onCreate): it stays if nobody does.
-            LockedStart.Hold -> controller.hold(waiting, spoken = intent.getBooleanExtra(EXTRA_SPOKEN, false))
+            LockedStart.Hold -> handed?.let { controller.hold(it) }
 
             LockedStart.Unlock -> keyguard.requestDismissKeyguard(
                 this,
@@ -271,27 +307,40 @@ class AssistActivity : ComponentActivity() {
     }
 
     /**
-     * Ask Android to unlock. When it does, the question that waited is sent (unless [askWaiting]
-     * says another takes its place) and [then] runs. When it does not -- nobody there, or Back
-     * on the lock screen -- nothing happens: the sheet stays as it is, with the way to try again.
+     * Ask Android to unlock. When it does, the question that waited is sent and [then] runs.
+     * When it does not -- nobody there, or Back on the lock screen -- nothing happens: the sheet
+     * stays as it is, with the way to try again.
      */
-    private fun askToUnlock(askWaiting: Boolean = true, then: () -> Unit = {}) {
+    private fun askToUnlock(then: () -> Unit = {}) {
         keyguard.requestDismissKeyguard(
             this,
             object : KeyguardManager.KeyguardDismissCallback() {
                 override fun onDismissSucceeded() {
-                    unlockedNow(askWaiting)
+                    unlockedNow()
                     then()
                 }
             },
         )
     }
 
-    /** The phone is unlocked now, however that came about: once. */
-    private fun unlockedNow(askWaiting: Boolean = true) {
-        if (!locked.value) return
+    /**
+     * The phone is unlocked now, however that was heard of -- Android's answer to the asking,
+     * the person's own unlock, the sheet coming back: once, and only if the lock itself says so.
+     */
+    private fun unlockedNow() {
+        if (!locked.value || keyguard.isKeyguardLocked) return
         locked.value = false
-        controller.unlocked(ask = askWaiting)
+        controller.unlocked()
+    }
+
+    /** A question that waits for the unlock outlives the sheet being made again; a recording does not. */
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        val waiting = controller.state.value.waiting
+        if (waiting.isNotBlank()) {
+            outState.putString(STATE_WAITING, waiting)
+            outState.putBoolean(STATE_SPOKEN, controller.heldSpoken)
+        }
     }
 
     override fun onDestroy() {
@@ -301,10 +350,11 @@ class AssistActivity : ComponentActivity() {
     }
 
     companion object {
-        const val EXTRA_QUESTION = "eu.llembas.android.QUESTION"
+        /** The ticket of a question handed over by the session ([AssistHandOff]); never the question. */
+        const val EXTRA_HANDOFF = "eu.llembas.android.HANDOFF"
 
-        /** With [EXTRA_QUESTION]: it was spoken, and is answered as a spoken one. */
-        const val EXTRA_SPOKEN = "eu.llembas.android.SPOKEN"
+        private const val STATE_WAITING = "waiting"
+        private const val STATE_SPOKEN = "spoken"
 
         /** Handed over by the session: ask for the microphone, then listen. */
         const val EXTRA_LISTEN = "eu.llembas.android.LISTEN"
@@ -316,7 +366,7 @@ class AssistActivity : ComponentActivity() {
         const val ACTION_CONTINUE = "eu.llembas.android.action.CONTINUE"
 
         /** The sheet, listening. */
-        fun listening(context: Context): Intent = Intent(context, AssistActivity::class.java).setAction(ACTION_LISTEN)
+        fun listening(context: Context): Intent = OwnIntents.own(context, Intent(context, AssistActivity::class.java).setAction(ACTION_LISTEN))
 
         /** The sheet that is on screen now, if this activity is it. */
         @Volatile
@@ -334,6 +384,12 @@ class AssistActivity : ComponentActivity() {
         fun woken(context: Context): Intent = listening(context).putExtra(EXTRA_WAKE, true).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 
         /** The sheet, at the last assistant chat. */
-        fun continuing(context: Context): Intent = Intent(context, AssistActivity::class.java).setAction(ACTION_CONTINUE)
+        fun continuing(context: Context): Intent = OwnIntents.own(context, Intent(context, AssistActivity::class.java).setAction(ACTION_CONTINUE))
+
+        /** The sheet, taking the question left under [ticket] -- or asking for the microphone and listening. */
+        fun handedOver(context: Context, ticket: String?, listen: Boolean): Intent = OwnIntents.own(
+            context,
+            Intent(context, AssistActivity::class.java).putExtra(EXTRA_HANDOFF, ticket).putExtra(EXTRA_LISTEN, listen).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+        )
     }
 }

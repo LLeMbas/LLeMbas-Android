@@ -53,6 +53,7 @@ class LembasApp : Application() {
         manager.deleteNotificationChannel("reports")
         // The launcher's long-press shortcuts, in the app's language as it is now.
         eu.llembas.android.widget.Shortcuts.publish(this)
+        eu.llembas.android.widget.AskWidget.refresh(this)
     }
 
     companion object {

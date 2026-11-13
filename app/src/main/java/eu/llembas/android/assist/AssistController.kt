@@ -1,10 +1,12 @@
 package eu.llembas.android.assist
 
 import android.Manifest
+import android.app.KeyguardManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
+import android.os.SystemClock
 import android.speech.SpeechRecognizer
 import androidx.core.content.ContextCompat
 import eu.llembas.android.MainActivity
@@ -22,6 +24,7 @@ import eu.llembas.android.notify.NotificationAccess
 import eu.llembas.android.notify.NotificationReader
 import eu.llembas.android.push.Notifications
 import eu.llembas.android.ui.explain
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -47,6 +50,12 @@ data class AssistTurn(val question: String, val reply: LiveReply? = null, val ea
     val steps: List<Step> get() = reply?.finished?.steps ?: reply?.shown ?: earlier
     val writing: Boolean get() = reply != null && reply.finished == null && !reply.closed
 }
+
+/**
+ * A question that waits for the phone to be unlocked: its [text], or -- heard where the instance
+ * writes speech down -- its recording ([wav]), which stays on the phone until then.
+ */
+class Held(val text: String, val wav: ByteArray?, val spoken: Boolean)
 
 /** Whether the instance answers: being asked, yes, or no (and why). */
 enum class Connection { Checking, Online, Offline }
@@ -89,11 +98,20 @@ data class AssistUiState(
     /** Whether the person let the assistant read the notifications when asked (Settings and Android both). */
     val canReadNotifications: Boolean = false,
     /**
-     * A question that waits for the phone to be unlocked: heard (or typed) over the lock screen,
-     * the person's own words and nothing from the account. Asked once the phone is unlocked.
+     * A question that waits for the phone to be unlocked: typed over the lock screen, or heard
+     * there by the phone's own recogniser -- the person's own words and nothing from the
+     * account. Asked once the phone is unlocked.
      */
     val waiting: String = "",
+    /**
+     * A question heard over the lock screen that waits as a recording, on the phone: the
+     * instance writes speech down, and nothing goes to the instance while the phone is locked.
+     */
+    val waitingRecording: Boolean = false,
 ) {
+    /** Whether a question waits for the unlock, as words or as a recording. */
+    val held: Boolean get() = waiting.isNotBlank() || waitingRecording
+
     val screenAvailable: Boolean get() = screenText || screenshot != null
     val modelInfo: ModelInfo? get() = models.firstOrNull { it.id == modelId }
     val empty: Boolean get() = turns.isEmpty()
@@ -135,7 +153,15 @@ interface AssistActions {
  * a moment behind, from the recording so far, and a pause in speech sends it), or the phone's
  * own recogniser (the words as they are said). Speech out is the instance's text-to-speech.
  */
-class AssistController(private val context: Context, private val scope: CoroutineScope) : AssistActions {
+class AssistController(
+    private val context: Context,
+    private val scope: CoroutineScope,
+    /**
+     * Whether the phone is locked, asked each time it matters. While it is, nothing goes to the
+     * instance from here: no question, no recording to write down, not even "which models".
+     */
+    private val locked: () -> Boolean = { context.getSystemService(KeyguardManager::class.java)?.isKeyguardLocked == true },
+) : AssistActions {
     private val _state = MutableStateFlow(AssistUiState())
     val state = _state.asStateFlow()
     private val recorder = Recorder(scope)
@@ -161,28 +187,48 @@ class AssistController(private val context: Context, private val scope: Coroutin
      */
     private var newChatModel: String? = null
 
-    /** Over the lock screen: what is heard is held ([AssistUiState.waiting]), not asked. */
-    private var overLock = false
+    /** The question that waits for the unlock ([hold]). */
+    private var held: Held? = null
 
-    /** Whether the held question was spoken (and is answered aloud like one). */
-    private var waitingSpoken = false
-    private val ready: Job
+    /** Whether the question that waits was spoken. */
+    val heldSpoken: Boolean get() = held?.spoken == true
+
+    /** When the phone's recogniser last gave a sign of somebody speaking (elapsed ms). */
+    private var phoneActiveAt = 0L
+
+    /** What the phone itself knows: Settings, the instance's name. */
+    private val local: Job
+
+    /** What the instance says -- its models, what it offers: asked only once the phone is unlocked. */
+    private var remote: Job? = null
 
     init {
-        ready = scope.launch { load() }
+        local = scope.launch {
+            loadLocal()
+            if (!locked()) askInstance()
+        }
         scope.launch { speaker.playing.collect { on -> _state.update { it.copy(speaking = on) } } }
         // Settings changed the assistant's model while this sheet lives: the next new chat has it.
         scope.launch {
             context.lembas.instances.prefs.map { it.assistantModel }.distinctUntilChanged().drop(1).collect { chosen ->
-                ready.join()
+                ready()
                 newChatModel = assistantModelFor(chosen, accountDefault, _state.value.models) ?: chosen.ifBlank { null }
                 _state.update { if (it.chatId == null) it.copy(modelId = newChatModel) else it }
             }
         }
     }
 
-    /** The instance, its models and what it offers this account; the choices kept in Settings. */
-    private suspend fun load() {
+    /** Everything known: Settings, and -- unless the phone is locked -- what the instance says. */
+    private suspend fun ready() {
+        local.join()
+        if (!locked()) askInstance().join()
+    }
+
+    /** Ask the instance what it has, once. */
+    private fun askInstance(): Job = remote ?: scope.launch { loadRemote() }.also { remote = it }
+
+    /** The choices kept in Settings, and which instance: nothing here leaves the phone. */
+    private suspend fun loadLocal() {
         val store = context.lembas.instances
         val instance = store.current()
         val prefs = store.prefs.first()
@@ -199,7 +245,13 @@ class AssistController(private val context: Context, private val scope: Coroutin
         // Until the instance has said what it has, the choice in Settings stands as it is: a
         // question asked while the list could not be read still goes to the chosen model.
         newChatModel = prefs.assistantModel.ifBlank { null }
-        val api = instance?.let { store.clientFor(it) } ?: return
+    }
+
+    /** The instance's models and what it offers this account. */
+    private suspend fun loadRemote() {
+        val store = context.lembas.instances
+        val prefs = store.prefs.first()
+        val api = store.current()?.let { store.clientFor(it) } ?: return
         try {
             val me = api.me()
             val models = api.models()
@@ -223,56 +275,101 @@ class AssistController(private val context: Context, private val scope: Coroutin
 
     /**
      * The sheet came up. It starts listening at once -- the microphone first, as an assistant
-     * opens -- unless Settings says not to, the phone is locked (nothing is sent from the lock
-     * screen), or the microphone is not allowed yet (that needs an activity to ask). [listen]
-     * is a way in that means to speak -- a headset's voice button -- and listens regardless.
+     * opens -- unless Settings says not to or the microphone is not allowed yet (that needs an
+     * activity to ask). [listen] is a way in that means to speak -- the wake word, a headset's
+     * voice button -- and listens regardless.
+     *
+     * Over the lock screen only such a way in listens, and what it hears is held for the unlock
+     * ([hold]), never asked from there; the microphone opens without waiting for the instance.
      */
-    fun opened(locked: Boolean, listen: Boolean = false) {
+    fun opened(listen: Boolean = false) {
         scope.launch {
-            ready.join()
+            if (locked()) {
+                local.join()
+                val s = _state.value
+                if (listen && s.signedIn && !s.listening && !s.held && micAllowed()) listen()
+                return@launch
+            }
+            ready()
             val prefs = context.lembas.instances.prefs.first()
             val s = _state.value
-            if (s.signedIn && !locked && (listen || prefs.assistantListens) && s.canListen && !s.listening && micAllowed()) {
+            if (s.signedIn && (listen || prefs.assistantListens) && s.canListen && !s.listening && micAllowed()) {
                 if (listen || s.empty) listen()
             }
         }
     }
 
     /**
-     * The sheet came up over the lock screen by a way in that means to speak -- the wake word, a
-     * headset's button: it listens, and what it hears is held for the unlock ([hold]), never
-     * asked from here. The reply is not for the lock screen (nothing from the account shows there).
+     * Keep [question] until the phone is unlocked ([unlocked]); it takes the place of one that
+     * waited already. With the phone not locked there is nothing to wait for.
      */
-    fun listenOverLock() {
-        overLock = true
+    fun hold(question: Held) {
+        if (question.text.isBlank() && question.wav == null) return
+        held = question
+        _state.update { it.copy(waiting = question.text, waitingRecording = question.wav != null, conversation = false) }
+        if (!locked()) unlocked()
+    }
+
+    /** The question that waits, taken away from here: to be handed to another sheet. */
+    fun takeHeld(): Held? {
+        val waited = held
+        held = null
+        _state.update { it.copy(waiting = "", waitingRecording = false) }
+        return waited
+    }
+
+    /**
+     * The phone is unlocked: the instance is asked what it has, and the question that waited is
+     * asked now -- a recording is written down first. Does nothing while the phone is still locked.
+     */
+    fun unlocked() {
+        if (locked()) return
+        askInstance()
+        val waited = takeHeld() ?: return
+        val wav = waited.wav
+        if (wav == null) {
+            ask(waited.text, spoken = waited.spoken)
+            return
+        }
         scope.launch {
-            ready.join()
-            val s = _state.value
-            if (overLock && s.signedIn && s.canListen && !s.listening && s.waiting.isBlank() && micAllowed()) listen()
+            try {
+                _state.update { it.copy(busy = true, error = null) }
+                val text = context.lembas.instances.client()?.transcribe(wav).orEmpty()
+                _state.update { it.copy(busy = false) }
+                if (text.isNotBlank()) ask(text, spoken = true)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _state.update { it.copy(busy = false, error = context.explain(e)) }
+            }
         }
     }
 
-    /** Keep [question] until the phone is unlocked ([unlocked]). */
-    fun hold(question: String, spoken: Boolean) {
-        if (question.isBlank()) return
-        overLock = true
-        waitingSpoken = spoken
-        _state.update { it.copy(waiting = question, conversation = false) }
+    /**
+     * The screen went off: the microphone and the voice stop, whatever the lock says -- nobody
+     * is looking, and a phone that is about to lock must not go on listening or talking.
+     */
+    fun screenOff() {
+        speaker.stop()
+        if (_state.value.listening) type()
+        _state.update { it.copy(conversation = false) }
     }
 
-    /** The phone is unlocked: the question that waited is asked now -- unless [ask] says another one takes its place. */
-    fun unlocked(ask: Boolean = true) {
-        overLock = false
-        val waited = _state.value.waiting
-        _state.update { it.copy(waiting = "") }
-        if (ask && waited.isNotBlank()) ask(waited, spoken = waitingSpoken)
+    /**
+     * The phone locked while the sheet was up: as [screenOff], and the answer being written is
+     * no longer followed. Whatever is asked from now on waits for the unlock ([ask]).
+     */
+    fun lockedNow() {
+        screenOff()
+        following?.cancel()
+        _state.update { it.copy(busy = false) }
     }
 
     /** Open at the last assistant chat, once it is known which that is. */
     fun continueWhenReady() {
         scope.launch {
-            ready.join()
-            if (_state.value.last != null) continueLast() else opened(locked = false)
+            ready()
+            if (_state.value.last != null) continueLast() else opened()
         }
     }
 
@@ -305,7 +402,11 @@ class AssistController(private val context: Context, private val scope: Coroutin
             val headset = route.microphone()
             if (usingPhone) {
                 phone.start(
-                    onPartial = { words -> _state.update { it.copy(heard = words) } },
+                    onPartial = { words ->
+                        phoneActiveAt = SystemClock.elapsedRealtime()
+                        _state.update { it.copy(heard = words) }
+                    },
+                    onActive = { phoneActiveAt = SystemClock.elapsedRealtime() },
                     onLevel = { l -> _state.update { it.copy(level = l) } },
                     onResult = { words ->
                         _state.update { it.copy(listening = false, level = 0f, heard = "") }
@@ -341,7 +442,8 @@ class AssistController(private val context: Context, private val scope: Coroutin
      * The instance's speech-to-text takes a whole recording, so words "as they are said" are the
      * recording so far, written down again every moment -- one request at a time, only when half
      * a second more has been said, not past the first minute -- and not before the microphone
-     * has heard anything above the room: silence written down is an invented sentence.
+     * has heard anything above the room: silence written down is an invented sentence. Never
+     * while the phone is locked: the recording stays on the phone until it is unlocked.
      */
     private suspend fun writeDownAsSaid() {
         val api = context.lembas.instances.client() ?: return
@@ -349,7 +451,7 @@ class AssistController(private val context: Context, private val scope: Coroutin
         while (scope.isActive) {
             delay(PARTIAL_EVERY_MS)
             val seconds = recorder.seconds
-            if (seconds - sent < 0.5f || seconds > 60f || ear?.heardSomething != true) continue
+            if (seconds - sent < 0.5f || seconds > 60f || ear?.heardSomething != true || locked()) continue
             sent = seconds
             val words = runCatching { api.transcribe(recorder.snapshot()) }.getOrNull()
             if (!words.isNullOrBlank() && _state.value.listening) _state.update { it.copy(heard = words) }
@@ -365,6 +467,7 @@ class AssistController(private val context: Context, private val scope: Coroutin
         val ear = ear ?: return false
         while (true) {
             delay(TICK_MS)
+            // Over the lock screen no words are written down: the level alone decides.
             when (ear.tick(recorder.level.value, _state.value.heard)) {
                 EndOfSpeech.Verdict.Said -> return true
                 EndOfSpeech.Verdict.Nothing -> return false
@@ -382,6 +485,8 @@ class AssistController(private val context: Context, private val scope: Coroutin
         var words = ""
         var sameFor = 0L
         var asked = false
+        val began = SystemClock.elapsedRealtime()
+        phoneActiveAt = 0L
         while (_state.value.listening) {
             delay(TICK_MS)
             waited += TICK_MS
@@ -392,7 +497,9 @@ class AssistController(private val context: Context, private val scope: Coroutin
             } else {
                 sameFor += TICK_MS
             }
-            when (phoneWatch(waited, heard.isNotBlank(), sameFor)) {
+            // Since it last gave a sign of somebody speaking; never, and it is as long as it has listened.
+            val silentFor = if (phoneActiveAt >= began) SystemClock.elapsedRealtime() - phoneActiveAt else waited
+            when (phoneWatch(waited, heard.isNotBlank(), sameFor, silentFor)) {
                 PhoneWatch.Wait -> Unit
 
                 PhoneWatch.Finish -> if (!asked) {
@@ -432,6 +539,13 @@ class AssistController(private val context: Context, private val scope: Coroutin
                 _state.update { it.copy(heard = "") }
                 return@launch
             }
+            // Over the lock screen nothing goes to the instance, a recording to write down
+            // included: it waits on the phone, and is written down and asked on the unlock.
+            if (locked()) {
+                _state.update { it.copy(heard = "") }
+                hold(Held("", wav, spoken = true))
+                return@launch
+            }
             try {
                 _state.update { it.copy(busy = true) }
                 val text = context.lembas.instances.client()?.transcribe(wav).orEmpty()
@@ -457,7 +571,7 @@ class AssistController(private val context: Context, private val scope: Coroutin
 
     /** What was said: in a conversation, "stop" (or the like) ends it; anything else is asked. */
     private fun askOrStop(words: String) {
-        if (overLock) return hold(words, spoken = true)
+        if (locked()) return hold(Held(words, null, spoken = true))
         val phrases = context.getString(R.string.assist_stop_words).split("|")
         if (_state.value.conversation && isStopPhrase(words, phrases)) endConversation() else ask(words, spoken = true)
     }
@@ -478,8 +592,13 @@ class AssistController(private val context: Context, private val scope: Coroutin
     /** The sheet's "Summarise my notifications": the notifications up now go with the question. */
     override fun summariseNotifications() = ask(context.getString(R.string.assist_notifications_prompt), spoken = false, notifications = true)
 
+    /**
+     * Ask [question]. With the phone locked it is not asked but held for the unlock, whoever
+     * called: this is the one door to the instance, and it is shut while the phone is locked.
+     */
     fun ask(question: String, spoken: Boolean, notifications: Boolean = false) {
         if (question.isBlank()) return
+        if (locked()) return hold(Held(question, null, spoken))
         if (_state.value.listening) type()
         following?.cancel()
         following = scope.launch {
@@ -494,7 +613,7 @@ class AssistController(private val context: Context, private val scope: Coroutin
                 val api = store.client() ?: throw ApiException(401, "Not signed in.")
                 val prefs = store.prefs.first()
                 // A question typed the moment the sheet opened: the model is known first.
-                ready.join()
+                ready()
                 val now = _state.value
                 val withScreen = now.includeScreen
                 val attachments = buildList {
@@ -554,7 +673,7 @@ class AssistController(private val context: Context, private val scope: Coroutin
                 }
                 // The answer was heard to the end: listen for the next thing said. Stopped, a
                 // card waiting, or nothing to read: the conversation ends there.
-                if (_state.value.conversation && heardAll && micAllowed()) listen() else endConversation()
+                if (_state.value.conversation && heardAll && micAllowed() && !locked()) listen() else endConversation()
             } catch (e: Exception) {
                 _state.update { it.copy(error = context.explain(e), conversation = false) }
             } finally {
@@ -661,7 +780,8 @@ class AssistController(private val context: Context, private val scope: Coroutin
 
     /** Read [words] aloud; true when they were heard to the end. */
     private suspend fun speak(words: String): Boolean {
-        if (words.isBlank()) return false
+        // Never aloud over the lock screen: an answer is the account's.
+        if (words.isBlank() || locked()) return false
         return try {
             val api = context.lembas.instances.client() ?: return false
             speaker.playToEnd(api.speech(words))
@@ -683,7 +803,9 @@ class AssistController(private val context: Context, private val scope: Coroutin
         speaker.stop()
         phone.stop()
         route.release()
-        scope.launch { recorder.stop() }
+        // Not in a coroutine: the scope may be cancelled already, and the microphone must be let go.
+        recorder.stopNow()
+        held = null
     }
 
     private suspend fun png(bitmap: Bitmap): ByteArray = withContext(Dispatchers.Default) {

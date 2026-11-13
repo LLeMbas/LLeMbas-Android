@@ -49,6 +49,10 @@ the phone before the word. Not in the F-Droid build.
 The wake word and the hands-free parts of the voice assistant (listening by itself, the spoken
 conversation) are **experimental**: new, and tried on few phones. Settings marks them so.
 
+Over the lock screen the assistant can listen (the wake word, a headset's button), but nothing
+goes to the instance and no answer is shown or spoken until the phone is unlocked: with the
+instance's speech-to-text the question waits on the phone as a recording.
+
 ## Build
 
 Builds run on GitHub Actions (`.github/workflows/ci.yml`); locally it is

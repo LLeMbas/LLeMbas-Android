@@ -3,6 +3,7 @@ package eu.llembas.android.widget
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ShortcutInfo
@@ -34,10 +35,21 @@ class AskWidget : AppWidgetProvider() {
         PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
     )
 
-    private companion object {
-        const val REQUEST_ASK = 1
-        const val REQUEST_LISTEN = 2
-        const val REQUEST_CONTINUE = 3
+    companion object {
+        private const val REQUEST_ASK = 1
+        private const val REQUEST_LISTEN = 2
+        private const val REQUEST_CONTINUE = 3
+
+        /**
+         * Give every placed widget its buttons again. Nothing on it changes -- but the intents
+         * behind the buttons carry the app's own mark ([eu.llembas.android.assist.OwnIntents]),
+         * and a widget placed by an older version has buttons without it.
+         */
+        fun refresh(context: Context) {
+            val manager = AppWidgetManager.getInstance(context) ?: return
+            val ids = runCatching { manager.getAppWidgetIds(ComponentName(context, AskWidget::class.java)) }.getOrNull() ?: return
+            if (ids.isNotEmpty()) AskWidget().onUpdate(context, manager, ids)
+        }
     }
 }
 

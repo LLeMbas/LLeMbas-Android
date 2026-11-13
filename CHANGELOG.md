@@ -28,12 +28,35 @@ is in alpha and releases come off `main`.
   whose screen is off is locked, and a sheet opened over the lock screen asked Android to unlock
   first and closed itself when that was turned down -- which is what happens when nobody is
   there to unlock. Opened to listen (the wake word, a headset's button), the sheet now stays up
-  over the lock screen and listens. What it heard is shown as your question, with **Unlock to
-  send**, and Android is asked to unlock at once: a face or a fingerprint sends it. Leave it,
-  and it stays until the screen goes off. Nothing is asked and no answer is shown or spoken
-  while the phone is locked -- an answer over the lock screen is not offered.
-- A conversation that was on the assistant's sheet when the phone locked is no longer readable
-  over the lock screen.
+  over the lock screen and listens, and Android is asked to unlock once it has heard you: a face
+  or a fingerprint sends the question. Leave it, and it stays until the screen goes off.
+- **Nothing goes to your instance while the phone is locked.** Not the question, not the
+  recording, not even "which models are there". With Voice input › LLeMbas the question waits on
+  the phone as a recording -- the sheet says *Question heard*, with no words, and **Unlock to
+  send** -- and is written down and asked once you unlock. With Voice input › Phone the phone's
+  own recogniser writes it down (the recording goes wherever that recogniser sends it, as
+  always) and the words are shown while they wait. No answer is shown or spoken over the lock
+  screen, and an answer over the lock screen is not offered.
+- **A phone that locks while the assistant is open stops there.** The screen going off stops the
+  microphone and the voice at once; a question still being listened to is dropped; an answer is
+  no longer read aloud on a locked phone, a spoken conversation does not go on, and the
+  conversation that was on the sheet is not readable over the lock screen -- nor a failure's
+  words, which may name the instance. The screen stays on while an answer is read aloud.
+- **Another app can no longer put a question into the assistant.** The
+  sheet's screen has to be startable by Android (the assist action, a headset's button), so any
+  app can start it. A question handed from the assistant's own sheet no longer travels in the
+  intent, where any app could have written one to be asked on your account (or to wait for your
+  next unlock): it stays in the app's memory and the intent carries a one-time ticket. Opening
+  listening, the last chat and turning the screen on are honoured only on intents the app made
+  itself. Android's own headset actions still open it listening, as they must.
+- The sheet no longer asks its question a second time, or loses the one that waits, when the
+  phone is turned, folded or switches theme while it is up.
+- Closing the sheet lets go of the microphone at once, also when it was closed in the middle of
+  listening.
+- Listening no longer runs to the limit after speech into a headset that gates its noise to
+  exact silence, and no longer gives up as "nothing said" on someone who goes straight on after
+  the wake word in a steady voice. The phone's recogniser is not given up on while it reports
+  speech but shows no words yet.
 - **A new assistant chat could start on the wrong model.** After *Continue the last chat*, *New
   chat* kept that chat's model instead of going back to the assistant's own; and a question
   sent the moment the sheet opened, before the instance had said which models it has, went to

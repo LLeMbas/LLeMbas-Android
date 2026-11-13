@@ -425,6 +425,8 @@
     <string name="assist_type">Radšej písať</string>
     <string name="assist_writing_down">Zapisujem, čo ste povedali…</string>
     <string name="assist_unlock_to_send">Odomknúť a odoslať</string>
+    <string name="assist_question_heard">Otázka zaznamenaná</string>
+    <string name="assist_recording_waits_line">Telefón je zamknutý. Vaša otázka čaká v tomto telefóne ako nahrávka; nič sa neodoslalo. Po odomknutí sa odošle vašej inštancii, ktorá ju prepíše a odpovie.</string>
     <string name="assist_locked_line">Telefón je zamknutý. Kým ho neodomknete, nič sa neodošle a žiadna odpoveď sa nezobrazí.</string>
     <string name="assist_conversation">Rozhovor</string>
     <string name="assist_conversation_line">Po každej odpovedi znova počúvam. Povedzte „stop“ a skončíme.</string>
