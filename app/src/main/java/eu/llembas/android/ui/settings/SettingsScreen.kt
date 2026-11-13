@@ -48,6 +48,7 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.PhoneAndroid
+import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.RecordVoiceOver
 import androidx.compose.material.icons.filled.Science
 import androidx.compose.material.icons.filled.ScreenLockPortrait
@@ -93,6 +94,7 @@ import eu.llembas.android.AppLanguage
 import eu.llembas.android.BuildConfig
 import eu.llembas.android.R
 import eu.llembas.android.actions.NavApp
+import eu.llembas.android.api.ModelInfo
 import eu.llembas.android.assist.LembasAssistService
 import eu.llembas.android.assist.PhoneRecognizer
 import eu.llembas.android.auth.Instance
@@ -122,6 +124,7 @@ import eu.llembas.android.wake.WakeWordService
 import eu.llembas.android.wake.WakeWords
 import eu.llembas.android.wake.wakeAttemptWords
 import eu.llembas.android.wake.wakeTitle
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -136,6 +139,7 @@ interface SettingsActions {
     fun notificationSettings() {}
     fun assistantSettings() {}
     fun assistantTemporary(on: Boolean) {}
+    fun assistantModel(id: String) {}
     fun voiceInput(value: String) {}
     fun assistantListens(on: Boolean) {}
     fun assistantConversation(on: Boolean) {}
@@ -195,6 +199,8 @@ data class SettingsState(
     val notificationsBuild: Boolean = false,
     /** The navigation apps installed: NavApp ids. */
     val navApps: List<String> = emptyList(),
+    /** The instance's models, for Settings › Assistant › Assistant model; empty until (or unless) it said them. */
+    val assistantModels: List<ModelInfo> = emptyList(),
 )
 
 @Composable
@@ -217,6 +223,18 @@ fun SettingsScreen(onBack: () -> Unit, onAddInstance: () -> Unit) {
             delay(200)
         }
         clock = SystemClock.elapsedRealtime()
+    }
+    // The instance's models, for the assistant's: asked for each time Settings opens on an instance.
+    var models by remember { mutableStateOf(emptyList<ModelInfo>()) }
+    LaunchedEffect(active?.id) {
+        models = try {
+            store.client()?.models().orEmpty()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // Not reachable now: the row keeps what was chosen and offers the instance's default.
+            emptyList()
+        }
     }
     var pushNote by remember { mutableStateOf<String?>(null) }
     var updateNote by remember { mutableStateOf<String?>(null) }
@@ -277,6 +295,10 @@ fun SettingsScreen(onBack: () -> Unit, onAddInstance: () -> Unit) {
 
             override fun assistantTemporary(on: Boolean) {
                 scope.launch { store.savePrefs { it.copy(assistantTemporary = on) } }
+            }
+
+            override fun assistantModel(id: String) {
+                scope.launch { store.savePrefs { it.copy(assistantModel = id) } }
             }
 
             override fun voiceInput(value: String) {
@@ -420,6 +442,7 @@ fun SettingsScreen(onBack: () -> Unit, onAddInstance: () -> Unit) {
             notificationAccess = NotificationAccess.granted(context),
             notificationsBuild = NotificationAccess.AVAILABLE,
             navApps = remember { NavApp.installedApps(context).map { it.id } },
+            assistantModels = models,
         ),
         actions,
         onBack,
@@ -441,6 +464,15 @@ fun SettingsContent(state: SettingsState, actions: SettingsActions, onBack: () -
             WakeChoices(which, state.prefs, onPick = { pick ->
                 choosingWake = null
                 pick(actions)
+            })
+        }
+    }
+    var choosingModel by remember { mutableStateOf(false) }
+    if (choosingModel) {
+        ModalBottomSheet(onDismissRequest = { choosingModel = false }, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+            AssistantModelChoices(state, onPick = {
+                choosingModel = false
+                actions.assistantModel(it)
             })
         }
     }
@@ -565,6 +597,15 @@ fun SettingsContent(state: SettingsState, actions: SettingsActions, onBack: () -
                         stringResource(R.string.assistant_open_settings),
                         subtitle = stringResource(R.string.assistant_explained),
                         onClick = actions::assistantSettings,
+                    )
+                    Rule()
+                    // The model the assistant's new chats start on: the instance's default may be
+                    // a large one, and a spoken question wants a quick answer.
+                    SettingRow(
+                        Icons.Filled.Psychology,
+                        stringResource(R.string.assistant_model),
+                        subtitle = assistantModelLabel(state),
+                        onClick = { choosingModel = true },
                     )
                     Rule()
                     SettingRow(
@@ -1108,6 +1149,40 @@ fun WakeChoices(which: WakeChoice, prefs: Prefs, onPick: ((SettingsActions) -> U
         onPick { actions -> if (which == WakeChoice.Sensitivity) actions.wakeSensitivity(id) else actions.wakePhrase(id) }
     }
 }
+
+/**
+ * What the assistant's model row says: the chosen model by its name, or "Instance default" --
+ * also for a model the instance no longer has, since that is what the assistant then uses.
+ */
+@Composable
+private fun assistantModelLabel(state: SettingsState): String {
+    val chosen = state.prefs.assistantModel
+    val model = state.assistantModels.firstOrNull { it.id == chosen }
+    // While the list is not read yet, or could not be: the choice as it was saved.
+    return when {
+        chosen.isBlank() -> stringResource(R.string.assistant_model_default)
+        model != null -> model.name.ifBlank { model.id }
+        state.assistantModels.isEmpty() -> chosen
+        else -> stringResource(R.string.assistant_model_default)
+    }
+}
+
+/**
+ * Settings › Assistant › Assistant model, as a sheet: "Instance default" (the account's default
+ * model, as in a new chat in the app), then the instance's models. The choice is the model a new
+ * assistant chat starts on, from every way in -- the sheet, the wake word, Share.
+ */
+@Composable
+fun AssistantModelChoices(state: SettingsState, onPick: (String) -> Unit) {
+    val chosen = state.prefs.assistantModel.takeIf { id -> state.assistantModels.any { it.id == id } }.orEmpty()
+    val choices = listOf(
+        Choice(INSTANCE_DEFAULT, stringResource(R.string.assistant_model_default), stringResource(R.string.assistant_model_default_line), chosen.isEmpty()),
+    ) + state.assistantModels.map { Choice(it.id, it.name.ifBlank { it.id }, null, it.id == chosen) }
+    ChoiceList(stringResource(R.string.assistant_model), choices) { id -> onPick(if (id == INSTANCE_DEFAULT) "" else id) }
+}
+
+/** The list's key for "Instance default": a key cannot be empty, and no model is named so. */
+private const val INSTANCE_DEFAULT = " default"
 
 private data class Choice(val id: String, val title: String, val subtitle: String?, val chosen: Boolean)
 

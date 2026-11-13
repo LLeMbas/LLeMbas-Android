@@ -374,6 +374,9 @@
     <string name="settings_assistant">Assistant</string>
     <string name="assistant_explained">Make LLeMbas the phone\'s digital assistant: choose it under Default apps › Digital assistant app. Then holding the power button, the assist gesture or the lock screen\'s shortcut opens it over whatever is on screen.</string>
     <string name="assistant_open_settings">Open the assistant settings</string>
+    <string name="assistant_model">Assistant model</string>
+    <string name="assistant_model_default">Instance default</string>
+    <string name="assistant_model_default_line">The model your new chats start on. Choose a quick one below if it is too slow for a spoken question.</string>
     <string name="assistant_samsung">On Samsung phones: Settings › Advanced features › Side button › Press and hold › Digital assistant.</string>
     <string name="assistant_temporary">Assistant chats are temporary</string>
     <string name="assistant_read_aloud">Read the answer aloud when asked by voice</string>

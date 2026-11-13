@@ -63,6 +63,7 @@ import eu.llembas.android.ui.scheduled.ScheduleContent
 import eu.llembas.android.ui.scheduled.ScheduleEditContent
 import eu.llembas.android.ui.scheduled.ScheduledContent
 import eu.llembas.android.ui.scheduled.SchedulingModelsContent
+import eu.llembas.android.ui.settings.AssistantModelChoices
 import eu.llembas.android.ui.settings.LanguageChoices
 import eu.llembas.android.ui.settings.NotificationSummaryGroup
 import eu.llembas.android.ui.settings.SettingsActions
@@ -231,6 +232,14 @@ class ScreenShots {
         shoot("08-wake-greeting") { SheetOver { WakeChoices(WakeChoice.Greeting, Fakes.settings.prefs, onPick = {}) } }
         shoot("08-wake-sensitivity") { SheetOver { WakeChoices(WakeChoice.Sensitivity, Fakes.settings.prefs, onPick = {}) } }
         shoot("08-wake-sensitivity", Phone.Small, fontScale = 1.5f) { SheetOver { WakeChoices(WakeChoice.Sensitivity, Fakes.settings.prefs, onPick = {}) } }
+    }
+
+    @Test
+    fun assistantModel() {
+        // "Instance default" chosen, then one of the instance's models.
+        shoot("08-assistant-model", Phone.Scroll) { SheetOver { AssistantModelChoices(Fakes.settings, onPick = {}) } }
+        val picked = Fakes.settings.copy(prefs = Fakes.settings.prefs.copy(assistantModel = Fakes.models.last().id))
+        shoot("08-assistant-model-chosen", Phone.Small, fontScale = 1.5f) { SheetOver { AssistantModelChoices(picked, onPick = {}) } }
     }
 
     @Test

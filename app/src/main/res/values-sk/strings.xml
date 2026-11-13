@@ -372,6 +372,9 @@
     <string name="settings_assistant">Asistent</string>
     <string name="assistant_explained">Nastavte LLeMbas ako digitálneho asistenta telefónu: zvoľte ho v Predvolené aplikácie › Digitálny asistent. Podržanie tlačidla napájania, gesto asistenta alebo skratka na uzamknutej obrazovke ho potom otvorí nad tým, čo je práve na obrazovke.</string>
     <string name="assistant_open_settings">Otvoriť nastavenia asistenta</string>
+    <string name="assistant_model">Model asistenta</string>
+    <string name="assistant_model_default">Predvolený model inštancie</string>
+    <string name="assistant_model_default_line">Model, s ktorým sa začínajú vaše nové konverzácie. Ak je na hovorenú otázku príliš pomalý, vyberte nižšie rýchlejší.</string>
     <string name="assistant_samsung">Na telefónoch Samsung: Nastavenia › Rozšírené funkcie › Tlačidlo na boku › Stlačenie a podržanie › Digitálny asistent.</string>
     <string name="assistant_temporary">Konverzácie s asistentom sú dočasné</string>
     <string name="assistant_read_aloud">Prečítať odpoveď nahlas, keď sa spýtate hlasom</string>

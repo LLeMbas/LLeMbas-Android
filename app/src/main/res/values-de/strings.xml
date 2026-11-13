@@ -372,6 +372,9 @@
     <string name="settings_assistant">Assistent</string>
     <string name="assistant_explained">Machen Sie LLeMbas zum digitalen Assistenten des Telefons: Wählen Sie ihn unter Standard-Apps › Digitaler Assistent. Das Halten der Einschalttaste, die Assistenzgeste oder die Verknüpfung auf dem Sperrbildschirm öffnet ihn dann über allem, was gerade angezeigt wird.</string>
     <string name="assistant_open_settings">Assistenten-Einstellungen öffnen</string>
+    <string name="assistant_model">Modell des Assistenten</string>
+    <string name="assistant_model_default">Standard der Instanz</string>
+    <string name="assistant_model_default_line">Das Modell, mit dem deine neuen Chats beginnen. Ist es für eine gesprochene Frage zu langsam, wähle unten ein schnelleres.</string>
     <string name="assistant_samsung">Auf Samsung-Telefonen: Einstellungen › Erweiterte Funktionen › Seitentaste › Gedrückt halten › Digitaler Assistent.</string>
     <string name="assistant_temporary">Assistenten-Chats sind temporär</string>
     <string name="assistant_read_aloud">Antwort vorlesen, wenn per Sprache gefragt wurde</string>

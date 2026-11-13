@@ -1,6 +1,7 @@
 package eu.llembas.android
 
 import eu.llembas.android.api.LiveReply
+import eu.llembas.android.api.ModelInfo
 import eu.llembas.android.api.Step
 import eu.llembas.android.api.Tail
 import eu.llembas.android.assist.AssistController
@@ -51,6 +52,22 @@ class AssistTest {
         val earlier = AssistTurn("Why?", earlier = listOf(Step(kind = "text", markdown = "Because.")))
         assertFalse(earlier.writing)
         assertEquals("Because.", earlier.steps.single().markdown)
+    }
+
+    @Test
+    fun theAssistantsModelIsTheOneChosenInSettings() {
+        val models = listOf(ModelInfo("large"), ModelInfo("standard", default = true), ModelInfo("quick"))
+        // The choice, whatever the account's and the instance's defaults are.
+        assertEquals("quick", AssistController.assistantModelFor("quick", "large", models))
+        // "Instance default": the account's default, as a new chat in the app starts.
+        assertEquals("large", AssistController.assistantModelFor("", "large", models))
+        // No account default (or one that is gone): the instance's, then its first.
+        assertEquals("standard", AssistController.assistantModelFor("", null, models))
+        assertEquals("standard", AssistController.assistantModelFor("", "retired", models))
+        assertEquals("large", AssistController.assistantModelFor("", null, models.map { it.copy(default = false) }))
+        // A chosen model the instance no longer has falls back the same way, and none is none.
+        assertEquals("large", AssistController.assistantModelFor("retired", "large", models))
+        assertEquals(null, AssistController.assistantModelFor("quick", null, emptyList()))
     }
 
     @Test

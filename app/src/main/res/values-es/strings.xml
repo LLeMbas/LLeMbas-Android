@@ -372,6 +372,9 @@
     <string name="settings_assistant">Asistente</string>
     <string name="assistant_explained">Convierta LLeMbas en el asistente digital del teléfono: elíjalo en Aplicaciones predeterminadas › App de asistencia digital. Mantener pulsado el botón de encendido, el gesto de asistencia o el acceso directo de la pantalla de bloqueo lo abrirá entonces sobre lo que haya en pantalla.</string>
     <string name="assistant_open_settings">Abrir los ajustes del asistente</string>
+    <string name="assistant_model">Modelo del asistente</string>
+    <string name="assistant_model_default">Predeterminado de la instancia</string>
+    <string name="assistant_model_default_line">El modelo con el que empiezan tus chats nuevos. Si es demasiado lento para una pregunta hablada, elige abajo uno más rápido.</string>
     <string name="assistant_samsung">En los teléfonos Samsung: Ajustes › Funciones avanzadas › Botón lateral › Mantener pulsado › Asistente digital.</string>
     <string name="assistant_temporary">Los chats del asistente son temporales</string>
     <string name="assistant_read_aloud">Leer la respuesta en voz alta cuando se pregunte por voz</string>

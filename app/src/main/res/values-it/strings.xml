@@ -372,6 +372,9 @@
     <string name="settings_assistant">Assistente</string>
     <string name="assistant_explained">Rendi LLeMbas l\'assistente digitale del telefono: selezionalo in App predefinite › App di assistenza digitale. Tenendo premuto il tasto di accensione, il gesto di assistenza o la scorciatoia della schermata di blocco lo apre quindi sopra qualsiasi cosa sia a schermo.</string>
     <string name="assistant_open_settings">Apri le impostazioni dell\'assistente</string>
+    <string name="assistant_model">Modello dell’assistente</string>
+    <string name="assistant_model_default">Predefinito dell’istanza</string>
+    <string name="assistant_model_default_line">Il modello con cui iniziano le tue nuove chat. Se è troppo lento per una domanda a voce, scegline sotto uno più rapido.</string>
     <string name="assistant_samsung">Sui telefoni Samsung: Impostazioni › Funzioni avanzate › Tasto laterale › Pressione prolungata › Assistente digitale.</string>
     <string name="assistant_temporary">Le chat dell\'assistente sono temporanee</string>
     <string name="assistant_read_aloud">Leggi la risposta ad alta voce quando la domanda è vocale</string>

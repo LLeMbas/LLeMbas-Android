@@ -372,6 +372,9 @@
     <string name="settings_assistant">Asszisztens</string>
     <string name="assistant_explained">Tegye az LLeMbas-t a telefon digitális asszisztensévé: válassza ki az Alapértelmezett alkalmazások › Digitális asszisztens alkalmazás alatt. A bekapcsológomb lenyomva tartása, az asszisztens-gesztus vagy a lezárási képernyő parancsikonja ezután a képernyőn lévő tartalom felett nyitja meg.</string>
     <string name="assistant_open_settings">Asszisztens beállításainak megnyitása</string>
+    <string name="assistant_model">Az asszisztens modellje</string>
+    <string name="assistant_model_default">A példány alapértelmezése</string>
+    <string name="assistant_model_default_line">Az a modell, amellyel az új csevegéseid indulnak. Ha egy kimondott kérdéshez túl lassú, válassz lent gyorsabbat.</string>
     <string name="assistant_samsung">Samsung telefonokon: Beállítások › Speciális funkciók › Oldalgomb › Nyomva tartás › Digitális asszisztens.</string>
     <string name="assistant_temporary">Az asszisztenses csevegések ideiglenesek</string>
     <string name="assistant_read_aloud">Olvassa fel a választ, ha hangos kérdés érkezett</string>

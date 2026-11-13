@@ -375,6 +375,7 @@ object Fakes {
         wakeState = WakeState.Listening("OK Google"),
         notificationsBuild = true,
         navApps = listOf("google", "osmand"),
+        assistantModels = models,
     )
 
     /** The wake word in trouble, and its test having heard the phrase: what the rows say then. */

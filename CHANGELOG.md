@@ -5,7 +5,20 @@ is in alpha and releases come off `main`.
 
 ## [Unreleased]
 
+### Added
+
+- **Assistant model** in Settings › Assistant: the model the assistant's new chats start on --
+  *Instance default* (your account's default, as before) or any model of the instance. A large
+  default model is slow to answer a spoken question; a quick one can be chosen for the assistant
+  alone. It holds for every way in: the sheet, the wake word, Share. Picking a model in the
+  sheet still changes it too.
+
 ### Fixed
+
+- **A new assistant chat could start on the wrong model.** After *Continue the last chat*, *New
+  chat* kept that chat's model instead of going back to the assistant's own; and a question
+  sent the moment the sheet opened, before the instance had said which models it has, went to
+  the instance's default whatever was chosen.
 
 - **Listening went on and on in a quiet room.** With the instance's speech-to-text the sheet
   decided "somebody is speaking" and "it is quiet again" by two fixed loudness levels. A phone

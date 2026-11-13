@@ -372,6 +372,9 @@
     <string name="settings_assistant">Assistant</string>
     <string name="assistant_explained">Faites de LLeMbas l\'assistant numérique du téléphone : choisissez-le dans Applications par défaut › Application d\'assistance numérique. Maintenir le bouton d\'alimentation, le geste d\'assistance ou le raccourci de l\'écran de verrouillage l\'ouvrira alors par-dessus ce qui est affiché.</string>
     <string name="assistant_open_settings">Ouvrir les paramètres de l\'assistant</string>
+    <string name="assistant_model">Modèle de l’assistant</string>
+    <string name="assistant_model_default">Modèle par défaut de l’instance</string>
+    <string name="assistant_model_default_line">Le modèle avec lequel commencent vos nouvelles discussions. S’il est trop lent pour une question orale, choisissez-en un plus rapide ci-dessous.</string>
     <string name="assistant_samsung">Sur les téléphones Samsung : Paramètres › Fonctions avancées › Bouton latéral › Maintenir enfoncé › Assistant numérique.</string>
     <string name="assistant_temporary">Les conversations de l\'assistant sont temporaires</string>
     <string name="assistant_read_aloud">Lire la réponse à voix haute en cas de question orale</string>

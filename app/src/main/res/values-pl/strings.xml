@@ -372,6 +372,9 @@
     <string name="settings_assistant">Asystent</string>
     <string name="assistant_explained">Ustaw LLeMbas jako cyfrowego asystenta telefonu: wybierz go w Domyślne aplikacje › Aplikacja asystenta cyfrowego. Przytrzymanie przycisku zasilania, gest asystenta lub skrót z ekranu blokady otwiera go wtedy nad tym, co jest na ekranie.</string>
     <string name="assistant_open_settings">Otwórz ustawienia asystenta</string>
+    <string name="assistant_model">Model asystenta</string>
+    <string name="assistant_model_default">Domyślny model instancji</string>
+    <string name="assistant_model_default_line">Model, od którego zaczynają się Twoje nowe czaty. Jeśli jest za wolny na pytanie zadane głosem, wybierz poniżej szybszy.</string>
     <string name="assistant_samsung">W telefonach Samsung: Ustawienia › Funkcje zaawansowane › Przycisk boczny › Naciśnięcie i przytrzymanie › Asystent cyfrowy.</string>
     <string name="assistant_temporary">Czaty asystenta są tymczasowe</string>
     <string name="assistant_read_aloud">Odczytaj odpowiedź na głos, gdy pytanie było głosowe</string>

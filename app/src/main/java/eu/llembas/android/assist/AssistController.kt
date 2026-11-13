@@ -28,7 +28,10 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.transformWhile
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
@@ -142,11 +145,29 @@ class AssistController(private val context: Context, private val scope: Coroutin
     private var usingPhone = false
     private var screenText: String? = null
     private var stt: Boolean? = null
+
+    /** The account's own default model, as the instance said it: what "Instance default" means. */
+    private var accountDefault: String? = null
+
+    /**
+     * The model a new chat starts on (Settings › Assistant › Assistant model). The sheet's
+     * [AssistUiState.modelId] is the model of the chat it is in, which for a continued chat is
+     * that chat's own; a new chat goes back to this one.
+     */
+    private var newChatModel: String? = null
     private val ready: Job
 
     init {
         ready = scope.launch { load() }
         scope.launch { speaker.playing.collect { on -> _state.update { it.copy(speaking = on) } } }
+        // Settings changed the assistant's model while this sheet lives: the next new chat has it.
+        scope.launch {
+            context.lembas.instances.prefs.map { it.assistantModel }.distinctUntilChanged().drop(1).collect { chosen ->
+                ready.join()
+                newChatModel = assistantModelFor(chosen, accountDefault, _state.value.models) ?: chosen.ifBlank { null }
+                _state.update { if (it.chatId == null) it.copy(modelId = newChatModel) else it }
+            }
+        }
     }
 
     /** The instance, its models and what it offers this account; the choices kept in Settings. */
@@ -164,15 +185,17 @@ class AssistController(private val context: Context, private val scope: Coroutin
                     ?.let { id -> LastAssist(id, prefs.lastAssistTitle, prefs.lastAssistAt) },
             )
         }
+        // Until the instance has said what it has, the choice in Settings stands as it is: a
+        // question asked while the list could not be read still goes to the chosen model.
+        newChatModel = prefs.assistantModel.ifBlank { null }
         val api = instance?.let { store.clientFor(it) } ?: return
         try {
             val me = api.me()
             val models = api.models()
             stt = me.speechToText
-            val chosen = prefs.assistantModel.takeIf { id -> models.any { it.id == id } }
-                ?: me.defaultModel?.takeIf { id -> models.any { it.id == id } }
-                ?: models.firstOrNull { it.default }?.id
-                ?: models.firstOrNull()?.id
+            accountDefault = me.defaultModel
+            val chosen = assistantModelFor(prefs.assistantModel, me.defaultModel, models)
+            newChatModel = chosen
             _state.update {
                 it.copy(
                     connection = Connection.Online,
@@ -428,6 +451,8 @@ class AssistController(private val context: Context, private val scope: Coroutin
                 val store = context.lembas.instances
                 val api = store.client() ?: throw ApiException(401, "Not signed in.")
                 val prefs = store.prefs.first()
+                // A question typed the moment the sheet opened: the model is known first.
+                ready.join()
                 val now = _state.value
                 val withScreen = now.includeScreen
                 val attachments = buildList {
@@ -456,7 +481,7 @@ class AssistController(private val context: Context, private val scope: Coroutin
                     inChat = chatId
                     replyId = sent.reply?.id ?: return@launch
                 } else {
-                    val made = api.createChat(text, attachments, model = now.modelId, temporary = prefs.assistantTemporary)
+                    val made = api.createChat(text, attachments, model = now.modelId ?: newChatModel, temporary = prefs.assistantTemporary)
                     inChat = made.chat.id
                     replyId = made.reply?.id ?: return@launch
                     _state.update { it.copy(chatId = inChat) }
@@ -560,11 +585,13 @@ class AssistController(private val context: Context, private val scope: Coroutin
     override fun newChat() {
         following?.cancel()
         speaker.stop()
-        _state.update { it.copy(chatId = null, turns = emptyList(), error = null, busy = false, conversation = false) }
+        // And on the assistant's own model again, not the one of the chat that was continued.
+        _state.update { it.copy(chatId = null, turns = emptyList(), error = null, busy = false, conversation = false, modelId = newChatModel ?: it.modelId) }
     }
 
     /** The model: for the chat this sheet is in, changed at once; for a new one, kept for next time. */
     override fun pickModel(id: String) {
+        newChatModel = id
         _state.update { it.copy(modelId = id) }
         scope.launch {
             context.lembas.instances.savePrefs { it.copy(assistantModel = id) }
@@ -636,6 +663,16 @@ class AssistController(private val context: Context, private val scope: Coroutin
         // their numbers), and how often the recording so far is written down.
         private const val TICK_MS = EndOfSpeech.TICK_MS
         private const val PARTIAL_EVERY_MS = 1_200L
+
+        /**
+         * The model a new assistant chat starts on: the one [chosen] in Settings while the
+         * instance still has it; else ("Instance default", or a model that is gone) the
+         * account's default, the instance's, or its first.
+         */
+        fun assistantModelFor(chosen: String, accountDefault: String?, models: List<ModelInfo>): String? {
+            val has = { id: String? -> !id.isNullOrBlank() && models.any { it.id == id } }
+            return chosen.takeIf(has) ?: accountDefault?.takeIf(has) ?: models.firstOrNull { it.default }?.id ?: models.firstOrNull()?.id
+        }
 
         /** A reply's words, for a voice: its text steps, without the markup. */
         fun spokenWords(steps: List<Step>): String = plain(steps.filter { it.kind == "text" }.joinToString("\n\n") { it.markdown.orEmpty() })
