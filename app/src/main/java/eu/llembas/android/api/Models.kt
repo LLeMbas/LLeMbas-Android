@@ -512,7 +512,7 @@ data class FileContent(
 @Serializable
 data class SteerNote(val id: String = "", val text: String = "")
 
-/** One step of a reply: `thinking`, `text`, `tools` or `steer`. */
+/** One step of a reply: `thinking`, `text`, `tools`, `steer` or `page`. */
 @Serializable
 data class Step(
     val index: Int = 0,
@@ -521,6 +521,8 @@ data class Step(
     val text: String? = null,
     val label: String? = null,
     val markdown: String? = null,
+    /** A `page` step's title (spec 3.8.0): the page itself is not sent to a client that does not draw it. */
+    val title: String? = null,
     val calls: List<ToolCall> = emptyList(),
     val messages: List<SteerNote> = emptyList(),
 )
@@ -715,6 +717,10 @@ data class PushPayload(
      */
     @SerialName("schedule_id") val scheduleId: String? = null,
     @SerialName("run_id") val runId: String? = null,
+    /** A report was filed (`kind` `report`, spec 3.8.0): its id; [title] and [body] are its title and summary, [url] `/reports/{id}`. */
+    @SerialName("report_id") val reportId: String? = null,
+    /** A report's `normal` or `high`. */
+    val importance: String? = null,
     val status: String? = null,
     val visibility: String? = null,
     val actions: List<String> = emptyList(),

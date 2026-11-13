@@ -20,6 +20,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -45,6 +46,8 @@ import eu.llembas.android.ui.home.ChatsViewModel
 import eu.llembas.android.ui.home.DrawerActions
 import eu.llembas.android.ui.home.DrawerContent
 import eu.llembas.android.ui.memory.MemoryScreen
+import eu.llembas.android.ui.reports.ReportScreen
+import eu.llembas.android.ui.reports.ReportsScreen
 import eu.llembas.android.ui.scheduled.RunScreen
 import eu.llembas.android.ui.scheduled.ScheduleEditScreen
 import eu.llembas.android.ui.scheduled.ScheduleScreen
@@ -65,7 +68,7 @@ import kotlinx.coroutines.launch
 private data class Loaded(val instance: Instance?)
 
 /** Where a notification (or the assistant, or a share) asked the app to open. */
-private data class Opening(val chat: String?, val schedule: String?, val run: String? = null, val instance: String? = null)
+private data class Opening(val chat: String?, val schedule: String?, val run: String? = null, val instance: String? = null, val report: String? = null)
 
 class MainActivity : ComponentActivity() {
     /** A chat or a schedule a notification, the assistant or a share asked to open; consumed once. */
@@ -139,8 +142,9 @@ class MainActivity : ComponentActivity() {
         val schedule = intent?.getStringExtra(Notifications.EXTRA_SCHEDULE)
         val run = intent?.getStringExtra(Notifications.EXTRA_RUN)
         val instance = intent?.getStringExtra(Notifications.EXTRA_INSTANCE)
-        if (chat == null && schedule == null) return
-        opening.value = Opening(chat, schedule, run, instance)
+        val report = intent?.getStringExtra(Notifications.EXTRA_REPORT)
+        if (chat == null && schedule == null && report == null) return
+        opening.value = Opening(chat, schedule, run, instance, report)
         // A notification from another of the person's instances: that one comes into use, and
         // its pages (keyed by the instance) open what was asked.
         if (instance != null) {
@@ -208,6 +212,8 @@ class MainActivity : ComponentActivity() {
                 when {
                     it.chat != null -> top("chat/${it.chat}")
 
+                    it.report != null -> over("report/${it.report}")
+
                     it.schedule != null -> {
                         over("schedule/${it.schedule}")
                         it.run?.let { run -> over("schedule/${it.schedule}/run/$run") }
@@ -242,6 +248,8 @@ class MainActivity : ComponentActivity() {
 
                 override fun scheduled() = over("scheduled")
 
+                override fun reports() = over("reports")
+
                 override fun archived() = over("archived")
 
                 override fun memory() = over("memory")
@@ -255,6 +263,8 @@ class MainActivity : ComponentActivity() {
                 override fun search(query: String) = chats.search(query)
             }
         }
+        // The title of each report whose conversation was opened, by its chat: what that chat's bar says.
+        val reportTitles = remember { mutableStateMapOf<String, String>() }
         val menu: () -> Unit = { scope.launch { drawer.open() } }
         ModalNavigationDrawer(
             drawerState = drawer,
@@ -299,6 +309,30 @@ class MainActivity : ComponentActivity() {
                     ArchivedScreen(onBack = { nav.popBackStack() }, onOpen = { top("chat/$it") }, onRestored = { chats.load() })
                 }
                 composable("memory") { MemoryScreen(onBack = { nav.popBackStack() }) }
+                composable("reports") { ReportsScreen(onBack = { nav.popBackStack() }, onOpen = { over("report/$it") }) }
+                composable("report/{id}") { e ->
+                    ReportScreen(
+                        e.arguments?.getString("id").orEmpty(),
+                        onBack = { nav.popBackStack() },
+                        onReply = { chat, title ->
+                            reportTitles[chat] = title
+                            over("report-chat/$chat")
+                        },
+                    )
+                }
+                // A report's conversation: the ordinary chat screen, entered from the report and
+                // left back to it. It is not among the chats (the server keeps it under Reports),
+                // so nothing here puts it into the drawer's list either.
+                composable("report-chat/{id}") { e ->
+                    val id = e.arguments?.getString("id")
+                    ChatScreen(
+                        chatId = id,
+                        onMenu = { nav.popBackStack() },
+                        onNewChat = { top("new") },
+                        onLeave = { nav.popBackStack() },
+                        report = reportTitles[id].orEmpty(),
+                    )
+                }
                 composable("scheduled") {
                     ScheduledScreen(
                         onBack = { nav.popBackStack() },
@@ -317,6 +351,7 @@ class MainActivity : ComponentActivity() {
                         onBack = { nav.popBackStack() },
                         onEdit = { over("schedule-edit/$it") },
                         onOpenRun = { run -> over("schedule/$id/run/$run") },
+                        onOpenReport = { report -> over("report/$report") },
                     )
                 }
                 composable("schedule/{id}/run/{run}") { e ->
@@ -325,6 +360,7 @@ class MainActivity : ComponentActivity() {
                         e.arguments?.getString("run").orEmpty(),
                         onBack = { nav.popBackStack() },
                         onOpenChat = { top("chat/$it") },
+                        onOpenReport = { over("report/$it") },
                     )
                 }
                 composable("schedule-new") {

@@ -4,6 +4,7 @@ package eu.llembas.android.ui.scheduled
 
 import android.app.Application
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -33,6 +34,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Summarize
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -44,6 +46,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -62,6 +65,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -83,6 +87,7 @@ import eu.llembas.android.api.ScheduleRun
 import eu.llembas.android.api.SchedulesFrame
 import eu.llembas.android.api.StreamClient
 import eu.llembas.android.api.computerAway
+import eu.llembas.android.api.notifyChoice
 import eu.llembas.android.lembas
 import eu.llembas.android.ui.explain
 import eu.llembas.android.ui.progressLineOf
@@ -424,6 +429,7 @@ fun ScheduleScreen(
     onBack: () -> Unit,
     onEdit: (String) -> Unit,
     onOpenRun: (String) -> Unit,
+    onOpenReport: (String) -> Unit = {},
     model: ScheduleViewModel = viewModel(key = "schedule-$id"),
 ) {
     val state by model.state.collectAsStateWithLifecycle()
@@ -447,6 +453,7 @@ fun ScheduleScreen(
         onRunNow = model::runNow,
         onPause = model::pause,
         onOpenRun = { run -> onOpenRun(run.id) },
+        onOpenReport = onOpenReport,
         onMore = model::more,
     )
 }
@@ -466,6 +473,7 @@ fun ScheduleContent(
     onRunNow: () -> Unit = {},
     onPause: (Boolean) -> Unit = {},
     onOpenRun: (ScheduleRun) -> Unit = {},
+    onOpenReport: (String) -> Unit = {},
     onMore: () -> Unit = {},
 ) {
     val palette = LocalPalette.current
@@ -488,7 +496,7 @@ fun ScheduleContent(
                 if (state.loading) CircularProgressIndicator() else state.error?.let { Message(it) }
             }
         } else {
-            ScheduleBody(state, schedule, padding, onRunNow, onPause, onOpenRun, onMore)
+            ScheduleBody(state, schedule, padding, onRunNow, onPause, onOpenRun, onOpenReport, onMore)
         }
     }
     if (deleting) {
@@ -514,6 +522,7 @@ private fun ScheduleBody(
     onRunNow: () -> Unit,
     onPause: (Boolean) -> Unit,
     onOpenRun: (ScheduleRun) -> Unit,
+    onOpenReport: (String) -> Unit,
     onMore: () -> Unit,
 ) {
     val palette = LocalPalette.current
@@ -534,7 +543,7 @@ private fun ScheduleBody(
                     val facts = listOfNotNull(
                         schedule.model?.takeIf { it.isNotBlank() }?.let { stringResource(R.string.schedule_model, it) },
                         modeWords(schedule.mode),
-                        notifyWords(schedule.notify),
+                        notifyWords(schedule),
                     )
                     if (facts.isNotEmpty()) {
                         Text(facts.joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = palette.inkFaint)
@@ -595,16 +604,22 @@ private fun ScheduleBody(
                 )
             }
         }
-        items(state.runs, key = { it.id }) { run -> RunRow(run, schedule.runsOn, onOpen = { onOpenRun(run) }) }
+        items(state.runs, key = { it.id }) { run -> RunRow(run, schedule.runsOn, onOpen = { onOpenRun(run) }, onOpenReport = onOpenReport) }
         if (state.more) item { LaunchedEffect(state.runs.size) { onMore() } }
     }
 }
 
 @Composable
-private fun notifyWords(notify: String): String? = when (notify) {
+private fun notifyWords(schedule: Schedule): String? = when (schedule.notify) {
     "always" -> stringResource(R.string.notify_always)
+
+    // "When…" with the person's own words (spec 3.8.0); a server before it said "matters".
+    "when" -> stringResource(R.string.notify_when_words, schedule.notifyWhen.ifBlank { stringResource(R.string.notify_when_default) })
+
     "matters" -> stringResource(R.string.notify_matters)
+
     "never" -> stringResource(R.string.notify_never)
+
     else -> null
 }
 
@@ -696,7 +711,7 @@ internal fun Header(text: String) {
  * whole row opens the run.
  */
 @Composable
-private fun RunRow(run: ScheduleRun, runsOn: RunsOn?, onOpen: () -> Unit) {
+private fun RunRow(run: ScheduleRun, runsOn: RunsOn?, onOpen: () -> Unit, onOpenReport: (String) -> Unit = {}) {
     val palette = LocalPalette.current
     Surface(
         onClick = onOpen,
@@ -712,12 +727,27 @@ private fun RunRow(run: ScheduleRun, runsOn: RunsOn?, onOpen: () -> Unit) {
                 // Which computer the run was for, and whether it was away.
                 runsOn?.let { on -> ComputerName(on, away = run.computerAway) }
                 RunFacts(run, maxLines = 2)
+                run.reportId?.let { report -> ReportLink(onClick = { onOpenReport(report) }) }
             }
         }
     }
 }
 
-/** Under a run's time: the model and why, then the result's first lines, or the trouble. */
+/** A run that filed a report: the way to it, a tap target of its own inside the run's row. */
+@Composable
+internal fun ReportLink(onClick: () -> Unit) {
+    val palette = LocalPalette.current
+    Row(
+        Modifier.clip(RoundedCornerShape(12.dp)).clickable(onClick = onClick).heightIn(min = 40.dp).padding(end = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(Icons.Filled.Summarize, contentDescription = null, tint = palette.accent, modifier = Modifier.size(18.dp))
+        Spacer(Modifier.width(8.dp))
+        Text(stringResource(R.string.run_open_report), style = MaterialTheme.typography.labelLarge, color = palette.accent)
+    }
+}
+
+/** Under a run's time: the model and why, what it is doing or the trouble, then its note (or the result's first lines). */
 @Composable
 internal fun RunFacts(run: ScheduleRun, maxLines: Int = Int.MAX_VALUE, withPreview: Boolean = true) {
     val palette = LocalPalette.current
@@ -744,7 +774,11 @@ internal fun RunFacts(run: ScheduleRun, maxLines: Int = Int.MAX_VALUE, withPrevi
         val tone = if (run.status == "waiting") palette.inkMuted else palette.danger
         Text(it, style = MaterialTheme.typography.bodySmall, color = tone, maxLines = maxLines, overflow = TextOverflow.Ellipsis)
     }
-    if (withPreview && run.preview.isNotBlank()) {
+    // The run's own line for the history (spec 3.8.0): what it found, or why it filed no report.
+    // A model's words: plain text. A server before it sends the result's first lines instead.
+    if (run.note.isNotBlank()) {
+        Text(run.note, style = MaterialTheme.typography.bodySmall, color = palette.ink, maxLines = maxLines, overflow = TextOverflow.Ellipsis)
+    } else if (withPreview && run.preview.isNotBlank()) {
         Text(run.preview, style = MaterialTheme.typography.bodySmall, color = palette.ink, maxLines = maxLines, overflow = TextOverflow.Ellipsis)
     }
 }
@@ -758,6 +792,9 @@ data class EditState(
     val saving: Boolean = false,
     val error: String? = null,
     val unsupported: Boolean = false,
+    /** Notify when (spec 3.8.0): `always`, `when` or `never`, and the person's words for `when` (empty: the default). */
+    val notify: String = "when",
+    val notifyWhen: String = "",
 )
 
 class ScheduleEditViewModel(app: Application) : AndroidViewModel(app) {
@@ -774,12 +811,16 @@ class ScheduleEditViewModel(app: Application) : AndroidViewModel(app) {
         if (id == null) return
         viewModelScope.launch {
             runCatching { getApplication<Application>().api().schedule(id) }.onSuccess { s ->
-                _state.update { it.copy(words = s.request.ifBlank { s.instruction }) }
+                _state.update { it.copy(words = s.request.ifBlank { s.instruction }, notify = notifyChoice(s.notify), notifyWhen = s.notifyWhen) }
             }
         }
     }
 
     fun words(text: String) = _state.update { it.copy(words = text, compiled = null) }
+
+    fun notify(value: String) = _state.update { it.copy(notify = notifyChoice(value)) }
+
+    fun notifyWhen(text: String) = _state.update { it.copy(notifyWhen = text) }
 
     /** The server reads the words: the title, the instruction, the rule and the next runs. */
     fun preview() {
@@ -803,7 +844,14 @@ class ScheduleEditViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             _state.update { it.copy(saving = true, error = null) }
             try {
-                val saved = getApplication<Application>().api().saveSchedule(compiled, _state.value.words.trim(), editing)
+                val now = _state.value
+                val saved = getApplication<Application>().api().saveSchedule(
+                    compiled,
+                    now.words.trim(),
+                    editing,
+                    notify = now.notify,
+                    notifyWhen = now.notifyWhen,
+                )
                 then(saved.id)
             } catch (e: Exception) {
                 _state.update { it.copy(saving = false, error = getApplication<Application>().explain(e)) }
@@ -821,7 +869,16 @@ fun ScheduleEditScreen(
 ) {
     val state by model.state.collectAsStateWithLifecycle()
     LaunchedEffect(id) { model.start(id) }
-    ScheduleEditContent(state, editing = id != null, onBack = onBack, onWords = model::words, onPreview = model::preview, onSave = { model.save(onSaved) })
+    ScheduleEditContent(
+        state,
+        editing = id != null,
+        onBack = onBack,
+        onWords = model::words,
+        onPreview = model::preview,
+        onSave = { model.save(onSaved) },
+        onNotify = model::notify,
+        onNotifyWhen = model::notifyWhen,
+    )
 }
 
 /**
@@ -838,6 +895,8 @@ fun ScheduleEditContent(
     onWords: (String) -> Unit = {},
     onPreview: () -> Unit = {},
     onSave: () -> Unit = {},
+    onNotify: (String) -> Unit = {},
+    onNotifyWhen: (String) -> Unit = {},
 ) {
     val palette = LocalPalette.current
     Scaffold(
@@ -880,7 +939,55 @@ fun ScheduleEditContent(
             if (state.unsupported) Text(stringResource(R.string.scheduled_unsupported), color = palette.inkMuted)
             state.error?.let { Text(it, color = palette.danger, style = MaterialTheme.typography.bodyMedium) }
             state.compiled?.let { Understood(it) }
+            NotifyWhen(state.notify, state.notifyWhen, onNotify, onNotifyWhen)
             Spacer(Modifier.height(24.dp))
+        }
+    }
+}
+
+/**
+ * Notify when: every run, when the person's own words hold, or never -- each with one line
+ * saying what it does. A report is what tells the person; a run without one is a line in the
+ * task's history. "When…" opens a field with the default already in it.
+ */
+@Composable
+private fun NotifyWhen(notify: String, words: String, onNotify: (String) -> Unit, onWords: (String) -> Unit) {
+    val palette = LocalPalette.current
+    val choices = listOf(
+        Triple("always", R.string.notify_every_run, R.string.notify_every_run_line),
+        Triple("when", R.string.notify_when_option, R.string.notify_when_line),
+        Triple("never", R.string.notify_never_option, R.string.notify_never_line),
+    )
+    Surface(shape = RoundedCornerShape(20.dp), color = palette.surfaceRaised, contentColor = palette.ink, modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(vertical = 12.dp)) {
+            Text(
+                stringResource(R.string.notify_when),
+                style = MaterialTheme.typography.labelLarge,
+                color = palette.accent,
+                modifier = Modifier.padding(horizontal = 16.dp),
+            )
+            choices.forEach { (value, title, line) ->
+                Row(
+                    Modifier.fillMaxWidth().clickable { onNotify(value) }.heightIn(min = 56.dp).padding(start = 4.dp, end = 16.dp, top = 4.dp, bottom = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    RadioButton(selected = notify == value, onClick = { onNotify(value) })
+                    Column(Modifier.weight(1f)) {
+                        Text(stringResource(title), style = MaterialTheme.typography.bodyLarge)
+                        Text(stringResource(line), style = MaterialTheme.typography.bodySmall, color = palette.inkMuted)
+                    }
+                }
+                if (value == "when" && notify == "when") {
+                    val usual = stringResource(R.string.notify_when_default)
+                    OutlinedTextField(
+                        value = words.ifEmpty { usual },
+                        onValueChange = onWords,
+                        label = { Text(stringResource(R.string.notify_when_label)) },
+                        shape = RoundedCornerShape(16.dp),
+                        modifier = Modifier.fillMaxWidth().padding(start = 52.dp, end = 16.dp, bottom = 8.dp),
+                    )
+                }
+            }
         }
     }
 }

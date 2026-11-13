@@ -291,8 +291,7 @@ class ApiClient(val base: String, private val token: String, val http: OkHttpCli
 
     suspend fun deleteChat(chatId: String) = empty(authed("$v2/chats/$chatId").delete().build())
 
-    suspend fun stop(chatId: String, messageId: String) =
-        empty(authed("$v2/chats/$chatId/messages/$messageId/stop").post(ByteArray(0).toRequestBody(null)).build())
+    suspend fun stop(chatId: String, messageId: String) = empty(authed("$v2/chats/$chatId/messages/$messageId/stop").post("{}".toRequestBody(JSON)).build())
 
     suspend fun edit(chatId: String, messageId: String, text: String): Turn =
         send("POST", "/chats/$chatId/messages/$messageId/edit", buildJsonObject { put("text", text) })
@@ -334,7 +333,7 @@ class ApiClient(val base: String, private val token: String, val http: OkHttpCli
      * server refuses in its own words (409) while a reply is being written or with nothing to
      * summarise; the transcript is read again after, for the divider it leaves.
      */
-    suspend fun compact(chatId: String) = empty(authed("$v2/chats/$chatId/compact").post(ByteArray(0).toRequestBody(null)).build())
+    suspend fun compact(chatId: String) = empty(authed("$v2/chats/$chatId/compact").post("{}".toRequestBody(JSON)).build())
 
     suspend fun team(chatId: String, since: Int = 0): TeamView = get<TeamEnvelope>("/chats/$chatId/team?since=$since").team
 
@@ -371,13 +370,18 @@ class ApiClient(val base: String, private val token: String, val http: OkHttpCli
      * Save what the compile made of [words]: a new schedule (201), or with [id] the one being
      * edited. The words go along as the schedule's `request`, so editing starts from them.
      */
-    suspend fun saveSchedule(compiled: ScheduleCompiled, words: String, id: String? = null): Schedule {
+    suspend fun saveSchedule(compiled: ScheduleCompiled, words: String, id: String? = null, notify: String? = null, notifyWhen: String = ""): Schedule {
         val body = buildJsonObject {
             put("title", compiled.title)
             put("instruction", compiled.instruction)
             put("rule", compiled.rule)
             put("target", compiled.target)
             if (id == null) put("request", words)
+            // Notify when (spec 3.8.0): left out where the form did not say, so an older server is sent nothing new.
+            if (notify != null) {
+                put("notify", notify)
+                if (notify == "when") put("notify_when", notifyWhen.trim().ifBlank { NOTIFY_DEFAULT_CONDITION })
+            }
         }
         return if (id == null) {
             send<ScheduleEnvelope>("POST", "/schedules", body).schedule
@@ -385,6 +389,27 @@ class ApiClient(val base: String, private val token: String, val http: OkHttpCli
             send<ScheduleEnvelope>("PATCH", "/schedules/${segment(id)}", body).schedule
         }
     }
+
+    // --- Reports (`schedule.use`) ---------------------------------------------------------------
+
+    /** The reports, newest first; [unread] only those not read yet, [schedule] only one schedule's. */
+    suspend fun reports(unread: Boolean = false, schedule: String? = null): List<Report> {
+        val asked = listOfNotNull(if (unread) "unread=1" else null, schedule?.let { "schedule=" + segment(it) }).joinToString("&")
+        return get<ReportList>(if (asked.isEmpty()) "/reports" else "/reports?" + asked).reports
+    }
+
+    /** One report with its body. Read as the report itself, or as `{report: …}` around it. */
+    suspend fun report(id: String): Report {
+        val answer = get<JsonObject>("/reports/${segment(id)}")
+        return LembasJson.decodeFromJsonElement(Report.serializer(), answer["report"] as? JsonObject ?: answer)
+    }
+
+    suspend fun readReport(id: String) = empty(authed("$v2/reports/${segment(id)}/read").post("{}".toRequestBody(JSON)).build())
+
+    suspend fun deleteReport(id: String) = empty(authed("$v2/reports/${segment(id)}").delete().build())
+
+    /** Continue the report as a conversation: the chat it is in, which stays under Reports. */
+    suspend fun replyToReport(id: String): String? = send<ReportReply>("POST", "/reports/${segment(id)}/reply", null).chatId
 
     suspend fun pauseSchedule(id: String, paused: Boolean): Schedule =
         send<ScheduleEnvelope>("POST", "/schedules/${segment(id)}/" + if (paused) "pause" else "resume", null).schedule

@@ -37,6 +37,7 @@ import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Summarize
 import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
@@ -103,6 +104,8 @@ data class ChatsState(
     /** Chats whose messages hold the search words (`GET /search?in=chats`), and the words asked. */
     val found: List<SearchHit> = emptyList(),
     val foundFor: String = "",
+    /** How many reports are unread: the badge on Reports. */
+    val unreadReports: Int = 0,
 )
 
 /** The drawer's list: every chat of the instance in use, both kinds, newest first. */
@@ -135,7 +138,9 @@ class ChatsViewModel(app: Application) : AndroidViewModel(app) {
                 val page = api.chats()
                 // Folders are a side dish: the chats show without them if they cannot be read.
                 val folders = runCatching { api.folders() }.getOrDefault(_state.value.folders)
-                _state.value = ChatsState(chats = page.chats, more = page.more, folders = folders)
+                // So is the count of unread reports: an instance before Reports simply has none.
+                val unread = runCatching { api.reports(unread = true).size }.getOrDefault(0)
+                _state.value = ChatsState(chats = page.chats, more = page.more, folders = folders, unreadReports = unread)
             } catch (e: Exception) {
                 _state.update { it.copy(loading = false, error = getApplication<Application>().explain(e)) }
             }
@@ -262,6 +267,7 @@ interface DrawerActions {
     fun deleteFolder(folder: Folder) {}
     fun files() {}
     fun scheduled() {}
+    fun reports() {}
     fun archived() {}
     fun memory() {}
     fun settings() {}
@@ -331,6 +337,7 @@ fun DrawerContent(
                 item { DrawerItem(Icons.Filled.EditNote, stringResource(R.string.new_chat), onClick = actions::newChat) }
                 item { DrawerItem(Icons.Filled.Terminal, stringResource(R.string.new_agent_chat), onClick = actions::newAgentChat) }
                 item { DrawerItem(Icons.Filled.Folder, stringResource(R.string.files), onClick = actions::files) }
+                item { DrawerItem(Icons.Filled.Summarize, stringResource(R.string.reports), badge = state.unreadReports, onClick = actions::reports) }
                 item { DrawerItem(Icons.Filled.Schedule, stringResource(R.string.scheduled), onClick = actions::scheduled) }
                 item { DrawerItem(Icons.Filled.Inventory2, stringResource(R.string.archived), onClick = actions::archived) }
                 item { DrawerItem(Icons.Filled.Psychology, stringResource(R.string.memory), onClick = actions::memory) }
@@ -613,7 +620,7 @@ private fun FolderNameDialog(initial: String, title: Int, onSave: (String) -> Un
 }
 
 @Composable
-private fun DrawerItem(icon: ImageVector, label: String, subtitle: String? = null, onClick: () -> Unit) {
+private fun DrawerItem(icon: ImageVector, label: String, subtitle: String? = null, badge: Int = 0, onClick: () -> Unit) {
     val palette = LocalPalette.current
     Surface(
         onClick = onClick,
@@ -627,6 +634,13 @@ private fun DrawerItem(icon: ImageVector, label: String, subtitle: String? = nul
             Column(Modifier.weight(1f)) {
                 Text(label, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 subtitle?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = palette.inkMuted, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+            }
+            // A count of what is new: the words give, the badge keeps its size.
+            if (badge > 0) {
+                Spacer(Modifier.width(12.dp))
+                Box(Modifier.background(palette.accent, RoundedCornerShape(50)).padding(horizontal = 8.dp, vertical = 2.dp)) {
+                    Text(if (badge > 99) "99+" else badge.toString(), style = MaterialTheme.typography.labelMedium, color = palette.bg, maxLines = 1)
+                }
             }
         }
     }

@@ -19,6 +19,8 @@ import eu.llembas.android.api.Message
 import eu.llembas.android.api.Metrics
 import eu.llembas.android.api.ModelList
 import eu.llembas.android.api.Progress
+import eu.llembas.android.api.Report
+import eu.llembas.android.api.ReportSchedule
 import eu.llembas.android.api.RunError
 import eu.llembas.android.api.RunModel
 import eu.llembas.android.api.RunResult
@@ -50,6 +52,8 @@ import eu.llembas.android.ui.chat.ChatState
 import eu.llembas.android.ui.chat.Draft
 import eu.llembas.android.ui.home.ChatsState
 import eu.llembas.android.ui.memory.MemoryState
+import eu.llembas.android.ui.reports.ReportState
+import eu.llembas.android.ui.reports.ReportsState
 import eu.llembas.android.ui.scheduled.EditState
 import eu.llembas.android.ui.scheduled.ModelsState
 import eu.llembas.android.ui.scheduled.RunState
@@ -59,6 +63,7 @@ import eu.llembas.android.ui.settings.SettingsState
 import eu.llembas.android.ui.settings.WakeTestShown
 import eu.llembas.android.wake.WakeFailure
 import eu.llembas.android.wake.WakeState
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
 import java.time.LocalDate
 
@@ -645,6 +650,68 @@ object Fakes {
         ),
     )
 
+    /** Reports: two unread (one marked important), one read; a long title and a long task name. */
+    val reports = ReportsState(
+        reports = listOf(
+            Report(
+                id = "rep1",
+                title = "Two storage tenders opened, and one of them closes before the next run",
+                summary = "Austria asks for 200 MW of grid storage, bids due in May. A second, smaller one closes on Friday.",
+                importance = "high",
+                schedule = ReportSchedule("s1", "Morning news on renewables"),
+                created = "2026-03-10T07:31:00+00:00",
+                unread = true,
+            ),
+            Report(
+                id = "rep2",
+                title = "Flour is back in stock",
+                summary = "The mill lists the stone-ground flour again.",
+                schedule = ReportSchedule("s2", "The mill's price list, watched every hour of every working day"),
+                created = "2026-03-09T16:00:00+00:00",
+                unread = true,
+            ),
+            Report(
+                id = "rep3",
+                title = "Nothing new on the bridge",
+                summary = "The council has not published the minutes yet.",
+                schedule = ReportSchedule("s3", "Bridge watch"),
+                created = "2026-03-08T07:31:00+00:00",
+            ),
+        ),
+    )
+
+    /** One report read as a page: Markdown, a code block, and a page a phone does not draw. */
+    val report = ReportState(
+        loading = false,
+        report = reports.reports[0].copy(
+            unread = false,
+            body = """
+                |Two tenders for grid storage opened this week.
+                |
+                |1. **Austria**: 200 MW, bids due on 15 May.
+                |2. **A smaller one** closes on Friday; see the [notice](https://example.org/notice).
+                |
+                |```html-view Storage tenders by month
+                |<!doctype html><html><body><svg></svg></body></html>
+                |```
+                |
+                |```text
+                |storage tender: 200 MW, deadline 2026-05-15
+                |```
+            """.trimMargin(),
+        ),
+    )
+
+    /** A task's history under spec 3.8.0: a run that filed a report, one that says why it did not, one unchanged. */
+    val scheduleWithReports = ScheduleState(
+        schedule = schedules[0].copy(notify = "when", notifyWhen = "a tender for storage opens or closes"),
+        runs = listOf(
+            ok.copy(id = "r-10", note = "Two tenders opened; the report says which.", report = JsonPrimitive("rep1"), preview = ""),
+            ok.copy(id = "r-11", note = "No tender opened or closed since yesterday, so there is nothing to report.", preview = ""),
+            ScheduleRun(id = "r-12", scheduleId = "s1", dueAt = "2026-03-06T07:30:00+00:00", status = "unchanged", note = "The page did not change."),
+        ),
+    )
+
     val schedulingModels = ModelsState(
         models = SchedulingModels(
             models = listOf(
@@ -656,6 +723,9 @@ object Fakes {
             mine = listOf("gpt-oss", "qwen"),
         ),
     )
+
+    /** The form with "When…" chosen and the person's own words in it. */
+    val editingNotify: EditState get() = editing.copy(notify = "when", notifyWhen = "a tender for storage opens or closes")
 
     val editing = EditState(
         words = "Every weekday at 7:30, sum up the news about renewable energy in five points",

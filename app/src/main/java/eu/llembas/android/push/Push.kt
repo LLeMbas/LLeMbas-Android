@@ -100,10 +100,12 @@ object Notifications {
 
     const val EXTRA_SCHEDULE = "eu.llembas.android.SCHEDULE"
     const val EXTRA_RUN = "eu.llembas.android.RUN"
+    const val EXTRA_REPORT = "eu.llembas.android.REPORT"
 
     fun show(context: Context, instance: String, payload: PushPayload) {
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) return
         if (payload.kind == "schedule" || payload.kind == "schedule_failed") return scheduled(context, instance, payload)
+        if (payload.kind == ReportNotice.KIND) return report(context, instance, payload)
         val chatId = payload.chatId ?: payload.url.removePrefix("/chat/").takeIf { payload.url.startsWith("/chat/") }
         val id = (chatId ?: payload.url).hashCode()
         val open = opener(context, instance, id, chatId = chatId)
@@ -176,22 +178,77 @@ object Notifications {
         NotificationManagerCompat.from(context).notify(notice.id, builder.build())
     }
 
+    /**
+     * A report was filed (spec 3.8.0): what a scheduled task has to tell, on the Reports channel.
+     * Unlocked: the report's title and its summary. On the lock screen only the public version:
+     * the app's name and "New report" -- nothing from the account (Working-notes rule 5). A tap
+     * and Open go to the report; Mark read marks it, once the phone is unlocked. A run that
+     * filed no report sends nothing, so there is nothing to show for it; a failed run still has
+     * its own notification ([scheduled]).
+     */
+    private fun report(context: Context, instance: String, payload: PushPayload) {
+        val notice = ReportNotice.from(payload) ?: return
+        NotificationManagerCompat.from(context).notify(notice.id, reportNotification(context, instance, notice))
+    }
+
+    /** The report's notification, apart from posting it, so a test can read both of its faces. */
+    fun reportNotification(context: Context, instance: String, notice: ReportNotice): Notification {
+        val fixed = context.getString(R.string.report_new_public)
+        val open = opener(context, instance, notice.id, chatId = null, reportId = notice.reportId)
+        val public = NotificationCompat.Builder(context, LembasApp.CHANNEL_REPORTS)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle(context.getString(R.string.app_name))
+            .setContentText(fixed)
+            .build()
+        val read = PendingIntent.getBroadcast(
+            context,
+            ("read" + notice.reportId).hashCode(),
+            Intent(context, ReportActionReceiver::class.java)
+                .putExtra("instance", instance)
+                .putExtra("report", notice.reportId)
+                .putExtra("notification", notice.id),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+        return NotificationCompat.Builder(context, LembasApp.CHANNEL_REPORTS)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle(notice.title.ifBlank { fixed })
+            .setContentText(notice.summary)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(notice.summary))
+            .setAutoCancel(true)
+            .setContentIntent(open)
+            .setCategory(Notification.CATEGORY_STATUS)
+            .setPriority(if (notice.high) NotificationCompat.PRIORITY_HIGH else NotificationCompat.PRIORITY_DEFAULT)
+            .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
+            .setPublicVersion(public)
+            .addAction(0, context.getString(R.string.viewer_open), open)
+            .addAction(unlocked(context.getString(R.string.report_mark_read), read))
+            .build()
+    }
+
     /** A notification action Android runs only once the phone is unlocked. */
     private fun unlocked(title: String, intent: PendingIntent): NotificationCompat.Action =
         NotificationCompat.Action.Builder(0, title, intent).setAuthenticationRequired(true).build()
 
-    private fun opener(context: Context, instance: String, id: Int, chatId: String?, scheduleId: String? = null, runId: String? = null): PendingIntent =
-        PendingIntent.getActivity(
-            context,
-            id,
-            Intent(context, MainActivity::class.java)
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-                .putExtra(EXTRA_CHAT, chatId)
-                .putExtra(EXTRA_SCHEDULE, scheduleId)
-                .putExtra(EXTRA_RUN, runId)
-                .putExtra(EXTRA_INSTANCE, instance),
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-        )
+    private fun opener(
+        context: Context,
+        instance: String,
+        id: Int,
+        chatId: String?,
+        scheduleId: String? = null,
+        runId: String? = null,
+        reportId: String? = null,
+    ): PendingIntent = PendingIntent.getActivity(
+        context,
+        id,
+        Intent(context, MainActivity::class.java)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            .putExtra(EXTRA_CHAT, chatId)
+            .putExtra(EXTRA_SCHEDULE, scheduleId)
+            .putExtra(EXTRA_RUN, runId)
+            .putExtra(EXTRA_REPORT, reportId)
+            .putExtra(EXTRA_INSTANCE, instance),
+        PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+    )
 
     private fun scheduleAction(context: Context, instance: String, schedule: String, notification: Int, action: String): PendingIntent =
         PendingIntent.getBroadcast(
@@ -234,6 +291,24 @@ class CardActionReceiver : BroadcastReceiver() {
                     // A 409 means it was answered elsewhere first; either way the card is settled.
                     runCatching { context.lembas.instances.clientFor(found).answer(chat, card, CardAnswer(verdict = verdict)) }
                 }
+                NotificationManagerCompat.from(context).cancel(intent.getIntExtra("notification", 0))
+            } finally {
+                pending.finish()
+            }
+        }
+    }
+}
+
+/** A report's Mark read, from its notification. */
+class ReportActionReceiver : BroadcastReceiver() {
+    override fun onReceive(context: Context, intent: Intent) {
+        val pending = goAsync()
+        val instance = intent.getStringExtra("instance") ?: return pending.finish()
+        val report = intent.getStringExtra("report") ?: return pending.finish()
+        background.launch {
+            try {
+                // A report that is gone is as good as read; the notification goes either way.
+                Push.instance(context, instance)?.let { found -> runCatching { context.lembas.instances.clientFor(found).readReport(report) } }
                 NotificationManagerCompat.from(context).cancel(intent.getIntExtra("notification", 0))
             } finally {
                 pending.finish()

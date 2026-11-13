@@ -54,6 +54,10 @@ import eu.llembas.android.ui.home.DrawerContent
 import eu.llembas.android.ui.memory.MemoryActions
 import eu.llembas.android.ui.memory.MemoryContent
 import eu.llembas.android.ui.memory.MemoryState
+import eu.llembas.android.ui.reports.ReportContent
+import eu.llembas.android.ui.reports.ReportsActions
+import eu.llembas.android.ui.reports.ReportsContent
+import eu.llembas.android.ui.reports.ReportsState
 import eu.llembas.android.ui.scheduled.RunContent
 import eu.llembas.android.ui.scheduled.ScheduleContent
 import eu.llembas.android.ui.scheduled.ScheduleEditContent
@@ -87,6 +91,8 @@ private object NoMemoryActions : MemoryActions
 private object NoActivityActions : ActivityActions
 
 private object NoSettingsActions : SettingsActions
+
+private object NoReportsActions : ReportsActions
 
 private object NoAssistActions : AssistActions
 
@@ -137,7 +143,7 @@ class ScreenShots {
                 drawerState = rememberDrawerState(DrawerValue.Open),
                 drawerContent = {
                     DrawerContent(
-                        Fakes.chats,
+                        Fakes.chats.copy(unreadReports = 2),
                         current = "c1",
                         account = "Home · frodo@example.org",
                         actions = NoDrawerActions,
@@ -247,7 +253,26 @@ class ScreenShots {
     }
 
     @Test
-    fun scheduleEdit() = shoot("11-schedule-edit") { ScheduleEditContent(Fakes.editing, editing = false) }
+    fun scheduleEdit() {
+        shoot("11-schedule-edit", Phone.Scroll) { ScheduleEditContent(Fakes.editing, editing = false) }
+        // "Notify when": the three choices, and "When…" with the person's words.
+        shoot("11-schedule-edit-notify", Phone.Scroll) { ScheduleEditContent(Fakes.editingNotify, editing = true) }
+        shoot("11-schedule-edit-notify", Phone.SmallScroll, fontScale = 1.5f) { ScheduleEditContent(Fakes.editingNotify, editing = true) }
+    }
+
+    @Test
+    fun reports() {
+        shoot("40-reports") { ReportsContent(Fakes.reports, NoReportsActions) }
+        shoot("40-reports", Phone.Small, fontScale = 1.5f) { ReportsContent(Fakes.reports, NoReportsActions) }
+        shoot("40-reports-none") { ReportsContent(ReportsState(), NoReportsActions) }
+        shoot("40-reports-older-instance") { ReportsContent(ReportsState(unsupported = true), NoReportsActions) }
+        // One report as a page; the page in it is a card, not a page and not its source.
+        shoot("41-report", Phone.Scroll) { ReportContent(Fakes.report) }
+        shoot("41-report", Phone.Small, fontScale = 1.5f) { ReportContent(Fakes.report) }
+        // A task's runs: the note, the way to a report, an unchanged look.
+        shoot("42-schedule-runs-reports", Phone.Scroll) { ScheduleContent(Fakes.scheduleWithReports) }
+        shoot("42-schedule-runs-reports", Phone.SmallScroll, fontScale = 1.5f) { ScheduleContent(Fakes.scheduleWithReports) }
+    }
 
     @Test
     fun scheduleRun() {

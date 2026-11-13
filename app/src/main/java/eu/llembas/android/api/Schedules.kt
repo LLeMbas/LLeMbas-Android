@@ -2,6 +2,7 @@ package eu.llembas.android.api
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 
 // --- Scheduled tasks (`/api/v2/schedules`) ------------------------------------------------
@@ -67,13 +68,20 @@ data class ScheduleRun(
     val notification: RunNotification? = null,
     /** A watching schedule's look at its address on this run (`unchanged` when nothing moved). */
     val watch: RunWatch? = null,
-)
+    /** The run's line in the history (spec 3.8.0): the answer's first line, or why no report was filed. */
+    val note: String = "",
+    /** The report this run filed, when it filed one: its id (or an object carrying it). */
+    val report: JsonElement? = null,
+) {
+    val reportId: String? get() = idOf(report)
+}
 
 /**
  * A scheduled task. [description] is the rule in words, as the server says it ("On the second
  * Monday of each month at 07:30"), in [timezone]; [rule] the server's own form of it; [request]
  * the person's words it was made from; [instruction] what the model is asked each time.
- * [notify] is `always`, `matters` or `never`; [mode] `fresh` (a chat per run) or `continue`.
+ * [notify] is `always`, `when` or `never` (spec 3.8.0; `matters` before it) and [notifyWhen] the
+ * person's own words for `when`; [mode] `fresh` (a chat per run) or `continue`.
  */
 @Serializable
 data class Schedule(
@@ -90,6 +98,7 @@ data class Schedule(
     val target: String = "chat",
     val mode: String = "",
     val notify: String = "",
+    @SerialName("notify_when") val notifyWhen: String = "",
     @SerialName("catch_up") val catchUp: String = "",
     @SerialName("grace_minutes") val graceMinutes: Int? = null,
     val model: String? = null,

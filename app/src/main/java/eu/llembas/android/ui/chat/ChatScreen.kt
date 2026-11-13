@@ -35,6 +35,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.ChatBubbleOutline
@@ -112,6 +113,8 @@ fun ChatScreen(
     onOpened: (String) -> Unit = {},
     agent: Boolean = false,
     onKind: ((agent: Boolean) -> Unit)? = null,
+    /** Entered from a report (its Reply): the bar says "Report: title" and has Back, to the report, where the menu is. */
+    report: String? = null,
     model: ChatViewModel = viewModel(key = chatId ?: if (agent) "new-agent" else "new"),
 ) {
     val state by model.state.collectAsStateWithLifecycle()
@@ -155,6 +158,7 @@ fun ChatScreen(
             onActivity = { activityOpen = true },
             onShow = { showing = it },
             onKind = onKind,
+            report = report,
         )
     }
 
@@ -166,6 +170,10 @@ fun ChatScreen(
         state.chat?.id?.let { id -> FileViewer(id, file, onClose = { showing = null }) }
     }
 }
+
+/** What the bar says of a chat entered from a report: "Report: title", or "Report" when the title is not known. */
+@Composable
+private fun reportTitle(title: String): String = if (title.isBlank()) stringResource(R.string.report) else stringResource(R.string.report_chat_title, title)
 
 /**
  * The chat as it is drawn, from [state] alone: what the screenshot tests render with fake data.
@@ -183,6 +191,7 @@ fun ChatContent(
     onActivity: () -> Unit = {},
     onShow: (ShowCard) -> Unit = {},
     onKind: ((agent: Boolean) -> Unit)? = null,
+    report: String? = null,
 ) {
     val palette = LocalPalette.current
     val context = LocalContext.current
@@ -224,13 +233,18 @@ fun ChatContent(
                 TopAppBar(
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = palette.bg, scrolledContainerColor = palette.bg),
                     navigationIcon = {
-                        IconButton(onClick = onMenu) { Icon(Icons.Filled.Menu, contentDescription = stringResource(R.string.chats_open)) }
+                        if (report != null) {
+                            // A report's conversation is reached from the report, and Back returns there.
+                            IconButton(onClick = onMenu) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back)) }
+                        } else {
+                            IconButton(onClick = onMenu) { Icon(Icons.Filled.Menu, contentDescription = stringResource(R.string.chats_open)) }
+                        }
                     },
                     title = {
                         ModelTitle(
                             model = info,
                             fallback = state.modelId ?: stringResource(R.string.app_name),
-                            subtitle = chat?.title?.ifBlank { null },
+                            subtitle = if (report != null) reportTitle(report) else chat?.title?.ifBlank { null },
                             onClick = { picking = true },
                         )
                     },

@@ -197,6 +197,11 @@
             android:name=".push.CardActionReceiver"
             android:exported="false" />
 
+        <!-- A report's Mark read, from its notification. -->
+        <receiver
+            android:name=".push.ReportActionReceiver"
+            android:exported="false" />
+
         <!-- A scheduled task's Pause, from its notification. -->
         <receiver
             android:name=".push.ScheduleActionReceiver"

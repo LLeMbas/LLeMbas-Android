@@ -45,6 +45,7 @@ import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.SelectAll
 import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.filled.Web
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
@@ -90,6 +91,7 @@ import eu.llembas.android.lembas
 import eu.llembas.android.ui.MarkdownText
 import eu.llembas.android.ui.Segment
 import eu.llembas.android.ui.highlight
+import eu.llembas.android.ui.pageProjection
 import eu.llembas.android.ui.progressLineOf
 import eu.llembas.android.ui.splitFences
 import eu.llembas.android.ui.theme.LocalPalette
@@ -296,8 +298,19 @@ fun AssistantMessage(
 }
 
 /** A reply's own words, as the person would copy them: its text steps, in order. */
-fun replyText(message: Message): String =
-    message.steps.filter { it.kind == "text" }.mapNotNull { it.markdown }.joinToString("\n\n").ifBlank { message.text.orEmpty() }
+fun replyText(message: Message): String = pageProjection(
+    message.steps.mapNotNull { step ->
+        when (step.kind) {
+            "text" -> step.markdown
+            "page" -> "[page: ${step.title.orEmpty()}]"
+            else -> null
+        }
+    }.joinToString("\n\n").ifBlank { message.text.orEmpty() },
+    untitled = PAGE_UNTITLED,
+)
+
+/** `pages.untitled`, for the text that is copied or read aloud (the card says it in the app's language). */
+private const val PAGE_UNTITLED = "Page"
 
 /** What a finished reply cost, in one quiet line: model, tokens, speed. Null when nothing was counted. */
 private fun footLine(message: Message): String? {
@@ -354,8 +367,14 @@ fun StepsCompact(steps: List<Step>, modifier: Modifier = Modifier, onShow: ((Sho
         steps.forEach { step ->
             when (step.kind) {
                 "thinking" -> ThinkingChip(step)
+
                 "text" -> RichMarkdown(step.markdown.orEmpty(), onLongPress = onLongPress)
+
+                // A page the server took out of the text as a step of its own: the same card.
+                "page" -> PageCard(step.title.orEmpty())
+
                 "tools" -> ToolsChip(step, onShow)
+
                 "steer" -> step.messages.forEach { Steered(it.text) }
             }
         }
@@ -371,7 +390,35 @@ fun RichMarkdown(markdown: String, modifier: Modifier = Modifier, onLongPress: (
             when (segment) {
                 is Segment.Prose -> MarkdownText(segment.markdown, modifier = Modifier.fillMaxWidth(), onLongPress = onLongPress)
                 is Segment.Code -> CodeBlock(segment.language, segment.code)
+                is Segment.Page -> PageCard(segment.title)
             }
+        }
+    }
+}
+
+/**
+ * A page in an answer (harness spec 3.8.0, `pages.md`): not drawn on a phone -- no web view, and
+ * never its source. One quiet card says that there is one, by its title, and where it can be
+ * seen. The title is a model's: plain text.
+ */
+@Composable
+fun PageCard(title: String, modifier: Modifier = Modifier) {
+    val palette = LocalPalette.current
+    Row(
+        modifier.fillMaxWidth().clip(Block).border(1.dp, palette.border, Block).padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(Icons.Filled.Web, contentDescription = null, tint = palette.inkMuted, modifier = Modifier.size(20.dp))
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text(
+                stringResource(R.string.page_note, title.ifBlank { stringResource(R.string.page_untitled) }),
+                style = MaterialTheme.typography.bodyMedium,
+                color = palette.ink,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(stringResource(R.string.page_where), style = MaterialTheme.typography.bodySmall, color = palette.inkMuted)
         }
     }
 }

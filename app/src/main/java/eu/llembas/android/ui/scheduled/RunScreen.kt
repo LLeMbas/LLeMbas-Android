@@ -77,6 +77,7 @@ fun RunScreen(
     runId: String,
     onBack: () -> Unit,
     onOpenChat: (String) -> Unit,
+    onOpenReport: (String) -> Unit = {},
     model: RunViewModel = viewModel(key = "run-$scheduleId-$runId"),
 ) {
     val state by model.state.collectAsStateWithLifecycle()
@@ -84,7 +85,7 @@ fun RunScreen(
         model.open(scheduleId, runId)
         onPauseOrDispose { }
     }
-    RunContent(state, onBack = onBack, onOpenChat = onOpenChat)
+    RunContent(state, onBack = onBack, onOpenChat = onOpenChat, onOpenReport = onOpenReport)
 }
 
 /**
@@ -93,7 +94,7 @@ fun RunScreen(
  * links only outside) -- or why there is none. Open its chat goes on from there.
  */
 @Composable
-fun RunContent(state: RunState, onBack: () -> Unit = {}, onOpenChat: (String) -> Unit = {}) {
+fun RunContent(state: RunState, onBack: () -> Unit = {}, onOpenChat: (String) -> Unit = {}, onOpenReport: (String) -> Unit = {}) {
     val palette = LocalPalette.current
     val context = LocalContext.current
     val copy: (String) -> Unit = remember(context) {
@@ -128,6 +129,8 @@ fun RunContent(state: RunState, onBack: () -> Unit = {}, onOpenChat: (String) ->
                             )
                         }
                         RunFacts(run, withPreview = false)
+                        // What the run filed for the person, when it filed anything.
+                        run.reportId?.let { report -> ReportLink(onClick = { onOpenReport(report) }) }
                     }
                 }
                 Header(stringResource(R.string.run_result))

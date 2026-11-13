@@ -3,6 +3,39 @@
 What changed in each release of LLeMbas for Android. Versions follow SemVer; until 1.0.0 the app
 is in alpha and releases come off `main`.
 
+## [Unreleased] — for 1.0.0-beta.9
+
+For LLeMbas server 2.0.0-beta.12 (harness spec 3.8.0); an older instance works as before.
+
+### Added
+
+- **Reports.** A scheduled task no longer answers into a chat: it files a report when it has
+  something to tell you, or leaves a line in its history. *Reports* is in the drawer, with a
+  count of the unread. The list has the unread first -- title, the task it came from, when, and
+  a mark where the model called it important; pull to read it again, swipe a row one way to mark
+  it read and the other to delete it (which asks once). A report reads as a page and is marked
+  read when opened; **Share** hands its text to another app; **Reply** continues it as a
+  conversation that stays with the report -- its bar says *Report: …*, Back returns to the
+  report, and it is not among your chats.
+- **Notify when** on a scheduled task's form: *Every run* (the model writes a report every
+  time, also when nothing was found), *When…* (only when your own words hold; "something needs
+  my attention" to start from) or *Never* (runs are kept in the task's history only).
+- A task's runs show the run's own note -- what it found, or why it filed no report -- and a way
+  to its report when it filed one. The run's working chat can still be opened from the run.
+
+### Changed
+
+- **Notifications come from a report, not from a run**, on a *Reports* channel of their own:
+  unlocked, the report's title and summary; on the lock screen only "New report". A tap opens
+  the report; *Mark read* asks for the phone to be unlocked. A run that filed no report notifies
+  nothing; a failed run still says that it failed. An instance on 2.0.0-beta.11 keeps sending
+  its runs' notifications, and they work as before.
+- **A page in an answer is not drawn on the phone** (LLeMbas 2.0.0-beta.12 can let a model add
+  HTML pages to an answer; the web and LLeMbas Desktop show them). The phone shows one quiet
+  card -- *This answer has a page: …*, and where to open it -- in a chat and in a report, never
+  the page's source. What you copy or share says `[page: …]` in its place. The phone's chat
+  settings do not offer the switch.
+
 ## [1.0.0-beta.8] — 2026-11-12
 
 For LLeMbas server 2.0.0-beta.11 or later. Three files now: the standard app, `-notifications` (the same app with notification summaries) and `-fdroid`.
