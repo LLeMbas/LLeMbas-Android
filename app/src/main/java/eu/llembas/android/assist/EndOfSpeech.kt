@@ -8,12 +8,16 @@ package eu.llembas.android.assist
  * Nothing here is an absolute loudness: a room's own noise differs from phone to phone by more
  * than a voice differs from a room. The **noise floor** is measured from the first sound on and
  * followed all the time -- the quietest level of the last two seconds, taken at once when it
- * falls and slowly when it rises, so the dips between words keep it down while somebody speaks
- * and a steady noise (a fan, a car) becomes the floor within a moment. Speech and quiet are
+ * falls and slowly, in calm moments, when it rises: the dips between words keep it down while
+ * somebody speaks, and a steady noise (a fan, a car) becomes the floor within a moment. Speech and quiet are
  * levels relative to it:
  *
  * - **speech** begins when the level is well above the floor in [ONSET_TICKS] of the last
  *   [ONSET_WINDOW] ticks -- a voice rises and falls, and one click or knock is not speech;
+ * - listening may begin in the middle of a sentence (the wake word's shape: the person goes
+ *   straight on), and a voice that never dips far must not become "the room": the floor rises
+ *   only while the sound is calm, and sound that stays above the floor without being steady is
+ *   speech;
  * - once somebody spoke, a **pause** of [PAUSE_MS] back near the floor ends it ([Verdict.Said]);
  * - when **nothing is said**, it gives up after [NOTHING_SAID_MS] ([Verdict.Nothing]);
  * - the words written down so far are a second ear: the same words for [SAME_WORDS_MS] end it,
@@ -43,6 +47,11 @@ class EndOfSpeech(private val tickMs: Long = TICK_MS) {
     private var waited = 0L
     private val loud = ArrayDeque<Boolean>()
     private var stirred = 0
+    private var aboveRun = 0
+
+    /** The floor is a guess: listening began in the middle of sound louder than any room is taken to be. */
+    private var guessed = false
+    private var overGuess = 0
     private var quietFor = 0L
     private var words = ""
     private var sameWordsFor = 0L
@@ -55,9 +64,14 @@ class EndOfSpeech(private val tickMs: Long = TICK_MS) {
     /** One tick: the microphone's [level] (0..1, RMS) and the [heard] words written down so far. */
     fun tick(level: Float, heard: String = ""): Verdict {
         waited += tickMs
-        // Exact zero is a microphone that has not given anything yet (or gives nothing at all):
-        // it says nothing about the room.
-        if (level > 0f) follow(level)
+        // Exact zero before any sound is a microphone that has not given anything yet (or gives
+        // nothing at all): it says nothing about the room. After sound it is silence -- a
+        // headset that gates its noise gives exactly that between sentences -- and so a pause.
+        if (level > 0f) {
+            follow(level)
+        } else if (floor > 0f) {
+            judge(loud = false, above = false)
+        }
         if (heard != words) {
             words = heard
             sameWordsFor = 0
@@ -78,20 +92,48 @@ class EndOfSpeech(private val tickMs: Long = TICK_MS) {
         recent.addLast(level)
         if (recent.size > WINDOW_TICKS) recent.removeFirst()
         val lowest = recent.min()
-        // The first sound is the room, unless somebody is already speaking -- then a guess that
-        // the next dip corrects. After it: down at once, up slowly.
-        floor = when {
-            floor == 0f -> minOf(level, START_MAX)
-            lowest < floor -> lowest
-            else -> floor + (lowest - floor) * RISE
-        }.coerceAtLeast(MIN_FLOOR)
-        loud.addLast(level >= speechFrom())
-        if (loud.size > ONSET_WINDOW) loud.removeFirst()
-        if (loud.count { it } >= ONSET_TICKS) spoke = true
-        if (level >= pauseUnder()) {
+        // Steady over the whole window: a noise. Calm in the last half second: no voice now.
+        val steady = recent.size >= CALM_TICKS && recent.max() <= lowest * STEADY_RATIO
+        val last = recent.takeLast(CALM_TICKS)
+        val calm = last.size >= CALM_TICKS && last.max() <= last.min() * STEADY_RATIO
+        // The first sound is the room, unless somebody is already speaking -- then a guess,
+        // until a dip or a calm moment shows the room. After it: down at once; up slowly, and
+        // only while the sound is calm, so a voice does not lift the floor under itself.
+        when {
+            floor == 0f -> {
+                floor = minOf(level, START_MAX)
+                guessed = level > START_MAX
+            }
+
+            lowest < floor -> {
+                floor = lowest
+                guessed = false
+            }
+
+            calm -> {
+                floor += (lowest - floor) * RISE
+                guessed = false
+            }
+        }
+        floor = floor.coerceAtLeast(MIN_FLOOR)
+        judge(loud = level >= speechFrom(), above = level >= pauseUnder())
+        // Sound that stays above the floor and is not steady is a voice: one that never dips
+        // far, or -- while the floor is only a guess -- one that began before the listening did.
+        overGuess = if (guessed && level > floor) overGuess + 1 else 0
+        if ((aboveRun >= SUSTAINED_TICKS || overGuess >= SUSTAINED_TICKS) && !steady) spoke = true
+    }
+
+    /** One tick's sound, judged: [loud] enough to be speech beginning, or at least [above] a pause. */
+    private fun judge(loud: Boolean, above: Boolean) {
+        this.loud.addLast(loud)
+        if (this.loud.size > ONSET_WINDOW) this.loud.removeFirst()
+        if (this.loud.count { it } >= ONSET_TICKS) spoke = true
+        if (above) {
             stirred++
+            aboveRun++
             quietFor = 0
         } else {
+            aboveRun = 0
             quietFor += tickMs
         }
     }
@@ -117,7 +159,13 @@ class EndOfSpeech(private val tickMs: Long = TICK_MS) {
         private const val PAUSE_MARGIN = 0.002f
         private const val ONSET_TICKS = 3
         private const val ONSET_WINDOW = 8
-        private const val STIRRED_TICKS = 2
+        private const val STIRRED_TICKS = 4
+
+        // Steady, calm: the loudest within half again of the quietest -- over the window, over
+        // the last half second. Sustained: above the floor for a second without a break.
+        private const val CALM_TICKS = 5
+        private const val STEADY_RATIO = 1.5f
+        private const val SUSTAINED_TICKS = 10
 
         const val PAUSE_MS = 1_500L
         const val SAME_WORDS_MS = 4_500L
@@ -142,15 +190,20 @@ enum class PhoneWatch {
 
 /**
  * The watch kept over the phone's recogniser, from how long it has listened ([waitedMs]), whether
- * it has shown any words ([anyWords]) and for how long they have stayed the same ([sameForMs]).
+ * it has shown any words ([anyWords]), for how long they have stayed the same ([sameForMs]), and
+ * how long ago it last gave a sign of somebody speaking ([silentForMs]: its "speech began", a
+ * loud level, new words -- not every recogniser shows words while one speaks).
  * A recogniser normally ends by itself; some never call back, and the sheet would listen for good.
+ * No words and nothing heard for a while gives up; when somebody did speak before that quiet, it
+ * is first asked for what it has.
  */
-fun phoneWatch(waitedMs: Long, anyWords: Boolean, sameForMs: Long): PhoneWatch = when {
-    !anyWords && waitedMs >= PHONE_NOTHING_SAID_MS -> PhoneWatch.GiveUp
-    anyWords && sameForMs >= EndOfSpeech.SAME_WORDS_MS + PHONE_GRACE_MS -> PhoneWatch.Take
-    anyWords && sameForMs >= EndOfSpeech.SAME_WORDS_MS -> PhoneWatch.Finish
+fun phoneWatch(waitedMs: Long, anyWords: Boolean, sameForMs: Long, silentForMs: Long = waitedMs): PhoneWatch = when {
     waitedMs >= EndOfSpeech.LONGEST_MS + PHONE_GRACE_MS -> if (anyWords) PhoneWatch.Take else PhoneWatch.GiveUp
     waitedMs >= EndOfSpeech.LONGEST_MS -> PhoneWatch.Finish
+    !anyWords && silentForMs >= PHONE_NOTHING_SAID_MS + PHONE_GRACE_MS -> PhoneWatch.GiveUp
+    !anyWords && silentForMs >= PHONE_NOTHING_SAID_MS -> if (silentForMs < waitedMs) PhoneWatch.Finish else PhoneWatch.GiveUp
+    anyWords && sameForMs >= EndOfSpeech.SAME_WORDS_MS + PHONE_GRACE_MS -> PhoneWatch.Take
+    anyWords && sameForMs >= EndOfSpeech.SAME_WORDS_MS && silentForMs >= EndOfSpeech.PAUSE_MS -> PhoneWatch.Finish
     else -> PhoneWatch.Wait
 }
 

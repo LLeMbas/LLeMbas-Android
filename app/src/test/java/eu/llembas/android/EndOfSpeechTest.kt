@@ -44,11 +44,14 @@ class EndOfSpeechTest {
     private fun still(level: Float, ticks: Int): List<Float> = List(ticks) { level }
 
     /** Ended as said, a pause after [start]'s last sound: not before it was over, and not long after. */
-    private fun assertEndsAfter(start: List<Float>, ended: Ended) {
+    private fun assertEndsAfter(start: List<Float>, ended: Ended, late: Long = 400) {
         val over = start.size * EndOfSpeech.TICK_MS
         assertEquals(Verdict.Said, ended.verdict)
-        assertTrue("ended at ${ended.ms}, speech over at $over", ended.ms > over + EndOfSpeech.PAUSE_MS - 400 && ended.ms <= over + EndOfSpeech.PAUSE_MS + 400)
+        assertTrue("ended at ${ended.ms}, speech over at $over", ended.ms > over + EndOfSpeech.PAUSE_MS - 400 && ended.ms <= over + EndOfSpeech.PAUSE_MS + late)
     }
+
+    /** A voice that never dips far: its quietest moments are six tenths of its loudest. One second. */
+    private fun steadyVoice(peak: Float): List<Float> = listOf(1.0f, 0.7f, 0.9f, 0.6f, 1.0f, 0.8f, 0.65f, 0.95f, 0.75f, 0.6f).map { it * peak }
 
     @Test
     fun aSilentRoomWithNothingSaidGivesUpSoon() {
@@ -76,7 +79,8 @@ class EndOfSpeechTest {
     @Test
     fun speechInANoisyRoomEndsAfterThePauseToo() {
         val start = noise(0.03f) + voice(0.12f)
-        assertEndsAfter(start, listen(start, noise(0.03f)))
+        // The room is louder than the first guess allows for: found a moment after the voice ends.
+        assertEndsAfter(start, listen(start, noise(0.03f)), late = 800)
     }
 
     @Test
@@ -92,6 +96,27 @@ class EndOfSpeechTest {
         for (peak in listOf(0.05f, 0.08f, 0.3f)) {
             val start = voice(peak)
             assertEndsAfter(start, listen(start, still(0.002f, 1)))
+        }
+    }
+
+    @Test
+    fun silenceFromAHeadsetThatGatesItsNoiseIsAPause() {
+        // After speech the microphone gives exact zeros: that is quiet, not "no microphone".
+        val start = still(0.001f, 5) + voice(0.06f)
+        assertEndsAfter(start, listen(start, still(0f, 1)))
+        val atOnce = voice(0.06f)
+        assertEndsAfter(atOnce, listen(atOnce, still(0f, 1)))
+    }
+
+    @Test
+    fun listeningThatBeginsInTheMiddleOfASentenceHearsIt() {
+        // The wake word's shape: the person goes straight on, and for eight seconds the voice
+        // never dips far. It must not become "the room", nor end as "nothing said" at five.
+        for (peak in listOf(0.035f, 0.05f, 0.1f)) {
+            var start = emptyList<Float>()
+            repeat(8) { start = start + steadyVoice(peak) }
+            assertEndsAfter(start, listen(start, still(0.002f, 1)))
+            assertEndsAfter(start, listen(start, still(0.004f, 1)))
         }
     }
 
@@ -172,5 +197,16 @@ class EndOfSpeechTest {
         // And never past the limit.
         assertEquals(PhoneWatch.Finish, phoneWatch(EndOfSpeech.LONGEST_MS, anyWords = true, sameForMs = 0))
         assertEquals(PhoneWatch.Take, phoneWatch(EndOfSpeech.LONGEST_MS + PHONE_GRACE_MS, anyWords = true, sameForMs = 0))
+    }
+
+    @Test
+    fun aRecogniserThatShowsNoWordsWhileOneSpeaksIsNotGivenUpOn() {
+        // No partial results, but it said speech began and its level is loud: somebody speaks.
+        assertEquals(PhoneWatch.Wait, phoneWatch(12_000, anyWords = false, sameForMs = 12_000, silentForMs = 300))
+        // Quiet for a good while after that: asked for what it has, then given up on.
+        assertEquals(PhoneWatch.Finish, phoneWatch(20_000, anyWords = false, sameForMs = 20_000, silentForMs = PHONE_NOTHING_SAID_MS))
+        assertEquals(PhoneWatch.GiveUp, phoneWatch(20_000, anyWords = false, sameForMs = 20_000, silentForMs = PHONE_NOTHING_SAID_MS + PHONE_GRACE_MS))
+        // Words that stopped changing while the level is still loud: not cut off yet.
+        assertEquals(PhoneWatch.Wait, phoneWatch(20_000, anyWords = true, sameForMs = EndOfSpeech.SAME_WORDS_MS, silentForMs = 200))
     }
 }
