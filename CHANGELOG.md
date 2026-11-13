@@ -3,7 +3,9 @@
 What changed in each release of LLeMbas for Android. Versions follow SemVer; until 1.0.0 the app
 is in alpha and releases come off `main`.
 
-## [Unreleased] — for 1.0.0-beta.9
+## [1.0.0-beta.9] — 2026-11-13
+
+For LLeMbas server 2.0.0-beta.12 or later.
 
 For LLeMbas server 2.0.0-beta.12 (harness spec 3.8.0); an older instance works as before.
 
