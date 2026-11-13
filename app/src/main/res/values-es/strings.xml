@@ -271,6 +271,7 @@
     <string name="notify_when_words">Avisa cuando: %1$s</string>
     <string name="run_open_report">Abrir su informe</string>
     <string name="channel_reports">Informes</string>
+    <string name="channel_reports_high">Informes importantes</string>
     <string name="report_new_public">Informe nuevo</string>
     <string name="schedule_run_again">Ejecutar de nuevo</string>
     <string name="card_approval">¿Permitir esto?</string>

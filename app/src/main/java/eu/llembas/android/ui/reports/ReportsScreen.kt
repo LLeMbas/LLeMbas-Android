@@ -68,6 +68,7 @@ import eu.llembas.android.api.ApiException
 import eu.llembas.android.api.Report
 import eu.llembas.android.api.sortedReports
 import eu.llembas.android.lembas
+import eu.llembas.android.push.Notifications
 import eu.llembas.android.ui.chat.RichMarkdown
 import eu.llembas.android.ui.explain
 import eu.llembas.android.ui.pageProjection
@@ -115,11 +116,13 @@ class ReportsViewModel(app: Application) : AndroidViewModel(app) {
     /** Read: it stays in the list, among those read. A failure is put right by reading the list again. */
     fun markRead(report: Report) {
         _state.update { s -> s.copy(reports = sortedReports(s.reports.map { if (it.id == report.id) it.copy(unread = false) else it })) }
+        Notifications.reportSeen(getApplication(), report.id)
         viewModelScope.launch { runCatching { getApplication<Application>().api().readReport(report.id) }.onFailure { fail(it) } }
     }
 
     fun delete(report: Report) {
         _state.update { s -> s.copy(reports = s.reports.filterNot { it.id == report.id }) }
+        Notifications.reportSeen(getApplication(), report.id)
         viewModelScope.launch { runCatching { getApplication<Application>().api().deleteReport(report.id) }.onFailure { fail(it) } }
     }
 
@@ -292,7 +295,7 @@ private fun ReportRow(report: Report, onOpen: () -> Unit, onRead: () -> Unit, on
 @Composable
 private fun ReportFacts(report: Report) {
     val palette = LocalPalette.current
-    val facts = listOfNotNull(report.schedule?.title?.ifBlank { null }, ScheduleLogic.moment(report.created)).joinToString(" · ")
+    val facts = listOfNotNull(report.from.ifBlank { null }, ScheduleLogic.moment(report.created)).joinToString(" · ")
     if (facts.isNotBlank()) Text(facts, style = MaterialTheme.typography.bodySmall, color = palette.inkFaint, maxLines = 1, overflow = TextOverflow.Ellipsis)
 }
 
@@ -312,6 +315,8 @@ class ReportViewModel(app: Application) : AndroidViewModel(app) {
                 val api = getApplication<Application>().api()
                 val report = api.report(id)
                 _state.value = ReportState(report = report.copy(unread = false), loading = false)
+                // Read here: its notification, if one is still up, goes.
+                Notifications.reportSeen(getApplication(), id)
                 if (report.unread) runCatching { api.readReport(id) }
             } catch (e: Exception) {
                 _state.update { it.copy(loading = false, error = getApplication<Application>().explain(e)) }
@@ -424,7 +429,8 @@ fun ReportContent(state: ReportState, onBack: () -> Unit = {}, onRetry: () -> Un
                     }
                 }
                 ReportFacts(report)
-                RichMarkdown(report.body.orEmpty().ifBlank { report.summary })
+                // The server's own text of the body, where each page is its one line; else the body.
+                RichMarkdown((report.text?.ifBlank { null } ?: report.body.orEmpty()).ifBlank { report.summary })
             }
         }
     }

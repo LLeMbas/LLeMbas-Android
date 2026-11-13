@@ -43,6 +43,7 @@ class LembasApp : Application() {
                 NotificationChannel(CHANNEL_SCHEDULED, getString(R.string.channel_scheduled), NotificationManager.IMPORTANCE_DEFAULT),
                 NotificationChannel(CHANNEL_SCHEDULED_FAILURES, getString(R.string.channel_scheduled_failures), NotificationManager.IMPORTANCE_HIGH),
                 NotificationChannel(CHANNEL_REPORTS, getString(R.string.channel_reports), NotificationManager.IMPORTANCE_DEFAULT),
+                NotificationChannel(CHANNEL_REPORTS_HIGH, getString(R.string.channel_reports_high), NotificationManager.IMPORTANCE_HIGH),
             ).onEach { it.lockscreenVisibility = android.app.Notification.VISIBILITY_PRIVATE } +
                 // A new version of the app says nothing about the account.
                 NotificationChannel(CHANNEL_UPDATES, getString(R.string.channel_updates), NotificationManager.IMPORTANCE_LOW),
@@ -60,6 +61,7 @@ class LembasApp : Application() {
         const val CHANNEL_SCHEDULED = "scheduled_results"
         const val CHANNEL_SCHEDULED_FAILURES = "scheduled_failures"
         const val CHANNEL_REPORTS = "reports_filed"
+        const val CHANNEL_REPORTS_HIGH = "reports_important"
         const val CHANNEL_UPDATES = "updates"
     }
 }

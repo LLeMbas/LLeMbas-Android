@@ -314,6 +314,10 @@ data class Chat(
     @SerialName("created_at") val createdAt: String? = null,
     @SerialName("updated_at") val updatedAt: String? = null,
     @SerialName("system_prompt") val systemPrompt: String? = null,
+    /** What may be done to this chat (`rename`, `delete`, `archive`, `pin`, `folder`); null from a server that does not say: everything. */
+    val controls: List<String>? = null,
+    /** The report this chat continues (`kind` `report`): such a chat lives under Reports, not among the chats. */
+    val report: ChatReport? = null,
     val plan: JsonObject? = null,
     /** The team's size: how many agents, its own included, the chat may have. */
     val agents: AgentsSetting? = null,
@@ -321,7 +325,13 @@ data class Chat(
     val subagents: SubagentsOffer? = null,
 ) {
     val isAgent: Boolean get() = kind == "agent"
+
+    fun allows(control: String): Boolean = controls?.contains(control) ?: true
 }
+
+/** The report a chat continues: its id and title. */
+@Serializable
+data class ChatReport(val id: String = "", val title: String = "")
 
 /** A chat's `agents {min, max}` (harness spec 3.2.0): `1 ≤ min ≤ max ≤` the instance's cap. */
 @Serializable
@@ -523,6 +533,8 @@ data class Step(
     val markdown: String? = null,
     /** A `page` step's title (spec 3.8.0): the page itself is not sent to a client that does not draw it. */
     val title: String? = null,
+    /** A `text` step's pages (spec 3.8.0): where it has any, [text] is its markdown with each page as the one line `[page: Title]`. */
+    val pages: List<StepPage> = emptyList(),
     val calls: List<ToolCall> = emptyList(),
     val messages: List<SteerNote> = emptyList(),
 )
@@ -534,6 +546,16 @@ data class Step(
  */
 @Serializable
 data class MessageEnd(val phase: String = "", val reason: String = "", val text: String = "")
+
+/** A page in a reply's text: its title (the page itself is fetched by its digest, by a client that draws pages). */
+@Serializable
+data class StepPage(val title: String = "", val digest: String = "")
+
+/**
+ * What a client that draws no pages shows of a `text` step: the server's own text where the step
+ * has pages (each page its one line), else the markdown as it is.
+ */
+val Step.shownMarkdown: String get() = text?.takeIf { pages.isNotEmpty() && it.isNotBlank() } ?: markdown.orEmpty()
 
 @Serializable
 data class Message(

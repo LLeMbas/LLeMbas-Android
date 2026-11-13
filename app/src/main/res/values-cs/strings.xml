@@ -271,6 +271,7 @@
     <string name="notify_when_words">Dá vědět, když: %1$s</string>
     <string name="run_open_report">Otevřít její zprávu</string>
     <string name="channel_reports">Zprávy</string>
+    <string name="channel_reports_high">Důležité zprávy</string>
     <string name="report_new_public">Nová zpráva</string>
     <string name="schedule_run_again">Spustit znovu</string>
     <string name="card_approval">Povolit to?</string>

@@ -288,6 +288,7 @@ STRINGS: dict[str, str] = {
     "notify_when_words": "Tells you when: %1$s",
     "run_open_report": "Open its report",
     "channel_reports": "Reports",
+    "channel_reports_high": "Important reports",
     "report_new_public": "New report",
     "schedule_run_again": "Run again",
     # Cards

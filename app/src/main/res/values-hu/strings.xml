@@ -271,6 +271,7 @@
     <string name="notify_when_words">Értesít, amikor: %1$s</string>
     <string name="run_open_report">A jelentésének megnyitása</string>
     <string name="channel_reports">Jelentések</string>
+    <string name="channel_reports_high">Fontos jelentések</string>
     <string name="report_new_public">Új jelentés</string>
     <string name="schedule_run_again">Futtatás újra</string>
     <string name="card_approval">Engedélyezzük ezt?</string>

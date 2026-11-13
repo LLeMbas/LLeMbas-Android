@@ -1,6 +1,7 @@
 package eu.llembas.android.api
 
 import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNames
@@ -35,6 +36,8 @@ data class Report(
     val summary: String = "",
     val importance: String = "normal",
     val schedule: ReportSchedule? = null,
+    /** The schedule's name as it was when the report was filed: what is left once the schedule itself is gone. */
+    @SerialName("schedule_title") val scheduleTitle: String = "",
     @JsonNames("created_at") val created: String? = null,
     val unread: Boolean = false,
     val body: String? = null,
@@ -44,6 +47,9 @@ data class Report(
     val chat: JsonElement? = null,
 ) {
     val high: Boolean get() = importance == "high"
+
+    /** The name of the task it came from: the schedule's as it is now, else as it was. */
+    val from: String get() = schedule?.title?.ifBlank { null } ?: scheduleTitle
 
     /** The chat a reply to this report continues in; null before the first reply. */
     val chatId: String? get() = idOf(chat)
@@ -85,5 +91,11 @@ fun notifyChoice(notify: String): String = when (notify) {
     else -> "when"
 }
 
-/** `scheduled.notify.default_condition`: what "When…" starts from, in the spec's words. */
-const val NOTIFY_DEFAULT_CONDITION = "something needs my attention"
+/**
+ * An id as the server makes them -- letters, digits, `_` and `-`, at most 64 -- or null. Anything
+ * that came from outside the app (a push payload, an intent's extra) is passed through this
+ * before it becomes part of a route or an address: a `/` in it must not open another page.
+ */
+fun safeId(id: String?): String? = id?.takeIf { SAFE_ID.matches(it) }
+
+private val SAFE_ID = Regex("^[A-Za-z0-9_-]{1,64}$")

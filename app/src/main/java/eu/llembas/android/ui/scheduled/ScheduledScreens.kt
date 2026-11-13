@@ -804,7 +804,25 @@ data class EditState(
     val reports: Boolean = false,
     /** The server's default condition in the account's language, when it said one. */
     val notifyDefault: String = "",
+    /** Editing: the schedule was read, so the form shows what it really has; or reading it failed, and nothing may be saved over it. */
+    val loaded: Boolean = false,
+    val loadFailed: Boolean = false,
+    /** The person chose a "notify when" themselves. */
+    val notifyTouched: Boolean = false,
 )
+
+/**
+ * The `notify` a save sends, or null for none: only to an instance with Reports, and when
+ * [editing] only what the form really knows -- the schedule's own value once it was read, or the
+ * person's choice. A form that could not read the schedule must not write its default over an
+ * "every run" or a "never".
+ */
+fun notifyToSend(state: EditState, editing: Boolean): String? = when {
+    !state.reports -> null
+    !editing -> state.notify
+    state.loaded || state.notifyTouched -> state.notify
+    else -> null
+}
 
 class ScheduleEditViewModel(app: Application) : AndroidViewModel(app) {
     private val _state = MutableStateFlow(EditState())
@@ -828,23 +846,26 @@ class ScheduleEditViewModel(app: Application) : AndroidViewModel(app) {
             runCatching { getApplication<Application>().api().schedule(id) }.onSuccess { s ->
                 _state.update {
                     it.copy(
-                        words = s.request.ifBlank {
-                            s.instruction
-                        },
-                        notify = notifyChoice(s.notify),
-                        notifyWhen = s.notifyWhen,
+                        words = s.request.ifBlank { s.instruction },
+                        // What the person chose while it was read stays chosen.
+                        notify = if (it.notifyTouched) it.notify else notifyChoice(s.notify),
+                        notifyWhen = if (it.notifyTouched) it.notifyWhen else s.notifyWhen,
                         notifyDefault = s.notifyDefault,
+                        loaded = true,
                     )
                 }
+            }.onFailure { e ->
+                // Not read: said, and Save waits -- the form would write its own defaults over the schedule.
+                _state.update { it.copy(loadFailed = true, error = getApplication<Application>().explain(e)) }
             }
         }
     }
 
     fun words(text: String) = _state.update { it.copy(words = text, compiled = null) }
 
-    fun notify(value: String) = _state.update { it.copy(notify = notifyChoice(value)) }
+    fun notify(value: String) = _state.update { it.copy(notify = notifyChoice(value), notifyTouched = true) }
 
-    fun notifyWhen(text: String) = _state.update { it.copy(notifyWhen = text) }
+    fun notifyWhen(text: String) = _state.update { it.copy(notifyWhen = text, notifyTouched = true) }
 
     /** The server reads the words: the title, the instruction, the rule and the next runs. */
     fun preview() {
@@ -873,7 +894,7 @@ class ScheduleEditViewModel(app: Application) : AndroidViewModel(app) {
                     compiled,
                     now.words.trim(),
                     editing,
-                    notify = now.notify.takeIf { now.reports },
+                    notify = notifyToSend(now, editing = editing != null),
                     notifyWhen = now.notifyWhen,
                 )
                 then(saved.id)
@@ -930,7 +951,7 @@ fun ScheduleEditContent(
             Box(Modifier.background(palette.bg).navigationBarsPadding().imePadding().padding(16.dp)) {
                 Button(
                     onClick = onSave,
-                    enabled = state.compiled?.savable == true && !state.saving,
+                    enabled = state.compiled?.savable == true && !state.saving && !state.loadFailed,
                     modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
                 ) { Text(stringResource(R.string.save)) }
             }
@@ -1004,9 +1025,11 @@ private fun NotifyWhen(notify: String, words: String, default: String, onNotify:
                 if (value == "when" && notify == "when") {
                     val usual = default.ifBlank { stringResource(R.string.notify_when_default) }
                     OutlinedTextField(
-                        value = words.ifEmpty { usual },
+                        // Empty is allowed and means the default, which stands there as the placeholder.
+                        value = words,
                         onValueChange = onWords,
                         label = { Text(stringResource(R.string.notify_when_label)) },
+                        placeholder = { Text(usual) },
                         shape = RoundedCornerShape(16.dp),
                         modifier = Modifier.fillMaxWidth().padding(start = 52.dp, end = 16.dp, bottom = 8.dp),
                     )

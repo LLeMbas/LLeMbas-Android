@@ -73,6 +73,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import eu.llembas.android.R
+import eu.llembas.android.api.ApiException
 import eu.llembas.android.api.Chat
 import eu.llembas.android.api.Doorstep
 import eu.llembas.android.api.Folder
@@ -106,6 +107,8 @@ data class ChatsState(
     val foundFor: String = "",
     /** How many reports are unread: the badge on Reports. */
     val unreadReports: Int = 0,
+    /** Whether the instance has Reports at all: one before 2.0.0-beta.12 has no such page to open. */
+    val reports: Boolean = false,
 )
 
 /** The drawer's list: every chat of the instance in use, both kinds, newest first. */
@@ -139,8 +142,23 @@ class ChatsViewModel(app: Application) : AndroidViewModel(app) {
                 // Folders are a side dish: the chats show without them if they cannot be read.
                 val folders = runCatching { api.folders() }.getOrDefault(_state.value.folders)
                 // So is the count of unread reports: an instance before Reports simply has none.
-                val unread = runCatching { api.unreadReports() }.getOrDefault(0)
-                _state.value = ChatsState(chats = page.chats, more = page.more, folders = folders, unreadReports = unread)
+                val unread = runCatching { api.unreadReports() }
+                // No such route (404, 405): no Reports. Any other trouble leaves what was known.
+                val refused = (unread.exceptionOrNull() as? ApiException)?.status
+                val has = if (unread.isSuccess) {
+                    true
+                } else if (refused == 404 || refused == 405) {
+                    false
+                } else {
+                    _state.value.reports
+                }
+                _state.value = ChatsState(
+                    chats = page.chats,
+                    more = page.more,
+                    folders = folders,
+                    unreadReports = unread.getOrDefault(_state.value.unreadReports),
+                    reports = has,
+                )
             } catch (e: Exception) {
                 _state.update { it.copy(loading = false, error = getApplication<Application>().explain(e)) }
             }
@@ -337,7 +355,9 @@ fun DrawerContent(
                 item { DrawerItem(Icons.Filled.EditNote, stringResource(R.string.new_chat), onClick = actions::newChat) }
                 item { DrawerItem(Icons.Filled.Terminal, stringResource(R.string.new_agent_chat), onClick = actions::newAgentChat) }
                 item { DrawerItem(Icons.Filled.Folder, stringResource(R.string.files), onClick = actions::files) }
-                item { DrawerItem(Icons.Filled.Summarize, stringResource(R.string.reports), badge = state.unreadReports, onClick = actions::reports) }
+                if (state.reports) {
+                    item { DrawerItem(Icons.Filled.Summarize, stringResource(R.string.reports), badge = state.unreadReports, onClick = actions::reports) }
+                }
                 item { DrawerItem(Icons.Filled.Schedule, stringResource(R.string.scheduled), onClick = actions::scheduled) }
                 item { DrawerItem(Icons.Filled.Inventory2, stringResource(R.string.archived), onClick = actions::archived) }
                 item { DrawerItem(Icons.Filled.Psychology, stringResource(R.string.memory), onClick = actions::memory) }

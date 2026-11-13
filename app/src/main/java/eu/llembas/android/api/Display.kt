@@ -115,3 +115,32 @@ fun localeNumber(n: Double, decimals: Int, locale: Locale): String {
     format.roundingMode = java.math.RoundingMode.HALF_UP
     return format.format(n)
 }
+
+/** How a message is drawn in the transcript. */
+enum class Drawn {
+    /** The person's own words: their bubble. */
+    Person,
+
+    /** The model's reply. */
+    Reply,
+
+    /** A line the server wrote in the person's place (`machine`): a quiet note, never their bubble. */
+    Note,
+
+    /** Not drawn at all. */
+    Hidden,
+}
+
+/**
+ * How [message] is drawn. A `user` row the server wrote itself (`machine`: a schedule's
+ * instruction, the line that opens a report's conversation) is not something the person said,
+ * so it is never their bubble: a quiet note -- and in a report's conversation ([reportChat]) the
+ * [first] such line, which only tells the model what the conversation continues, is left out,
+ * since the report itself is one tap back.
+ */
+fun drawn(message: Message, first: Boolean, reportChat: Boolean): Drawn = when {
+    !message.isUser -> Drawn.Reply
+    !message.machine -> Drawn.Person
+    reportChat && first -> Drawn.Hidden
+    else -> Drawn.Note
+}

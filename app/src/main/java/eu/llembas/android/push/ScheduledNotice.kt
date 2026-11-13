@@ -1,6 +1,7 @@
 package eu.llembas.android.push
 
 import eu.llembas.android.api.PushPayload
+import eu.llembas.android.api.safeId
 
 /**
  * What a scheduled run's push asks the app to show, read from the server's payload alone
@@ -40,8 +41,9 @@ data class ScheduledNotice(
         fun from(payload: PushPayload): ScheduledNotice? {
             if (payload.kind != KIND_RESULT && payload.kind != KIND_FAILED) return null
             val (urlSchedule, urlRun) = fromUrl(payload.url)
-            val schedule = payload.scheduleId?.takeIf { it.isNotBlank() } ?: urlSchedule ?: return null
-            val run = payload.runId?.takeIf { it.isNotBlank() } ?: urlRun
+            // Only ids that look like ids: they become parts of a route and of an address.
+            val schedule = safeId(payload.scheduleId?.takeIf { it.isNotBlank() } ?: urlSchedule) ?: return null
+            val run = safeId(payload.runId?.takeIf { it.isNotBlank() } ?: urlRun)
             val failed = payload.kind == KIND_FAILED
             val words = payload.notification
             val ask = words?.ask?.takeIf { it.isNotBlank() } ?: payload.ask

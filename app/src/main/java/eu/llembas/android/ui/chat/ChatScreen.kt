@@ -91,8 +91,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import eu.llembas.android.R
+import eu.llembas.android.api.Drawn
 import eu.llembas.android.api.Message
 import eu.llembas.android.api.ShowCard
+import eu.llembas.android.api.drawn
 import eu.llembas.android.ui.ModelAvatar
 import eu.llembas.android.ui.ProgressStatus
 import eu.llembas.android.ui.theme.LocalPalette
@@ -244,7 +246,13 @@ fun ChatContent(
                         ModelTitle(
                             model = info,
                             fallback = state.modelId ?: stringResource(R.string.app_name),
-                            subtitle = if (report != null) reportTitle(report) else chat?.title?.ifBlank { null },
+                            // A report's conversation says which report: by what it was entered with, else by
+                            // what the chat itself says (after the app was closed in between).
+                            subtitle = if (report != null || chat?.report != null) {
+                                reportTitle(report?.ifBlank { null } ?: chat?.report?.title.orEmpty())
+                            } else {
+                                chat?.title?.ifBlank { null }
+                            },
                             onClick = { picking = true },
                         )
                     },
@@ -264,10 +272,13 @@ fun ChatContent(
                                         menu = false
                                         actions.continueChat()
                                     }
-                                    MenuItem(Icons.Filled.Archive, stringResource(R.string.archive)) {
-                                        menu = false
-                                        actions.change("archived", "true")
-                                        onLeave()
+                                    // Only what may be done to this chat: a report's conversation is not archived.
+                                    if (chat.allows("archive")) {
+                                        MenuItem(Icons.Filled.Archive, stringResource(R.string.archive)) {
+                                            menu = false
+                                            actions.change("archived", "true")
+                                            onLeave()
+                                        }
                                     }
                                     MenuItem(Icons.Filled.Delete, stringResource(R.string.delete)) {
                                         menu = false
@@ -348,20 +359,29 @@ fun ChatContent(
                         item { TextButton(onClick = actions::older) { Text(stringResource(R.string.older)) } }
                     }
                     items(rows, key = { it.id }) { message ->
-                        when {
-                            message.isUser -> UserMessage(message, canEdit = !message.machine && live == null, onEdit = { editing = message })
+                        // The first row is the chat's first message only once nothing older is left to load.
+                        val first = !state.more && message.id == rows.firstOrNull()?.id
+                        when (drawn(message, first, reportChat = report != null || chat?.report != null)) {
+                            // The server's own line in the person's place: nothing, or a note.
+                            Drawn.Hidden -> Unit
 
-                            live != null && live.messageId == message.id && live.finished == null ->
-                                AssistantMessage(message, live.shown, writing = true, canRegenerate = false, onRegenerate = {}, onShow = onShow)
+                            Drawn.Note -> MachineNote(message.text.orEmpty())
 
-                            else -> AssistantMessage(
-                                message,
-                                message.steps,
-                                writing = false,
-                                canRegenerate = live == null && message == rows.lastOrNull(),
-                                onRegenerate = { actions.regenerate(message) },
-                                onShow = onShow,
-                            )
+                            Drawn.Person -> UserMessage(message, canEdit = live == null, onEdit = { editing = message })
+
+                            Drawn.Reply -> when {
+                                live != null && live.messageId == message.id && live.finished == null ->
+                                    AssistantMessage(message, live.shown, writing = true, canRegenerate = false, onRegenerate = {}, onShow = onShow)
+
+                                else -> AssistantMessage(
+                                    message,
+                                    message.steps,
+                                    writing = false,
+                                    canRegenerate = live == null && message == rows.lastOrNull(),
+                                    onRegenerate = { actions.regenerate(message) },
+                                    onShow = onShow,
+                                )
+                            }
                         }
                     }
                 }

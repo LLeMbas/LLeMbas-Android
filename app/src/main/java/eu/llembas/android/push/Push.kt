@@ -17,6 +17,7 @@ import eu.llembas.android.R
 import eu.llembas.android.api.CardAnswer
 import eu.llembas.android.api.LembasJson
 import eu.llembas.android.api.PushPayload
+import eu.llembas.android.api.safeId
 import eu.llembas.android.auth.Instance
 import eu.llembas.android.lembas
 import kotlinx.coroutines.CoroutineScope
@@ -102,11 +103,16 @@ object Notifications {
     const val EXTRA_RUN = "eu.llembas.android.RUN"
     const val EXTRA_REPORT = "eu.llembas.android.REPORT"
 
+    /** Whether [kind] is about a chat: a finished reply (which older payloads leave unnamed) or a question or an approval. */
+    fun chatKind(kind: String): Boolean = kind == "" || kind == "reply" || kind == "ask"
+
     fun show(context: Context, instance: String, payload: PushPayload) {
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) return
         if (payload.kind == "schedule" || payload.kind == "schedule_failed") return scheduled(context, instance, payload)
         if (payload.kind == ReportNotice.KIND) return report(context, instance, payload)
-        val chatId = payload.chatId ?: payload.url.removePrefix("/chat/").takeIf { payload.url.startsWith("/chat/") }
+        // A kind this app does not know -- a newer server's -- is not guessed at: no notification.
+        if (!chatKind(payload.kind)) return
+        val chatId = safeId(payload.chatId ?: payload.url.removePrefix("/chat/").takeIf { payload.url.startsWith("/chat/") })
         val id = (chatId ?: payload.url).hashCode()
         val open = opener(context, instance, id, chatId = chatId)
         val channel = when (payload.kind) {
@@ -195,7 +201,10 @@ object Notifications {
     fun reportNotification(context: Context, instance: String, notice: ReportNotice): Notification {
         val fixed = context.getString(R.string.report_new_public)
         val open = opener(context, instance, notice.id, chatId = null, reportId = notice.reportId)
-        val public = NotificationCompat.Builder(context, LembasApp.CHANNEL_REPORTS)
+        // A report the model called important goes on a channel of its own that may come up over
+        // what is on screen: on Android 8 and later the channel decides that, not the notification.
+        val channel = if (notice.high) LembasApp.CHANNEL_REPORTS_HIGH else LembasApp.CHANNEL_REPORTS
+        val public = NotificationCompat.Builder(context, channel)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(context.getString(R.string.app_name))
             .setContentText(fixed)
@@ -209,7 +218,7 @@ object Notifications {
                 .putExtra("notification", notice.id),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
-        return NotificationCompat.Builder(context, LembasApp.CHANNEL_REPORTS)
+        return NotificationCompat.Builder(context, channel)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(notice.title.ifBlank { fixed })
             .setContentText(notice.summary)
@@ -223,6 +232,11 @@ object Notifications {
             .addAction(0, context.getString(R.string.viewer_open), open)
             .addAction(unlocked(context.getString(R.string.report_mark_read), read))
             .build()
+    }
+
+    /** The report was read or deleted in the app: its notification has nothing left to say. */
+    fun reportSeen(context: Context, reportId: String) {
+        NotificationManagerCompat.from(context).cancel(ReportNotice.notificationId(reportId))
     }
 
     /** A notification action Android runs only once the phone is unlocked. */

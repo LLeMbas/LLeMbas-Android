@@ -143,7 +143,7 @@ class ScreenShots {
                 drawerState = rememberDrawerState(DrawerValue.Open),
                 drawerContent = {
                     DrawerContent(
-                        Fakes.chats.copy(unreadReports = 2),
+                        Fakes.chats.copy(reports = true, unreadReports = 2),
                         current = "c1",
                         account = "Home · frodo@example.org",
                         actions = NoDrawerActions,

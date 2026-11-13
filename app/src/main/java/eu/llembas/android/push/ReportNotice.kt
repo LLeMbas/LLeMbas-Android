@@ -1,6 +1,7 @@
 package eu.llembas.android.push
 
 import eu.llembas.android.api.PushPayload
+import eu.llembas.android.api.safeId
 
 /**
  * What a filed report's push asks the app to show (harness spec 3.8.0, `reports.md` §4:
@@ -11,14 +12,18 @@ import eu.llembas.android.api.PushPayload
  */
 data class ReportNotice(val reportId: String, val title: String, val summary: String, val high: Boolean) {
     /** One notification per report: a later push about the same report replaces it. */
-    val id: Int get() = "report:$reportId".hashCode()
+    val id: Int get() = notificationId(reportId)
 
     companion object {
         const val KIND = "report"
 
+        /** The notification of the report with this id: what is cancelled once the report is read or deleted in the app. */
+        fun notificationId(reportId: String): Int = "report:$reportId".hashCode()
+
         fun from(payload: PushPayload): ReportNotice? {
             if (payload.kind != KIND) return null
-            val id = payload.reportId?.takeIf { it.isNotBlank() } ?: fromUrl(payload.url) ?: return null
+            // Only an id that looks like one: it becomes part of a route and of an address.
+            val id = safeId(payload.reportId?.takeIf { it.isNotBlank() } ?: fromUrl(payload.url)) ?: return null
             // The report's own words are in the payload's `notification` (the payload's top is
             // what an older client would show: the app's name and "New report"). A payload
             // without one is read by its top.

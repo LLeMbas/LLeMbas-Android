@@ -1,6 +1,7 @@
 package eu.llembas.android
 
 import eu.llembas.android.api.CardItem
+import eu.llembas.android.api.Drawn
 import eu.llembas.android.api.LembasJson
 import eu.llembas.android.api.LiveReply
 import eu.llembas.android.api.Message
@@ -8,6 +9,7 @@ import eu.llembas.android.api.Progress
 import eu.llembas.android.api.ProgressWords
 import eu.llembas.android.api.ToolCall
 import eu.llembas.android.api.callDuration
+import eu.llembas.android.api.drawn
 import eu.llembas.android.api.ending
 import eu.llembas.android.api.localeNumber
 import eu.llembas.android.api.progressLine
@@ -180,5 +182,21 @@ class DisplayTest {
                 }
             }
         }
+    }
+
+    @Test
+    fun aLineTheServerWroteIsNeverThePersonsBubble() {
+        val person = Message(id = "m1", role = "user", text = "How many are left?")
+        val machine = Message(id = "m0", role = "user", machine = true, text = "[report] This conversation continues a report.")
+        val reply = Message(id = "m2", role = "assistant")
+        assertEquals(Drawn.Person, drawn(person, first = true, reportChat = false))
+        assertEquals(Drawn.Reply, drawn(reply, first = false, reportChat = true))
+        // In any chat: a quiet note.
+        assertEquals(Drawn.Note, drawn(machine, first = true, reportChat = false))
+        assertEquals(Drawn.Note, drawn(machine, first = false, reportChat = true))
+        // In a report's conversation the line that opens it is left out: the report is one tap back.
+        assertEquals(Drawn.Hidden, drawn(machine, first = true, reportChat = true))
+        // What the person wrote first in such a chat is still theirs.
+        assertEquals(Drawn.Person, drawn(person, first = true, reportChat = true))
     }
 }

@@ -2,16 +2,19 @@ package eu.llembas.android
 
 import android.app.Application
 import android.app.Notification
+import android.app.NotificationManager
 import eu.llembas.android.push.Notifications
 import eu.llembas.android.push.ReportNotice
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
 /**
@@ -56,5 +59,24 @@ class ReportNotificationTest {
         assertEquals(Notification.FLAG_AUTO_CANCEL, shown.flags and Notification.FLAG_AUTO_CANCEL)
         // A report without a title still says something that is the app's own.
         assertEquals("New report", Notifications.reportNotification(app, "home", notice.copy(title = "")).words()[0])
+    }
+
+    @Test
+    fun anImportantReportHasAChannelThatComesUp() {
+        assertEquals(LembasApp.CHANNEL_REPORTS_HIGH, Notifications.reportNotification(app, "home", notice.copy(high = true)).channelId)
+        val manager = app.getSystemService(NotificationManager::class.java)
+        assertEquals(NotificationManager.IMPORTANCE_HIGH, manager.getNotificationChannel(LembasApp.CHANNEL_REPORTS_HIGH).importance)
+        assertEquals(NotificationManager.IMPORTANCE_DEFAULT, manager.getNotificationChannel(LembasApp.CHANNEL_REPORTS).importance)
+        // Both stay private on the lock screen.
+        assertEquals(Notification.VISIBILITY_PRIVATE, manager.getNotificationChannel(LembasApp.CHANNEL_REPORTS_HIGH).lockscreenVisibility)
+    }
+
+    @Test
+    fun readingTheReportInTheAppTakesItsNotificationAway() {
+        val manager = app.getSystemService(NotificationManager::class.java)
+        manager.notify(notice.id, Notifications.reportNotification(app, "home", notice))
+        assertNotNull(shadowOf(manager).getNotification(notice.id))
+        Notifications.reportSeen(app, "rep1")
+        assertNull(shadowOf(manager).getNotification(notice.id))
     }
 }

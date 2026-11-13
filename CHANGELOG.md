@@ -26,10 +26,11 @@ For LLeMbas server 2.0.0-beta.12 (harness spec 3.8.0); an older instance works a
 
 - **Last wake** in Settings › Wake word: when the phrase was last heard, what the app tried
   (the assistant's sheet, the sheet as a screen of the app, a notification) and exactly how it
-  went -- opened; Android had not connected LLeMbas as the assistant; Android refused, in its
-  own words; or it did not refuse and still no sheet came -- with whether LLeMbas was the
-  digital assistant app then and when Android had connected or dropped it. A tap shows the last
-  five. Nothing from your account is in it.
+  went -- opened, and after how long; Android had not connected LLeMbas as the assistant;
+  Android refused, in its own words; or it did not refuse and still no sheet came -- with what
+  Android itself said at that moment: whether LLeMbas was the digital assistant app, whether
+  Android was really using it as its voice assistant, and when it had connected or dropped it.
+  A tap shows the last five. Nothing from your account is in it.
 
 ### Fixed
 
@@ -41,6 +42,14 @@ For LLeMbas server 2.0.0-beta.12 (harness spec 3.8.0); an older instance works a
   really came up before it counts the wake as opened; when it did not, the notification follows
   and says *Could not open by itself — tap to ask*. What makes a phone drop that connection is
   not fixed by this: the record is there to find out.
+- Settings says so when LLeMbas is chosen as the digital assistant app but Android is not using
+  it as its voice assistant (which Android can undo at a restart): the long press then opens
+  it as an ordinary screen, and the wake word can only send a notification until LLeMbas is
+  chosen again.
+- The wake word stayed paused "while the assistant is open" after the sheet was left with the
+  Home button, or after the assistant was asked for twice in a row.
+- A report's conversation showed the line the server opens it with as if you had written it;
+  such lines are a quiet note now, and that first one is left out.
 - The screen is turned on when the wake word opens the sheet (with *Only while the screen is
   on* switched off, the phrase can come while it is dark).
 
@@ -51,6 +60,10 @@ For LLeMbas server 2.0.0-beta.12 (harness spec 3.8.0); an older instance works a
   the report; *Mark read* asks for the phone to be unlocked. A run that filed no report notifies
   nothing; a failed run still says that it failed. An instance on 2.0.0-beta.11 keeps sending
   its runs' notifications, and they work as before.
+- A report the model called important arrives on a channel of its own, *Important reports*,
+  which may come up over what is on screen. A report read or deleted in the app takes its
+  notification away. *Reports* is in the drawer only where the instance has reports. An empty
+  *When…* means the instance's own default, which the field shows as a placeholder.
 - **A page in an answer is not drawn on the phone** (LLeMbas 2.0.0-beta.12 can let a model add
   HTML pages to an answer; the web and LLeMbas Desktop show them). The phone shows one quiet
   card -- *This answer has a page: …*, and where to open it -- in a chat and in a report, never

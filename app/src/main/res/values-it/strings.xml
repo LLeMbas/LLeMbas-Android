@@ -271,6 +271,7 @@
     <string name="notify_when_words">Avvisa quando: %1$s</string>
     <string name="run_open_report">Apri il suo rapporto</string>
     <string name="channel_reports">Rapporti</string>
+    <string name="channel_reports_high">Rapporti importanti</string>
     <string name="report_new_public">Nuovo rapporto</string>
     <string name="schedule_run_again">Esegui di nuovo</string>
     <string name="card_approval">Consentire questo?</string>

@@ -291,7 +291,8 @@ class ApiClient(val base: String, private val token: String, val http: OkHttpCli
 
     suspend fun deleteChat(chatId: String) = empty(authed("$v2/chats/$chatId").delete().build())
 
-    suspend fun stop(chatId: String, messageId: String) = empty(authed("$v2/chats/$chatId/messages/$messageId/stop").post("{}".toRequestBody(JSON)).build())
+    suspend fun stop(chatId: String, messageId: String) =
+        empty(authed("$v2/chats/$chatId/messages/$messageId/stop").post(ByteArray(0).toRequestBody(null)).build())
 
     suspend fun edit(chatId: String, messageId: String, text: String): Turn =
         send("POST", "/chats/$chatId/messages/$messageId/edit", buildJsonObject { put("text", text) })
@@ -333,7 +334,7 @@ class ApiClient(val base: String, private val token: String, val http: OkHttpCli
      * server refuses in its own words (409) while a reply is being written or with nothing to
      * summarise; the transcript is read again after, for the divider it leaves.
      */
-    suspend fun compact(chatId: String) = empty(authed("$v2/chats/$chatId/compact").post("{}".toRequestBody(JSON)).build())
+    suspend fun compact(chatId: String) = empty(authed("$v2/chats/$chatId/compact").post(ByteArray(0).toRequestBody(null)).build())
 
     suspend fun team(chatId: String, since: Int = 0): TeamView = get<TeamEnvelope>("/chats/$chatId/team?since=$since").team
 
@@ -380,7 +381,8 @@ class ApiClient(val base: String, private val token: String, val http: OkHttpCli
             // Notify when (spec 3.8.0): left out where the form did not say, so an older server is sent nothing new.
             if (notify != null) {
                 put("notify", notify)
-                if (notify == "when") put("notify_when", notifyWhen.trim().ifBlank { NOTIFY_DEFAULT_CONDITION })
+                // The person's own words, or none: an empty condition is the server's default, in its own words.
+                if (notify == "when") put("notify_when", notifyWhen.trim())
             }
         }
         return if (id == null) {

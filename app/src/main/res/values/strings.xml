@@ -272,6 +272,7 @@
     <string name="notify_when_words">Tells you when: %1$s</string>
     <string name="run_open_report">Open its report</string>
     <string name="channel_reports">Reports</string>
+    <string name="channel_reports_high">Important reports</string>
     <string name="report_new_public">New report</string>
     <string name="schedule_run_again">Run again</string>
     <string name="card_approval">Allow this?</string>

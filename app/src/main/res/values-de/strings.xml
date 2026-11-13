@@ -271,6 +271,7 @@
     <string name="notify_when_words">Meldet sich, wenn: %1$s</string>
     <string name="run_open_report">Zugehörigen Bericht öffnen</string>
     <string name="channel_reports">Berichte</string>
+    <string name="channel_reports_high">Wichtige Berichte</string>
     <string name="report_new_public">Neuer Bericht</string>
     <string name="schedule_run_again">Erneut ausführen</string>
     <string name="card_approval">Das erlauben?</string>

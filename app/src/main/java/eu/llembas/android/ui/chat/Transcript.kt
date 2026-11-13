@@ -87,6 +87,7 @@ import eu.llembas.android.api.ShowCard
 import eu.llembas.android.api.Step
 import eu.llembas.android.api.ToolCall
 import eu.llembas.android.api.ending
+import eu.llembas.android.api.shownMarkdown
 import eu.llembas.android.lembas
 import eu.llembas.android.ui.MarkdownText
 import eu.llembas.android.ui.Segment
@@ -168,6 +169,25 @@ fun UserMessage(message: Message, canEdit: Boolean, onEdit: () -> Unit, modifier
             )
         }
     }
+}
+
+/**
+ * A line the server wrote in the person's place (a schedule's instruction, what opens a report's
+ * conversation): a quiet note across the width, a few lines of it -- never the person's bubble,
+ * and never markdown.
+ */
+@Composable
+fun MachineNote(text: String, modifier: Modifier = Modifier) {
+    val palette = LocalPalette.current
+    if (text.isBlank()) return
+    Text(
+        text.trim(),
+        style = MaterialTheme.typography.bodySmall,
+        color = palette.inkFaint,
+        maxLines = 4,
+        overflow = TextOverflow.Ellipsis,
+        modifier = modifier.fillMaxWidth().padding(horizontal = 8.dp),
+    )
 }
 
 /**
@@ -301,7 +321,7 @@ fun AssistantMessage(
 fun replyText(message: Message): String = pageProjection(
     message.steps.mapNotNull { step ->
         when (step.kind) {
-            "text" -> step.markdown
+            "text" -> step.shownMarkdown
             "page" -> "[page: ${step.title.orEmpty()}]"
             else -> null
         }
@@ -368,7 +388,7 @@ fun StepsCompact(steps: List<Step>, modifier: Modifier = Modifier, onShow: ((Sho
             when (step.kind) {
                 "thinking" -> ThinkingChip(step)
 
-                "text" -> RichMarkdown(step.markdown.orEmpty(), onLongPress = onLongPress)
+                "text" -> RichMarkdown(step.shownMarkdown, onLongPress = onLongPress)
 
                 // A page the server took out of the text as a step of its own: the same card.
                 "page" -> PageCard(step.title.orEmpty())

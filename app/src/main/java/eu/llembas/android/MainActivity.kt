@@ -35,6 +35,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import eu.llembas.android.api.Chat
 import eu.llembas.android.api.Folder
+import eu.llembas.android.api.safeId
 import eu.llembas.android.auth.Instance
 import eu.llembas.android.auth.Prefs
 import eu.llembas.android.push.Notifications
@@ -138,11 +139,13 @@ class MainActivity : ComponentActivity() {
         if (intent?.getBooleanExtra(WakeBootReceiver.EXTRA_RESUME, false) == true) {
             lifecycleScope.launch { if (lembas.instances.prefs.first().wakeWord) WakeWordService.start(this@MainActivity) }
         }
-        val chat = intent?.getStringExtra(Notifications.EXTRA_CHAT)
-        val schedule = intent?.getStringExtra(Notifications.EXTRA_SCHEDULE)
-        val run = intent?.getStringExtra(Notifications.EXTRA_RUN)
+        // Extras are whatever the sender put there (this activity can be started from outside):
+        // only ids that look like ids go on to become routes.
+        val chat = safeId(intent?.getStringExtra(Notifications.EXTRA_CHAT))
+        val schedule = safeId(intent?.getStringExtra(Notifications.EXTRA_SCHEDULE))
+        val run = safeId(intent?.getStringExtra(Notifications.EXTRA_RUN))
         val instance = intent?.getStringExtra(Notifications.EXTRA_INSTANCE)
-        val report = intent?.getStringExtra(Notifications.EXTRA_REPORT)
+        val report = safeId(intent?.getStringExtra(Notifications.EXTRA_REPORT))
         if (chat == null && schedule == null && report == null) return
         opening.value = Opening(chat, schedule, run, instance, report)
         // A notification from another of the person's instances: that one comes into use, and

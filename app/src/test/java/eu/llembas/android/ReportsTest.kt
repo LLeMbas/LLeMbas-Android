@@ -8,12 +8,16 @@ import eu.llembas.android.api.ReportReply
 import eu.llembas.android.api.Schedule
 import eu.llembas.android.api.ScheduleRun
 import eu.llembas.android.api.notifyChoice
+import eu.llembas.android.api.safeId
 import eu.llembas.android.api.sortedReports
+import eu.llembas.android.push.Notifications
 import eu.llembas.android.push.ReportNotice
 import eu.llembas.android.push.ScheduledNotice
 import eu.llembas.android.ui.Segment
 import eu.llembas.android.ui.pageProjection
 import eu.llembas.android.ui.reports.shareText
+import eu.llembas.android.ui.scheduled.EditState
+import eu.llembas.android.ui.scheduled.notifyToSend
 import eu.llembas.android.ui.splitFences
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -146,6 +150,52 @@ class ReportsTest {
         assertFalse(notice.failed)
         // A failed run keeps its failure notification under 3.8.0 too.
         assertTrue(ScheduledNotice.from(result.copy(kind = "schedule_failed"))!!.failed)
+    }
+
+    @Test
+    fun onlyWhatLooksLikeAnIdBecomesARoute() {
+        assertEquals("rep1", safeId("rep1"))
+        assertEquals("a-b_C9", safeId("a-b_C9"))
+        // A slash, a query, a dot, nothing, too much: none of these is an id.
+        for (bad in listOf("a/b", "rep1?x=1", "..", "", "rep 1", "x".repeat(65))) assertNull(bad, safeId(bad))
+        assertNull(safeId(null))
+        // A push whose id is no id shows nothing rather than open somewhere else.
+        val push = PushPayload(kind = "report", reportId = "rep1/../../chat/c1", url = "/reports/rep1")
+        assertNull(ReportNotice.from(push))
+        assertNull(ReportNotice.from(PushPayload(kind = "report", url = "/reports/a%2Fb")))
+        assertNull(ScheduledNotice.from(PushPayload(kind = "schedule", scheduleId = "s1/x")))
+        // The run's id alone being bad drops the run, not the notification.
+        assertNull(ScheduledNotice.from(PushPayload(kind = "schedule", scheduleId = "s1", runId = "r/1"))!!.runId)
+    }
+
+    @Test
+    fun aPushOfAKindThisAppDoesNotKnowIsNotAChat() {
+        assertTrue(Notifications.chatKind(""))
+        assertTrue(Notifications.chatKind("reply"))
+        assertTrue(Notifications.chatKind("ask"))
+        assertFalse(Notifications.chatKind("digest"))
+        assertFalse(Notifications.chatKind("report"))
+    }
+
+    @Test
+    fun theFormSendsNotifyOnlyWhenItKnowsWhatItSends() {
+        val fresh = EditState(reports = true)
+        // A new schedule: what the form shows is what is meant.
+        assertEquals("when", notifyToSend(fresh, editing = false))
+        // An instance without Reports is sent nothing new.
+        assertNull(notifyToSend(EditState(reports = false, notify = "never", notifyTouched = true), editing = false))
+        // Editing before the schedule was read (or when reading it failed): the default is not written over it...
+        assertNull(notifyToSend(fresh, editing = true))
+        assertNull(notifyToSend(fresh.copy(loadFailed = true), editing = true))
+        // ...unless the person chose, or it was read.
+        assertEquals("never", notifyToSend(fresh.copy(notify = "never", notifyTouched = true), editing = true))
+        assertEquals("always", notifyToSend(fresh.copy(notify = "always", loaded = true), editing = true))
+    }
+
+    @Test
+    fun aSpaceBeforeTheWordIsNotAPage() {
+        // The spec: `html-view` stands straight after the fence. With a space it is a code block, here as on the server.
+        assertEquals(listOf(Segment.Code("html-view", "<p>x</p>")), splitFences("``` html-view Cakes\n<p>x</p>\n```"))
     }
 
     @Test
