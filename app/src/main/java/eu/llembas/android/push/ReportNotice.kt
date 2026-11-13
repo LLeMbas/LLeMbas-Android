@@ -19,7 +19,16 @@ data class ReportNotice(val reportId: String, val title: String, val summary: St
         fun from(payload: PushPayload): ReportNotice? {
             if (payload.kind != KIND) return null
             val id = payload.reportId?.takeIf { it.isNotBlank() } ?: fromUrl(payload.url) ?: return null
-            return ReportNotice(id, payload.title, payload.body, high = payload.importance == "high")
+            // The report's own words are in the payload's `notification` (the payload's top is
+            // what an older client would show: the app's name and "New report"). A payload
+            // without one is read by its top.
+            val words = payload.notification
+            return ReportNotice(
+                reportId = id,
+                title = words?.title ?: payload.title,
+                summary = words?.body ?: payload.body,
+                high = (words?.importance?.ifBlank { null } ?: payload.importance) == "high",
+            )
         }
 
         /** `/reports/{id}` → the id; null for anything else. */

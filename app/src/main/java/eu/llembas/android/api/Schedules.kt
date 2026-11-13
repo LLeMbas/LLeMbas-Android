@@ -215,6 +215,8 @@ data class RunNotification(
     val actions: List<String> = emptyList(),
     val labels: Map<String, String> = emptyMap(),
     val ask: String = "",
+    /** A report's notification: `normal` or `high`. */
+    val importance: String = "",
 )
 
 /**

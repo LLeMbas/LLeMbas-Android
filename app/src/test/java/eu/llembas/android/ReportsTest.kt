@@ -119,6 +119,20 @@ class ReportsTest {
     }
 
     @Test
+    fun theReportsWordsComeFromThePayloadsNotification() {
+        // The payload's top is for a client that knows nothing of reports; the words are inside.
+        val payload = LembasJson.decodeFromString(
+            PushPayload.serializer(),
+            """{"kind":"report","report_id":"rep1","title":"LLeMbas","body":"New report","url":"/reports/rep1",
+               "notification":{"title":"Two tenders opened","body":"Storage bids are due in May.","public":{"title":"New report","body":""},"importance":"high"}}""",
+        )
+        val notice = ReportNotice.from(payload)!!
+        assertEquals("Two tenders opened", notice.title)
+        assertEquals("Storage bids are due in May.", notice.summary)
+        assertTrue(notice.high)
+    }
+
+    @Test
     fun anOlderServersScheduledPushStillWorks() {
         // 2.0.0-beta.11 and before: a run's result is its own push, which opens the run.
         val result = LembasJson.decodeFromString(
