@@ -5,6 +5,20 @@ is in alpha and releases come off `main`.
 
 ## [Unreleased]
 
+### Fixed
+
+- **The chat no longer pulls you away from what you are reading while a reply is written.** The
+  view follows the reply only while you are at the end. Once you scroll up it stays exactly
+  where you are -- a finger on the list ends the following at once -- and scrolling back to the
+  end takes it up again. Before, the next queued turn starting, a transcript read again and a
+  rotation could each throw the view to the end.
+- **Older messages no longer throw the chat to its end.** Tapping *Older* keeps the message you
+  were at in place, with the older ones above it.
+- **The keyboard no longer covers the last lines**: opening it at the end of a chat keeps the
+  end in view.
+- **The assistant's sheet follows the same rule.** It pulled the answer back to its end at every
+  word, also for somebody reading further up.
+
 ## [1.0.0-beta.10] — 2026-11-13
 
 ### Added

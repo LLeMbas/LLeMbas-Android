@@ -8,6 +8,7 @@ import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.DragInteraction
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -78,9 +79,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -99,6 +102,7 @@ import eu.llembas.android.ui.ModelAvatar
 import eu.llembas.android.ui.ProgressStatus
 import eu.llembas.android.ui.theme.LocalPalette
 import eu.llembas.android.ui.viewer.FileViewer
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 
 /**
@@ -217,15 +221,45 @@ fun ChatContent(
     val rows = state.messages
     val info = state.modelInfo
 
-    // To the end when the transcript grows, and while a reply is being written -- but only if
-    // the person is at the end already: reading back up is not interrupted by the next line.
-    var following by remember { mutableStateOf(true) }
-    LaunchedEffect(list.isScrollInProgress) {
-        if (!list.isScrollInProgress) following = !list.canScrollForward
+    // The view keeps to the end while a reply is written only for a person who is there
+    // (`Follow.kt` has the rule): a finger on the list ends the following at once, and where the
+    // list comes to rest says whether it is taken up again. Kept over a rotation, with the place.
+    var following by rememberSaveable { mutableStateOf(true) }
+    var drawnBefore by rememberSaveable { mutableStateOf(false) }
+    val slack = with(LocalDensity.current) { 48.dp.roundToPx() }
+    LaunchedEffect(list) {
+        list.interactionSource.interactions.collect { if (it is DragInteraction.Start) following = false }
     }
-    LaunchedEffect(rows.size) { if (rows.isNotEmpty()) list.toEnd() }
+    LaunchedEffect(list) {
+        var moving = false
+        snapshotFlow { list.isScrollInProgress }.collect { now ->
+            if (moving && !now) following = followsAt(list.distanceToEnd(), slack)
+            moving = now
+        }
+    }
+    // The rows as they were at the last draw, to tell a message sent from an older page loaded.
+    val known = remember { arrayOfNulls<List<Message>>(1) }
+    LaunchedEffect(rows) {
+        val before = known[0]
+        known[0] = rows
+        val change = transcriptChange(before, rows, restored = drawnBefore)
+        if (rows.isNotEmpty()) drawnBefore = true
+        if (change == TranscriptChange.Older) {
+            // An older page above the very top: the row that was first stays first, so reading
+            // goes on upwards from it. Anywhere else the list keeps its place by the rows' keys.
+            val kept = keptRow(before.orEmpty(), rows)
+            if (kept != null && list.firstVisibleItemIndex == 0) list.scrollToItem(kept + if (state.more) 1 else 0)
+        } else if (movesToEnd(change, following)) {
+            following = true
+            list.toEnd()
+        }
+    }
     val growth = live?.let { it.shown.size * 100_000 + (it.tail.text.length + it.tail.thinking.length) } ?: 0
     LaunchedEffect(growth) { if (growth > 0 && following) list.toEnd() }
+    // The keyboard opening takes the list's foot away: a person at the end stays at the end.
+    LaunchedEffect(list) {
+        snapshotFlow { list.layoutInfo.viewportSize.height }.drop(1).collect { if (following) list.toEnd() }
+    }
 
     CompositionLocalProvider(LocalCopy provides copy) {
         Scaffold(
@@ -459,6 +493,14 @@ private suspend fun LazyListState.toEnd() {
     if (last < 0) return
     scrollToItem(last)
     scrollBy(1_000_000f)
+}
+
+/** How far the list stands from its very end, in pixels; a last row not on screen is "far". */
+private fun LazyListState.distanceToEnd(): Int {
+    val info = layoutInfo
+    val last = info.visibleItemsInfo.lastOrNull() ?: return 0
+    if (last.index < info.totalItemsCount - 1) return Int.MAX_VALUE
+    return last.offset + last.size + info.afterContentPadding - info.viewportEndOffset
 }
 
 /**

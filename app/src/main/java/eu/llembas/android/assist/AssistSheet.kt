@@ -10,6 +10,7 @@ import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.DragInteraction
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -75,6 +76,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -94,6 +96,7 @@ import eu.llembas.android.ui.ModelAvatar
 import eu.llembas.android.ui.ProgressStatus
 import eu.llembas.android.ui.chat.PhoneCard
 import eu.llembas.android.ui.chat.Steps
+import eu.llembas.android.ui.chat.followsAt
 import eu.llembas.android.ui.progressLineOf
 import eu.llembas.android.ui.theme.LocalPalette
 import kotlinx.coroutines.launch
@@ -217,8 +220,27 @@ fun ColumnScope.AssistSheetContent(
     val palette = LocalPalette.current
     var text by remember { mutableStateOf("") }
     val scroll = rememberScrollState()
-    val growth = state.turns.lastOrNull()?.steps?.sumOf { (it.markdown?.length ?: 0) + (it.text?.length ?: 0) } ?: 0
-    LaunchedEffect(state.turns.size, growth) { if (state.turns.isNotEmpty()) scroll.animateScrollTo(scroll.maxValue) }
+    // The turns keep to their end while an answer is written only for a person who is there
+    // (`ui/chat/Follow.kt`, the chat's rule): a finger on them ends the following, where they
+    // come to rest says whether it is taken up again, and a question asked always shows.
+    var following by remember { mutableStateOf(true) }
+    val slack = with(LocalDensity.current) { 48.dp.roundToPx() }
+    LaunchedEffect(scroll) {
+        scroll.interactionSource.interactions.collect { if (it is DragInteraction.Start) following = false }
+    }
+    LaunchedEffect(scroll) {
+        var moving = false
+        snapshotFlow { scroll.isScrollInProgress }.collect { now ->
+            if (moving && !now) following = followsAt(scroll.maxValue - scroll.value, slack)
+            moving = now
+        }
+    }
+    LaunchedEffect(state.turns.size) { following = true }
+    // The end moves when the answer grows and when the keyboard opens; before the first layout
+    // it is not known yet.
+    LaunchedEffect(scroll) {
+        snapshotFlow { if (following) scroll.maxValue else -1 }.collect { end -> if (end in 0 until Int.MAX_VALUE) scroll.scrollTo(end) }
+    }
 
     // The top: the handle and the bar. Both drag the sheet.
     Column(handle.fillMaxWidth()) {
