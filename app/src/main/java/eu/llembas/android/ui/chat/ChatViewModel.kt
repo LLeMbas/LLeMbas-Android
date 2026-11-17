@@ -20,10 +20,12 @@ import eu.llembas.android.api.Attachment
 import eu.llembas.android.api.Card
 import eu.llembas.android.api.CardAnswer
 import eu.llembas.android.api.Chat
+import eu.llembas.android.api.ChatDetail
 import eu.llembas.android.api.LembasJson
 import eu.llembas.android.api.LinkedDevice
 import eu.llembas.android.api.LiveReply
 import eu.llembas.android.api.Message
+import eu.llembas.android.api.MessagePage
 import eu.llembas.android.api.ModelInfo
 import eu.llembas.android.api.StreamClient
 import eu.llembas.android.api.SubagentTree
@@ -146,6 +148,36 @@ val ChatState.running: Boolean get() = live != null && live.finished == null
 val ChatState.device: LinkedDevice? get() = devices.firstOrNull { it.id == draft.device } ?: devices.firstOrNull()
 
 /**
+ * An older [page], read before the message [before], put above the transcript. Only while
+ * [before] is still the first row -- a transcript read again meanwhile has moved, and the page
+ * no longer belongs above it -- and never a row twice: the list's rows are keyed by id, and a
+ * key drawn twice ends the app.
+ */
+fun ChatState.withOlder(before: String, page: MessagePage): ChatState {
+    if (messages.firstOrNull()?.id != before) return this
+    val have = messages.mapTo(HashSet()) { it.id }
+    return copy(messages = page.messages.distinctBy { it.id }.filterNot { it.id in have } + messages, more = page.more)
+}
+
+/**
+ * The stream of the reply [messageId] closed without a `done`. What was written stays in view:
+ * the transcript as the server has it now ([reread]), or -- where that could not be read -- the
+ * row with the steps the stream had shown, closed, and how it ended where the stream said so.
+ * Nothing is live after it. A reply another stream is being followed for is left alone.
+ */
+fun ChatState.closedUnfinished(messageId: String, reread: ChatDetail?): ChatState {
+    val was = live?.takeIf { it.messageId == messageId }
+    if (live != null && was == null) return this
+    if (reread != null) return copy(chat = reread.chat, messages = reread.messages, more = reread.more, live = null)
+    if (was == null || was.shown.isEmpty()) return copy(live = null)
+    val kept = was.shown.map { it.copy(open = false) }
+    return copy(
+        live = null,
+        messages = messages.map { if (it.id == messageId) it.copy(steps = kept, progress = it.progress ?: was.end) else it },
+    )
+}
+
+/**
  * What the chat screen asks of its model. Every action has a do-nothing default, so the
  * screenshot tests draw the screen with fake data and no server behind it.
  */
@@ -263,12 +295,16 @@ class ChatViewModel(app: Application) :
         }
     }
 
+    private var olderRead: Job? = null
+
+    /** The page before the first row. One read at a time: a second tap while one is under way is not a second page. */
     override fun older() {
+        if (olderRead?.isActive == true) return
         val chat = _state.value.chat ?: return
         val first = _state.value.messages.firstOrNull() ?: return
-        viewModelScope.launch {
+        olderRead = viewModelScope.launch {
             runCatching { api().messages(chat.id, first.id) }
-                .onSuccess { page -> _state.update { it.copy(messages = page.messages + it.messages, more = page.more) } }
+                .onSuccess { page -> _state.update { it.withOlder(first.id, page) } }
                 .onFailure(::fail)
         }
     }
@@ -327,8 +363,21 @@ class ChatViewModel(app: Application) :
                 refresh()
                 return@launch
             }
-            // The stream closed without a `done` (an older reply already gone): nothing is live.
-            if (ended == null) _state.update { it.copy(live = null) }
+            // The stream closed without a `done`: the row is gone on the server, or it ended some
+            // way the stream did not tell. The transcript is read again, so what was written is
+            // still there; where it cannot be read, what the stream had shown stays.
+            if (ended == null) {
+                val reread = try {
+                    api().chat(chat.id)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (_: Exception) {
+                    null
+                }
+                _state.update { it.closedUnfinished(messageId, reread) }
+                // Another reply is being written there (a queued turn): that one is followed.
+                reread?.live?.takeIf { it != messageId }?.let { follow(it) }
+            }
         }
     }
 

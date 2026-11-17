@@ -294,14 +294,22 @@ class ApiClient(val base: String, private val token: String, val http: OkHttpCli
     suspend fun stop(chatId: String, messageId: String) =
         empty(authed("$v2/chats/$chatId/messages/$messageId/stop").post(ByteArray(0).toRequestBody(null)).build())
 
-    suspend fun edit(chatId: String, messageId: String, text: String): Turn =
-        send("POST", "/chats/$chatId/messages/$messageId/edit", buildJsonObject { put("text", text) })
+    // Every request that can start a reply says what this app can do, as a message does: the
+    // server then knows who the reply is written for however it was asked for.
+    suspend fun edit(chatId: String, messageId: String, text: String): Turn = send(
+        "POST",
+        "/chats/$chatId/messages/$messageId/edit",
+        buildJsonObject {
+            put("text", text)
+            put("client", CAPABILITIES)
+        },
+    )
 
-    suspend fun regenerate(chatId: String, messageId: String): Turn = send("POST", "/chats/$chatId/messages/$messageId/regenerate", null)
+    suspend fun regenerate(chatId: String, messageId: String): Turn = send("POST", "/chats/$chatId/messages/$messageId/regenerate", DECLARED)
 
-    suspend fun continueChat(chatId: String): Turn = send("POST", "/chats/$chatId/continue", null)
+    suspend fun continueChat(chatId: String): Turn = send("POST", "/chats/$chatId/continue", DECLARED)
 
-    suspend fun executePlan(chatId: String): Turn = send("POST", "/chats/$chatId/plan/execute", null)
+    suspend fun executePlan(chatId: String): Turn = send("POST", "/chats/$chatId/plan/execute", DECLARED)
 
     suspend fun answer(chatId: String, cardId: String, answer: CardAnswer) {
         val body = LembasJson.encodeToString(CardAnswer.serializer(), answer).toRequestBody(JSON)
@@ -567,10 +575,14 @@ class ApiClient(val base: String, private val token: String, val http: OkHttpCli
 
     companion object {
         /**
-         * What this app can do, sent with every message (spec 3.6.0): the phone carries out
-         * `phone_action` calls the person confirms here, so the chat is offered the tool.
+         * What this app can do, sent with every request that can start a reply (spec 3.6.0):
+         * the phone carries out `phone_action` calls the person confirms here, so the chat is
+         * offered the tool -- and a reply for the phone is one without pages to draw.
          */
         private val CAPABILITIES = JsonArray(listOf(JsonPrimitive("phone_actions")))
+
+        /** The body of a request that says nothing else: the declaration alone. */
+        private val DECLARED = JsonObject(mapOf("client" to CAPABILITIES))
 
         /** 1 MB, the server's own limit on a shown file, with room for a little more. */
         const val SHOWN_MAX_BYTES = 1_100_000L

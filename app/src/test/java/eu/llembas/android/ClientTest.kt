@@ -131,4 +131,36 @@ class ClientTest {
         assertEquals("hi", api.fileContent("/home/frodo/a b.md").text)
         assertEquals("/api/v2/files/content?path=%2Fhome%2Ffrodo%2Fa%20b.md", server.takeRequest().path)
     }
+
+    @Test
+    fun everyRequestThatStartsAReplySaysWhatTheAppCanDo() = runTest {
+        val api = client()
+        val declared = "\"client\":[\"phone_actions\"]"
+        val answer = """{"chat":{"id":"c1"}}"""
+        repeat(6) { server.enqueue(MockResponse().setResponseCode(201).setBody(answer)) }
+        api.createChat("Hello")
+        api.sendMessage("c1", "And then?")
+        api.edit("c1", "m1", "Hello again")
+        api.regenerate("c1", "m2")
+        api.continueChat("c1")
+        api.executePlan("c1")
+        val paths = listOf(
+            "/api/v2/chats",
+            "/api/v2/chats/c1/messages",
+            "/api/v2/chats/c1/messages/m1/edit",
+            "/api/v2/chats/c1/messages/m2/regenerate",
+            "/api/v2/chats/c1/continue",
+            "/api/v2/chats/c1/plan/execute",
+        )
+        for (path in paths) {
+            val request = server.takeRequest()
+            assertEquals(path, request.path)
+            val body = request.body.readUtf8()
+            assertTrue("$path: $body", body.contains(declared))
+        }
+        // An edit still carries its words.
+        server.enqueue(MockResponse().setBody("{}"))
+        api.edit("c1", "m1", "Hello again")
+        assertTrue(server.takeRequest().body.readUtf8().contains("\"text\":\"Hello again\""))
+    }
 }

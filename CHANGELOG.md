@@ -5,8 +5,31 @@ is in alpha and releases come off `main`.
 
 ## [Unreleased]
 
+### Changed
+
+- **The badge on Reports is live.** The count of unread reports in the drawer follows the
+  instance while the app is in front -- a report that arrives, or one read on another device,
+  moves it at once. Before, it was read only when the drawer opened.
+
 ### Fixed
 
+- **Two quick taps on *Older* no longer end the app.** The same page of older messages was
+  fetched twice and put above the chat twice. One page is read at a time now, and a message is
+  never added a second time.
+- **A reply whose stream ends without its last frame no longer disappears.** What had been
+  written vanished until the chat was opened again. The chat is now read again at that point;
+  where it cannot be read, what was written stays as it stood, with its *Stopped* or *Failed*
+  line where the instance had said one.
+- **Other apps' dictation sends nothing to your instance while the phone is locked.** While
+  LLeMbas is the digital assistant, an app that asks Android's speech recogniser is answered by
+  your instance -- until now also over the lock screen. A locked phone now uses its own
+  on-device recogniser where it has one, and otherwise tells the app that no recogniser is
+  available; a phone that locks while it is listening sends nothing either.
+- **A thinking block you opened stays open.** It closed by itself when the thinking ended and
+  the words began, and again when the reply finished.
+- **Edit, Regenerate, Continue and Carry out the plan tell the instance they come from the
+  phone**, as a new message always did, so a reply started that way is also written for an app
+  that draws no pages.
 - **The chat no longer pulls you away from what you are reading while a reply is written.** The
   view follows the reply only while you are at the end. Once you scroll up it stays exactly
   where you are -- a finger on the list ends the following at once -- and scrolling back to the

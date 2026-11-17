@@ -61,6 +61,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -386,7 +387,9 @@ fun StepsCompact(steps: List<Step>, modifier: Modifier = Modifier, onShow: ((Sho
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         steps.forEach { step ->
             when (step.kind) {
-                "thinking" -> ThinkingChip(step)
+                // By its place in the reply, not by its turn in this loop: a chip the person
+                // opened is the same chip when its step closes and others come after it.
+                "thinking" -> key(step.index, step.kind) { ThinkingChip(step) }
 
                 // A closed step's pages are the server's to name (its `text`); in the step still
                 // being written a page's fence is a page already, not source scrolling by.
@@ -525,7 +528,9 @@ private fun FoldChip(
 @Composable
 private fun ThinkingChip(step: Step) {
     val palette = LocalPalette.current
-    var open by rememberSaveable(step.index, step.open) { mutableStateOf(false) }
+    // Open only because the person opened it, and then it stays open: the step closing (the
+    // thinking is over, the words begin) is not a reason to fold away what somebody is reading.
+    var open by rememberSaveable(step.index) { mutableStateOf(false) }
     val label = if (step.open) stringResource(R.string.thinking) + "…" else stringResource(R.string.thought) + (step.label?.let { " $it" } ?: "")
     FoldChip(
         open = open,

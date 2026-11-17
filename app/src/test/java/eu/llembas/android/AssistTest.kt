@@ -12,10 +12,12 @@ import eu.llembas.android.assist.AssistUiState
 import eu.llembas.android.assist.Held
 import eu.llembas.android.assist.LockedStart
 import eu.llembas.android.assist.Opening
+import eu.llembas.android.assist.Recognise
 import eu.llembas.android.assist.Recorder
 import eu.llembas.android.assist.SheetStop
 import eu.llembas.android.assist.isStopPhrase
 import eu.llembas.android.assist.lockedStart
+import eu.llembas.android.assist.recogniseWith
 import eu.llembas.android.assist.settle
 import eu.llembas.android.assist.usePhoneRecognizer
 import eu.llembas.android.auth.Prefs
@@ -212,5 +214,15 @@ class AssistTest {
         val phrases = listOf("my notifications")
         assertTrue(NotificationReader.asksAbout("Anything urgent in My Notifications?", phrases))
         assertFalse(NotificationReader.asksAbout("How do notifications work on Android?", phrases))
+    }
+
+    @Test
+    fun theSystemRecogniserSendsNothingToTheInstanceFromALockedPhone() {
+        // Unlocked: the instance writes it down, whatever else the phone has.
+        assertEquals(Recognise.Instance, recogniseWith(locked = false, onDevice = false))
+        assertEquals(Recognise.Instance, recogniseWith(locked = false, onDevice = true))
+        // Locked: the phone's own recogniser, or nobody -- never the instance.
+        assertEquals(Recognise.OnDevice, recogniseWith(locked = true, onDevice = true))
+        assertEquals(Recognise.Refuse, recogniseWith(locked = true, onDevice = false))
     }
 }

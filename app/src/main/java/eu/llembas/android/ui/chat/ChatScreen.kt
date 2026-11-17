@@ -403,14 +403,14 @@ fun ChatContent(
 
                             Drawn.Person -> UserMessage(message, canEdit = live == null, onEdit = { editing = message })
 
-                            Drawn.Reply -> when {
-                                live != null && live.messageId == message.id && live.finished == null ->
-                                    AssistantMessage(message, live.shown, writing = true, canRegenerate = false, onRegenerate = {}, onShow = onShow)
-
-                                else -> AssistantMessage(
+                            // One call for a reply being written and the same reply finished:
+                            // what the person opened in it (a thinking chip) stays open at `done`.
+                            Drawn.Reply -> {
+                                val writing = live?.takeIf { it.messageId == message.id && it.finished == null }
+                                AssistantMessage(
                                     message,
-                                    message.steps,
-                                    writing = false,
+                                    writing?.shown ?: message.steps,
+                                    writing = writing != null,
                                     canRegenerate = live == null && message == rows.lastOrNull(),
                                     onRegenerate = { actions.regenerate(message) },
                                     onShow = onShow,

@@ -26,8 +26,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -208,6 +211,9 @@ class MainActivity : ComponentActivity() {
         // The list is read again each time the drawer opens, so a new title or a finished
         // reply's dot is there without a pull.
         LaunchedEffect(drawer.isOpen) { if (drawer.isOpen) chats.load() }
+        // The badge on Reports follows the instance while the app is in front.
+        val lifecycle = LocalLifecycleOwner.current.lifecycle
+        LaunchedEffect(instance.id) { lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) { chats.watchReports() } }
         LaunchedEffect(open) {
             open?.let {
                 // Meant for another instance: left for that one's pages, once it is in use.

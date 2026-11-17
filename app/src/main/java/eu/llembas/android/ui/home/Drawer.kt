@@ -77,12 +77,16 @@ import eu.llembas.android.api.ApiException
 import eu.llembas.android.api.Chat
 import eu.llembas.android.api.Doorstep
 import eu.llembas.android.api.Folder
+import eu.llembas.android.api.LembasJson
+import eu.llembas.android.api.ReportsFrame
 import eu.llembas.android.api.SearchHit
+import eu.llembas.android.api.StreamClient
 import eu.llembas.android.api.fit
 import eu.llembas.android.lembas
 import eu.llembas.android.ui.explain
 import eu.llembas.android.ui.signin.refusal
 import eu.llembas.android.ui.theme.LocalPalette
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -110,6 +114,16 @@ data class ChatsState(
     /** Whether the instance has Reports at all: one before 2.0.0-beta.12 has no such page to open. */
     val reports: Boolean = false,
 )
+
+/**
+ * The events route's `reports` frame, as the drawer takes it: the badge is the server's count
+ * of the unread, and an instance that sends the frame has Reports. Anything else it carries
+ * (the newest report) is not the drawer's. A frame that cannot be read changes nothing.
+ */
+fun ChatsState.reported(data: String): ChatsState {
+    val frame = runCatching { LembasJson.decodeFromString(ReportsFrame.serializer(), data) }.getOrNull() ?: return this
+    return copy(unreadReports = frame.unread.coerceAtLeast(0), reports = true)
+}
 
 /** The drawer's list: every chat of the instance in use, both kinds, newest first. */
 class ChatsViewModel(app: Application) : AndroidViewModel(app) {
@@ -162,6 +176,26 @@ class ChatsViewModel(app: Application) : AndroidViewModel(app) {
             } catch (e: Exception) {
                 _state.update { it.copy(loading = false, error = getApplication<Application>().explain(e)) }
             }
+        }
+    }
+
+    /**
+     * Follow the person's events route while the app is in front, for its `reports` frame: the
+     * badge on Reports moves when a report arrives or is read anywhere, not only when the drawer
+     * opens. Runs until cancelled. An older server has no such route, or no such frame: the
+     * badge is then what the drawer's own read said.
+     */
+    suspend fun watchReports() {
+        val api = runCatching { getApplication<Application>().lembas.instances.client() }.getOrNull() ?: return
+        try {
+            StreamClient(api).watch { api.events() }.collect { frame ->
+                // An instance this app refuses shows its refusal and nothing else.
+                if (frame.event == "reports" && refused == null) _state.update { it.reported(frame.data) }
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            // Nothing to say: the count is read when the drawer opens, as before.
         }
     }
 

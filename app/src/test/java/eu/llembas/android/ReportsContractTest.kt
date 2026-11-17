@@ -13,6 +13,8 @@ import eu.llembas.android.api.shownMarkdown
 import eu.llembas.android.push.ReportNotice
 import eu.llembas.android.push.ScheduledNotice
 import eu.llembas.android.ui.Segment
+import eu.llembas.android.ui.home.ChatsState
+import eu.llembas.android.ui.home.reported
 import eu.llembas.android.ui.reports.shareText
 import eu.llembas.android.ui.splitFences
 import kotlinx.serialization.KSerializer
@@ -50,6 +52,18 @@ class ReportsContractTest {
         assertEquals(1, frame.unread)
         assertEquals("rep1", frame.newest?.id)
         assertEquals("2026-01-02T03:04:05+00:00", frame.latestCreated)
+    }
+
+    @Test
+    fun theEventsFrameMovesTheDrawersBadge() {
+        // The frame as the server writes it: its count is the badge, and such an instance has Reports.
+        val told = ChatsState(unreadReports = 4).reported(text("event_reports"))
+        assertEquals(1, told.unreadReports)
+        assertTrue(told.reports)
+        // Everything read: the badge goes.
+        assertEquals(0, told.reported("""{"unread":0,"newest":null,"latest_created":null}""").unreadReports)
+        // A frame that cannot be read changes nothing.
+        assertEquals(told, told.reported("not json"))
     }
 
     @Test
