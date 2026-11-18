@@ -190,7 +190,9 @@ fun NotebookBody(notebook: Notebook) {
                     cell.source.ifEmpty { " " },
                     style = if (code) mono else MaterialTheme.typography.bodyMedium.copy(color = palette.ink),
                     // Code sits on the code's ground; a cell of prose is prose on the page.
-                    modifier = Modifier.fillMaxWidth().then(if (code) Modifier.background(palette.codeBg, RoundedCornerShape(8.dp)).padding(10.dp) else Modifier),
+                    modifier = Modifier.fillMaxWidth().then(
+                        if (code) Modifier.background(palette.codeBg, RoundedCornerShape(8.dp)).padding(10.dp) else Modifier,
+                    ),
                 )
                 if (cell.output.isNotEmpty()) {
                     Text(cell.output, style = mono.copy(color = palette.inkMuted), modifier = Modifier.fillMaxWidth().padding(start = 10.dp, top = 6.dp))
