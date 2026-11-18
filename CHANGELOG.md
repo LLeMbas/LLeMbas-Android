@@ -5,6 +5,15 @@ is in alpha and releases come off `main`.
 
 ## [Unreleased]
 
+### Fixed
+
+- **A chat on a model two connections serve shows the right connection.** When an instance has
+  the same model on two connections, a chat, a reply and a scheduled task on the second one were
+  shown as being on the first: the title, the tick in the model list, the picture, the thinking
+  control. The instance now says which connection each is on, and the app shows that one. The
+  line under a reply and a scheduled task's model name the connection where two share a name.
+  An instance that does not say it yet is shown as before.
+
 ## [1.0.0-beta.12] — 2026-11-18
 
 For what is new here the instance must be newer than LLeMbas 2.0.0-beta.14; an older one ignores

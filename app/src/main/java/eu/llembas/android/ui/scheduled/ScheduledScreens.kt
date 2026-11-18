@@ -102,6 +102,7 @@ import eu.llembas.android.api.agentic
 import eu.llembas.android.api.computerAway
 import eu.llembas.android.api.named
 import eu.llembas.android.api.notifyChoice
+import eu.llembas.android.api.saidWithConnection
 import eu.llembas.android.api.titleAmong
 import eu.llembas.android.lembas
 import eu.llembas.android.ui.DirectoryPicker
@@ -381,6 +382,8 @@ data class ScheduleState(
     val loading: Boolean = false,
     val error: String? = null,
     val notice: String? = null,
+    /** The models scheduled work may run on: what tells two with one id apart by their connection. */
+    val models: List<SchedulingModel> = emptyList(),
 )
 
 class ScheduleViewModel(app: Application) : AndroidViewModel(app) {
@@ -397,6 +400,7 @@ class ScheduleViewModel(app: Application) : AndroidViewModel(app) {
                 val schedule = api.schedule(id)
                 val runs = runCatching { api.scheduleRuns(id) }.getOrNull()
                 _state.update { it.copy(schedule = schedule, runs = runs?.runs.orEmpty(), more = runs?.more == true, loading = false) }
+                runCatching { api.schedulingModels() }.onSuccess { m -> _state.update { it.copy(models = m.models) } }
             } catch (e: Exception) {
                 _state.update { it.copy(loading = false, error = getApplication<Application>().explain(e)) }
             }
@@ -563,7 +567,7 @@ private fun ScheduleBody(
                         // An Agentic schedule with no model of its own runs on the folder's usual one.
                         stringResource(
                             R.string.schedule_model,
-                            schedule.model?.takeIf { it.isNotBlank() }
+                            state.models.saidWithConnection(schedule.modelRef, schedule.model)
                                 ?: stringResource(if (schedule.agentic) R.string.schedule_folder_model else R.string.schedule_first_free_model),
                         ),
                         modeWords(schedule.mode),
@@ -628,7 +632,9 @@ private fun ScheduleBody(
                 )
             }
         }
-        items(state.runs, key = { it.id }) { run -> RunRow(run, schedule.runsOn, onOpen = { onOpenRun(run) }, onOpenReport = onOpenReport) }
+        items(state.runs, key = { it.id }) { run ->
+            RunRow(run, schedule.runsOn, onOpen = { onOpenRun(run) }, onOpenReport = onOpenReport, models = state.models)
+        }
         if (state.more) item { LaunchedEffect(state.runs.size) { onMore() } }
     }
 }
@@ -757,7 +763,7 @@ internal fun Header(text: String) {
  * whole row opens the run.
  */
 @Composable
-private fun RunRow(run: ScheduleRun, runsOn: RunsOn?, onOpen: () -> Unit, onOpenReport: (String) -> Unit = {}) {
+private fun RunRow(run: ScheduleRun, runsOn: RunsOn?, onOpen: () -> Unit, onOpenReport: (String) -> Unit = {}, models: List<SchedulingModel> = emptyList()) {
     val palette = LocalPalette.current
     Surface(
         onClick = onOpen,
@@ -777,7 +783,7 @@ private fun RunRow(run: ScheduleRun, runsOn: RunsOn?, onOpen: () -> Unit, onOpen
                     ran != null -> RanOnLine(ran)
                     runsOn != null -> ComputerName(runsOn, away = run.computerAway)
                 }
-                RunFacts(run, maxLines = 2)
+                RunFacts(run, maxLines = 2, models = models)
                 run.reportId?.let { report -> ReportLink(onClick = { onOpenReport(report) }) }
             }
         }
@@ -800,9 +806,10 @@ internal fun ReportLink(onClick: () -> Unit) {
 
 /** Under a run's time: the model and why, what it is doing or the trouble, then its note (or the result's first lines). */
 @Composable
-internal fun RunFacts(run: ScheduleRun, maxLines: Int = Int.MAX_VALUE, withPreview: Boolean = true) {
+internal fun RunFacts(run: ScheduleRun, maxLines: Int = Int.MAX_VALUE, withPreview: Boolean = true, models: List<SchedulingModel> = emptyList()) {
     val palette = LocalPalette.current
-    val name = run.model.label
+    // Which connection ran it, where the run says so and two models here share the id.
+    val name = models.saidWithConnection(run.model.ref, run.model.label)
     val from = run.model.switchedFrom
     val why = runModelWhy(run.model.reason)
     val model = when {
@@ -980,7 +987,7 @@ fun EditState.read(s: Schedule): EditState {
         readWhere = on?.let {
             WhereToRun.Computer(it.device, it.cwd.trim(), it.mode.ifBlank { "edit" }, it.approvalWaitMinutes?.takeIf { minutes -> minutes > 0 })
         },
-        readModel = s.model.orEmpty(),
+        readModel = s.modelKey.orEmpty(),
         readWatch = watch,
         // Its own computer is in the list also when it is not linked now, so it can stay chosen.
         devices = if (on == null || known) devices else devices + LinkedDevice(id = on.device, name = on.deviceName),
@@ -990,7 +997,8 @@ fun EditState.read(s: Schedule): EditState {
         agentMode = if (whereTouched || on == null) agentMode else on.mode.ifBlank { agentMode },
         wait = if (whereTouched || on == null) wait else on.approvalWaitMinutes?.toString().orEmpty(),
         // A Chat schedule's own model too: made Agentic, it is shown as the model it keeps.
-        model = if (whereTouched) model else s.model.orEmpty(),
+        // By its connection where the server says it: the form then ticks the right one of two with one id.
+        model = if (whereTouched) model else s.modelKey.orEmpty(),
         watchCommand = if (whereTouched) watchCommand else watch.command,
         watchTimeout = if (whereTouched) watchTimeout else watch.timeoutS?.toString().orEmpty(),
     )

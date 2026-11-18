@@ -715,7 +715,7 @@ class AssistController(
                 val question = detail.messages.lastOrNull { it.isUser }
                 val answer = detail.messages.lastOrNull { !it.isUser }
                 val turns = if (question != null) listOf(AssistTurn(question.text.orEmpty(), earlier = answer?.steps.orEmpty())) else emptyList()
-                _state.update { it.copy(chatId = last.chatId, turns = turns, modelId = detail.chat.model.ifBlank { null } ?: it.modelId, last = null) }
+                _state.update { it.copy(chatId = last.chatId, turns = turns, modelId = detail.chat.modelKey ?: it.modelId, last = null) }
             } catch (e: Exception) {
                 // A chat deleted since is simply not offered again.
                 if (e is ApiException && e.status == 404) {

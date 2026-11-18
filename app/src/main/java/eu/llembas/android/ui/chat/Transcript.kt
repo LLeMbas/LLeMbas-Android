@@ -84,6 +84,7 @@ import androidx.compose.ui.unit.sp
 import eu.llembas.android.R
 import eu.llembas.android.api.Attachment
 import eu.llembas.android.api.Message
+import eu.llembas.android.api.ModelInfo
 import eu.llembas.android.api.ShowCard
 import eu.llembas.android.api.Step
 import eu.llembas.android.api.ToolCall
@@ -206,6 +207,8 @@ fun AssistantMessage(
     onRegenerate: () -> Unit,
     onShow: ((ShowCard) -> Unit)?,
     modifier: Modifier = Modifier,
+    /** The models offered here: a reply by one of two that share an id says its connection. */
+    models: List<ModelInfo> = emptyList(),
 ) {
     val palette = LocalPalette.current
     val copy = LocalCopy.current
@@ -292,7 +295,7 @@ fun AssistantMessage(
                         )
                     }
                 }
-                footLine(message)?.let { line ->
+                footLine(message, models)?.let { line ->
                     Text(
                         line,
                         style = MaterialTheme.typography.labelSmall,
@@ -334,11 +337,12 @@ fun replyText(message: Message): String = pageProjection(
 private const val PAGE_UNTITLED = "Page"
 
 /** What a finished reply cost, in one quiet line: model, tokens, speed. Null when nothing was counted. */
-private fun footLine(message: Message): String? {
-    val m = message.metrics ?: return message.model
-    if (m.completionTokens == 0 && m.elapsedMs == 0L) return message.model
+internal fun footLine(message: Message, models: List<ModelInfo> = emptyList()): String? {
+    val model = models.replyModel(message.modelRef, message.model)
+    val m = message.metrics ?: return model
+    if (m.completionTokens == 0 && m.elapsedMs == 0L) return model
     return buildList {
-        message.model?.let { add(it) }
+        model?.let { add(it) }
         if (m.completionTokens > 0) add("${if (m.estimated) "~" else ""}${m.completionTokens} tok")
         if (m.tokPerSecond > 0) add("${"%.1f".format(m.tokPerSecond)} tok/s")
     }.joinToString(" · ").ifBlank { null }

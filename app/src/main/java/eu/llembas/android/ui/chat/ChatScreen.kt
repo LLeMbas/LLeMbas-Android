@@ -288,7 +288,7 @@ fun ChatContent(
                     title = {
                         ModelTitle(
                             model = info,
-                            fallback = state.modelId ?: stringResource(R.string.app_name),
+                            fallback = state.modelWord ?: stringResource(R.string.app_name),
                             // A report's conversation says which report: by what it was entered with, else by
                             // what the chat itself says (after the app was closed in between).
                             subtitle = if (report != null || chat?.report != null) {
@@ -423,6 +423,7 @@ fun ChatContent(
                                     canRegenerate = live == null && message == rows.lastOrNull(),
                                     onRegenerate = { actions.regenerate(message) },
                                     onShow = onShow,
+                                    models = state.models,
                                 )
                             }
                         }
@@ -565,7 +566,7 @@ private fun Greeting(
                     }
                     TextButton(onClick = onTune) { Text(where, textAlign = TextAlign.Center, color = palette.inkMuted) }
                 } else {
-                    ModelAvatar(state.modelInfo, state.modelId ?: "?", size = 64.dp)
+                    ModelAvatar(state.modelInfo, state.modelWord ?: "?", size = 64.dp)
                     Spacer(Modifier.height(20.dp))
                     Text(stringResource(R.string.empty_chat), style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
                 }

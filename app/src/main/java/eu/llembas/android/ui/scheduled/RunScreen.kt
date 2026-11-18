@@ -39,6 +39,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import eu.llembas.android.R
 import eu.llembas.android.api.ApiException
 import eu.llembas.android.api.RunResult
+import eu.llembas.android.api.SchedulingModel
 import eu.llembas.android.lembas
 import eu.llembas.android.ui.chat.LocalCopy
 import eu.llembas.android.ui.chat.RichMarkdown
@@ -49,7 +50,14 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-data class RunState(val title: String = "", val result: RunResult? = null, val loading: Boolean = false, val error: String? = null)
+data class RunState(
+    val title: String = "",
+    val result: RunResult? = null,
+    val loading: Boolean = false,
+    val error: String? = null,
+    /** The models scheduled work may run on, for naming the run's by its connection. */
+    val models: List<SchedulingModel> = emptyList(),
+)
 
 class RunViewModel(app: Application) : AndroidViewModel(app) {
     private val _state = MutableStateFlow(RunState())
@@ -64,6 +72,7 @@ class RunViewModel(app: Application) : AndroidViewModel(app) {
                 val result = api.scheduleRun(schedule, run)
                 val title = runCatching { api.schedule(schedule).title }.getOrDefault("")
                 _state.update { it.copy(result = result, title = title, loading = false) }
+                runCatching { api.schedulingModels() }.onSuccess { m -> _state.update { it.copy(models = m.models) } }
             } catch (e: Exception) {
                 _state.update { it.copy(loading = false, error = getApplication<Application>().explain(e)) }
             }
@@ -128,7 +137,7 @@ fun RunContent(state: RunState, onBack: () -> Unit = {}, onOpenChat: (String) ->
                                 modifier = Modifier.weight(1f),
                             )
                         }
-                        RunFacts(run, withPreview = false)
+                        RunFacts(run, withPreview = false, models = state.models)
                         // What the run filed for the person, when it filed anything.
                         run.reportId?.let { report -> ReportLink(onClick = { onOpenReport(report) }) }
                     }

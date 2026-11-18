@@ -175,6 +175,28 @@ fun List<ModelInfo>.named(name: String?): ModelInfo? {
     return firstOrNull { it.ref == name } ?: firstOrNull { it.id == name }
 }
 
+/**
+ * The model a chat, a reply or a schedule is on, in a list. The server says the id (`model`) and,
+ * where it knows it, which connection serves it (`model_ref`). With a [ref] the model is the one
+ * with that ref and no other: one that is not in the list is no model here, never "the first
+ * with that id" -- that would name the wrong connection. Without one (an older server, or a
+ * connection that is gone) the bare [id] is all there is.
+ */
+fun List<ModelInfo>.serving(ref: String?, id: String?): ModelInfo? = if (ref.isNullOrBlank()) named(id) else firstOrNull { it.ref == ref }
+
+/** What such a thing's model is kept and sent by: its [ref] where the server says one, else its [id]; null for neither. */
+fun modelKey(ref: String?, id: String?): String? = ref?.ifBlank { null } ?: id?.ifBlank { null }
+
+/**
+ * The quiet line under a reply: the model's [id] as before, and its connection only where the
+ * reply says which one ([ref]) and another model here shares the id. Null when there is no id.
+ */
+fun List<ModelInfo>.replyModel(ref: String?, id: String?): String? {
+    val said = id?.ifBlank { null } ?: return null
+    val model = firstOrNull { !ref.isNullOrBlank() && it.ref == ref } ?: return said
+    return twinTitle(said, model.connection, count { it.id == model.id } > 1)
+}
+
 /** A model's name in a list of [all]: with its connection where another model there shares its id. */
 fun ModelInfo.titleAmong(all: List<ModelInfo>): String = twinTitle(name.ifBlank { id }, connection, all.count { it.id == id } > 1)
 
@@ -352,6 +374,8 @@ data class Chat(
     val kind: String = "chat",
     val title: String = "",
     val model: String = "",
+    /** Which connection serves [model] (`provider/model`); null from an older server, or when that connection is gone. */
+    @SerialName("model_ref") val modelRef: String? = null,
     @SerialName("folder_id") val folderId: String? = null,
     val pinned: Boolean = false,
     val archived: Boolean = false,
@@ -378,6 +402,9 @@ data class Chat(
     val subagents: SubagentsOffer? = null,
 ) {
     val isAgent: Boolean get() = kind == "agent"
+
+    /** The chat's model as it is looked up and sent: its ref, else its id. */
+    val modelKey: String? get() = modelKey(modelRef, model)
 
     fun allows(control: String): Boolean = controls?.contains(control) ?: true
 }
@@ -624,6 +651,8 @@ data class Message(
     val machine: Boolean = false,
     val origin: String = "",
     val model: String? = null,
+    /** Which connection wrote this reply (see [Chat.modelRef]). */
+    @SerialName("model_ref") val modelRef: String? = null,
     val attachments: List<Attachment> = emptyList(),
     val text: String? = null,
     val steps: List<Step> = emptyList(),

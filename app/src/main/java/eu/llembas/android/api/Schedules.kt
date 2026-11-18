@@ -23,6 +23,8 @@ data class RunModel(
     val name: String? = null,
     val reason: String? = null,
     @SerialName("switched_from") val switchedFrom: String? = null,
+    /** Which connection served the run (`provider/model`); null from an older server. */
+    val ref: String? = null,
 ) {
     /** What to call it: its name, else its id. */
     val label: String? get() = name ?: id
@@ -115,6 +117,8 @@ data class Schedule(
     @SerialName("catch_up") val catchUp: String = "",
     @SerialName("grace_minutes") val graceMinutes: Int? = null,
     val model: String? = null,
+    /** Which connection serves [model] (`provider/model`); null from an older server, or with no model of its own. */
+    @SerialName("model_ref") val modelRef: String? = null,
     val effort: String? = null,
     val agents: Int? = null,
     val tools: List<String> = emptyList(),
@@ -132,6 +136,9 @@ data class Schedule(
     @SerialName("created_at") val createdAt: String? = null,
 ) {
     val paused: Boolean get() = !enabled
+
+    /** The schedule's model as a form holds and sends it: its ref, else its id. */
+    val modelKey: String? get() = modelKey(modelRef, model)
 }
 
 @Serializable
@@ -208,6 +215,17 @@ data class SchedulingModel(
 fun List<SchedulingModel>.named(name: String?): SchedulingModel? {
     if (name.isNullOrBlank()) return null
     return firstOrNull { it.ref == name } ?: firstOrNull { it.id == name }
+}
+
+/**
+ * What a schedule's or a run's model is called among [this] list: [said] (the id or the name
+ * the server gave), and its connection where the server says which one ([ref]) and another
+ * model in the list shares the id. A ref the list does not have leaves [said] as it is.
+ */
+fun List<SchedulingModel>.saidWithConnection(ref: String?, said: String?): String? {
+    val word = said?.ifBlank { null } ?: return null
+    val model = firstOrNull { !ref.isNullOrBlank() && it.ref == ref } ?: return word
+    return twinTitle(word, model.connection, count { it.id == model.id } > 1)
 }
 
 /** A scheduling model's name in a list of [all]: with its connection where another there shares its id. */

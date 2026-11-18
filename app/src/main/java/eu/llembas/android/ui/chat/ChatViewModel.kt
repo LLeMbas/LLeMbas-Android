@@ -35,6 +35,7 @@ import eu.llembas.android.api.StreamClient
 import eu.llembas.android.api.SubagentTree
 import eu.llembas.android.api.Turn
 import eu.llembas.android.api.named
+import eu.llembas.android.api.serving
 import eu.llembas.android.lembas
 import eu.llembas.android.ui.explain
 import kotlinx.coroutines.CancellationException
@@ -131,12 +132,14 @@ val ChatState.modelId: String?
     get() = chatModel ?: draft.model ?: folderModel ?: models.firstOrNull { it.default }?.key ?: models.firstOrNull()?.key
 
 /**
- * An open chat's model. The chat says its model's id, which two connections may share; the one
- * picked here ([ChatState.picked], a ref) says which of them, for as long as the chat is still
- * on a model of that id.
+ * An open chat's model: the connection the chat itself names (`model_ref`), where the server
+ * says it. From an older server the chat says only its model's id, which two connections may
+ * share; the one picked here ([ChatState.picked], a ref) then says which of them, for as long
+ * as the chat is still on a model of that id.
  */
 val ChatState.chatModel: String?
     get() {
+        chat?.modelRef?.ifBlank { null }?.let { return it }
         val served = chat?.model?.ifBlank { null } ?: return null
         return picked?.takeIf { models.named(it)?.id == served } ?: served
     }
@@ -145,7 +148,16 @@ val ChatState.chatModel: String?
 val ChatState.folderModel: String?
     get() = start?.takeIf { chat == null }?.let { models.named(it.key) ?: models.named(it.model) }?.key
 
-val ChatState.modelInfo: ModelInfo? get() = models.named(modelId)
+/** The model in force, among the models offered: a chat that names its connection is on that one or on none of them. */
+val ChatState.modelInfo: ModelInfo?
+    get() {
+        val ref = chat?.modelRef?.ifBlank { null } ?: return models.named(modelId)
+        return models.serving(ref, chat?.model)
+    }
+
+/** What the model in force is called where the list does not have it: the chat's own id for it, not its ref. */
+val ChatState.modelWord: String?
+    get() = chat?.takeIf { !it.modelRef.isNullOrBlank() }?.model?.ifBlank { null } ?: modelId
 
 /**
  * Which chat a dictation or a reply read aloud is for: this chat once it exists, else the model
