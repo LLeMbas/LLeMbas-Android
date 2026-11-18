@@ -779,7 +779,7 @@ object Fakes {
     )
 
     /** The form with "When…" chosen and the person's own words in it. */
-    val editingNotify: EditState get() = editing.copy(reports = true, notify = "when", notifyWhen = "a tender for storage opens or closes")
+    val editingNotify: EditState get() = editing.copy(reports = true, notify = "when", notifyWhen = "a tender for storage opens or closes", loaded = true)
 
     val editing = EditState(
         words = "Every weekday at 7:30, sum up the news about renewable energy in five points",

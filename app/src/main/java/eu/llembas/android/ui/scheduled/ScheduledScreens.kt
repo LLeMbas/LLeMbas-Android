@@ -72,6 +72,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -1229,7 +1230,8 @@ private fun TypeChoice(state: EditState, onWhere: ((EditState) -> EditState) -> 
                     modifier = Modifier.weight(1f),
                 )
                 // The schedule is still being read: its type is not known yet, and not to be chosen.
-                if (!ready && !state.loadFailed) CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(16.dp))
+                // (Not in a preview or a screenshot: an animation that never ends never lets the picture be taken.)
+                if (!ready && !state.loadFailed && !LocalInspectionMode.current) CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(16.dp))
             }
             ChoiceRow(
                 selected = ready && !state.agentic,

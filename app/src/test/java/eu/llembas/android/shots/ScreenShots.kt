@@ -281,6 +281,8 @@ class ScreenShots {
         shoot("43-schedule-edit-agentic", Phone.Scroll) { ScheduleEditContent(Fakes.editingAgentic, editing = false) }
         shoot("43-schedule-edit-agentic", Phone.SmallScroll, fontScale = 1.5f) { ScheduleEditContent(Fakes.editingAgentic, editing = false) }
         shoot("43-schedule-edit-no-computer", Phone.Scroll) { ScheduleEditContent(Fakes.editingNoComputer, editing = false) }
+        // A schedule being edited that has not been read yet: the type cannot be chosen.
+        shoot("43-schedule-edit-not-read", Phone.Scroll) { ScheduleEditContent(Fakes.editing, editing = true) }
         // A run that says where it ran and that its model was the folder's usual one.
         shoot("43-schedule-agentic-run", Phone.Scroll) { ScheduleContent(Fakes.scheduleAgenticRun) }
         shoot("43-schedule-agentic-run", Phone.SmallScroll, fontScale = 1.5f) { ScheduleContent(Fakes.scheduleAgenticRun) }
