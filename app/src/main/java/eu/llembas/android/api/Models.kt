@@ -117,6 +117,8 @@ data class ModelInfo(
     val default: Boolean = false,
     /** Whether a new chat on this model is offered subagents (server 2.0.0-beta.7); null from an older one. */
     val subagents: SubagentsOffer? = null,
+    /** On a connection whose terms allow interactive use only: never a schedule's model. */
+    @SerialName("interactive_only") val interactiveOnly: Boolean = false,
 ) {
     /**
      * The levels, for a server that says them; an older one said only `efforts`, offered after
@@ -159,6 +161,8 @@ data class ModelList(
     @SerialName("subagents_cap") val subagentsCap: Int? = null,
     /** With `kind=agent` (spec 3.4.0 §14): whether a new agent chat may have subagents. */
     @SerialName("agent_subagents") val agentSubagents: AgentSubagents? = null,
+    /** With `kind=agent`, a device and a directory (spec 3.9.0): the model a new agent chat there starts on. */
+    val start: StartModel? = null,
 )
 
 /**
@@ -243,6 +247,14 @@ data class Mention(val kind: String = "", val id: String = "", val path: String 
 @Serializable
 data class Mentions(val items: List<Mention> = emptyList())
 
+/** A file or directory on a linked device, by its [path] from the chat's directory ([kind] `file` or `dir`). */
+@Serializable
+data class DeviceFile(val path: String = "", val kind: String = "", val name: String = "")
+
+/** What `@` offers in an agent chat (`GET /devices/{id}/files`): the device's files; one that cannot answer offers none and may say why. */
+@Serializable
+data class DeviceFiles(val files: List<DeviceFile> = emptyList(), val error: String = "", val device: String = "")
+
 @Serializable
 data class ServerChannel(val version: String = "", val channel: String = "")
 
@@ -288,7 +300,21 @@ data class FolderList(val folders: List<Folder> = emptyList())
 data class Device(@SerialName("token_id") val tokenId: String? = null, val directory: String = "")
 
 @Serializable
-data class LinkedDevice(val id: String, val name: String = "", val host: String = "", val platform: String = "")
+data class LinkedDevice(
+    val id: String,
+    val name: String = "",
+    val host: String = "",
+    val platform: String = "",
+    /** Whether the device accepts scheduled work: only then may an Agentic schedule belong to it. */
+    val scheduled: Boolean = false,
+    /** The widest mode the device lets a scheduled run have; empty where it accepts none. */
+    @SerialName("max_mode") val maxMode: String = "",
+    /** Whether the device remembers the model last used in a directory (spec 3.9.0). */
+    @SerialName("directory_model") val directoryModel: Boolean = false,
+) {
+    /** What to call it: its name, else its host. */
+    val label: String get() = name.ifBlank { host.ifBlank { id } }
+}
 
 @Serializable
 data class DeviceList(val devices: List<LinkedDevice> = emptyList())

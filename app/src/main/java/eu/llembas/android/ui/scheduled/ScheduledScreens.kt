@@ -8,6 +8,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -24,6 +26,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -31,6 +34,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Computer
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Schedule
@@ -41,6 +45,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -68,6 +73,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -79,16 +85,23 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import eu.llembas.android.R
 import eu.llembas.android.api.ApiClient
 import eu.llembas.android.api.ApiException
+import eu.llembas.android.api.DeviceDirectory
 import eu.llembas.android.api.LembasJson
+import eu.llembas.android.api.LinkedDevice
+import eu.llembas.android.api.RanOn
 import eu.llembas.android.api.RunsOn
 import eu.llembas.android.api.Schedule
 import eu.llembas.android.api.ScheduleCompiled
 import eu.llembas.android.api.ScheduleRun
 import eu.llembas.android.api.SchedulesFrame
+import eu.llembas.android.api.SchedulingModel
 import eu.llembas.android.api.StreamClient
+import eu.llembas.android.api.WhereToRun
+import eu.llembas.android.api.agentic
 import eu.llembas.android.api.computerAway
 import eu.llembas.android.api.notifyChoice
 import eu.llembas.android.lembas
+import eu.llembas.android.ui.DirectoryPicker
 import eu.llembas.android.ui.explain
 import eu.llembas.android.ui.progressLineOf
 import eu.llembas.android.ui.theme.LocalPalette
@@ -541,7 +554,14 @@ private fun ScheduleBody(
                     }
                     Text(schedule.instruction, style = MaterialTheme.typography.bodyMedium)
                     val facts = listOfNotNull(
-                        schedule.model?.takeIf { it.isNotBlank() }?.let { stringResource(R.string.schedule_model, it) },
+                        stringResource(R.string.schedule_type) + ": " +
+                            stringResource(if (schedule.agentic) R.string.schedule_agentic else R.string.schedule_chat),
+                        // An Agentic schedule with no model of its own runs on the folder's usual one.
+                        stringResource(
+                            R.string.schedule_model,
+                            schedule.model?.takeIf { it.isNotBlank() }
+                                ?: stringResource(if (schedule.agentic) R.string.schedule_folder_model else R.string.schedule_first_free_model),
+                        ),
                         modeWords(schedule.mode),
                         notifyWords(schedule),
                     )
@@ -663,6 +683,23 @@ private fun ComputerLine(on: RunsOn, away: Boolean) {
     }
 }
 
+/** A run's own line for where it ran: the computer and the folder there. The folder gives first. */
+@Composable
+private fun RanOnLine(on: RanOn) {
+    val palette = LocalPalette.current
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(Icons.Filled.Computer, contentDescription = stringResource(R.string.schedule_computer), tint = palette.inkFaint, modifier = Modifier.size(14.dp))
+        Spacer(Modifier.width(4.dp))
+        Text(
+            listOf(on.deviceName.ifBlank { stringResource(R.string.schedule_computer_gone) }, on.cwd).filter { it.isNotBlank() }.joinToString(" · "),
+            style = MaterialTheme.typography.bodySmall,
+            color = palette.inkMuted,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
 /** A run row's line: the computer's name, and "not linked now" when the run found it away. */
 @Composable
 private fun ComputerName(on: RunsOn, away: Boolean) {
@@ -729,8 +766,13 @@ private fun RunRow(run: ScheduleRun, runsOn: RunsOn?, onOpen: () -> Unit, onOpen
             Box(Modifier.width(112.dp)) { StatusChip(run.status, run.missed, run.waitingFor) }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(ScheduleLogic.moment(run.startedAt ?: run.dueAt) ?: "—", style = MaterialTheme.typography.bodyMedium)
-                // Which computer the run was for, and whether it was away.
-                runsOn?.let { on -> ComputerName(on, away = run.computerAway) }
+                // Where the run ran (its own word, spec 3.9.0), else which computer it was for --
+                // and whether that was away.
+                val ran = run.ranOn?.takeIf { it.device.isNotBlank() }
+                when {
+                    ran != null -> RanOnLine(ran)
+                    runsOn != null -> ComputerName(runsOn, away = run.computerAway)
+                }
                 RunFacts(run, maxLines = 2)
                 run.reportId?.let { report -> ReportLink(onClick = { onOpenReport(report) }) }
             }
@@ -758,9 +800,11 @@ internal fun RunFacts(run: ScheduleRun, maxLines: Int = Int.MAX_VALUE, withPrevi
     val palette = LocalPalette.current
     val name = run.model.label
     val from = run.model.switchedFrom
+    val why = runModelWhy(run.model.reason)
     val model = when {
         name == null -> null
         run.model.reason == "switched" && from != null -> stringResource(R.string.run_model_instead, name, from)
+        why != null -> name + " · " + stringResource(why)
         else -> name
     }
     model?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = palette.inkMuted, maxLines = 1, overflow = TextOverflow.Ellipsis) }
@@ -788,6 +832,18 @@ internal fun RunFacts(run: ScheduleRun, maxLines: Int = Int.MAX_VALUE, withPrevi
     }
 }
 
+/**
+ * How a run's model was chosen, where that is worth a word (spec 3.9.0): the folder's usual
+ * one, the person's default where the folder had none, or a continued conversation's own. A
+ * pinned model needs none, and a switched one has its own sentence.
+ */
+fun runModelWhy(reason: String?): Int? = when (reason) {
+    "directory" -> R.string.run_model_directory
+    "default" -> R.string.run_model_default
+    "session" -> R.string.run_model_session
+    else -> null
+}
+
 // --- Create and edit ------------------------------------------------------------------------
 
 data class EditState(
@@ -809,7 +865,76 @@ data class EditState(
     val loadFailed: Boolean = false,
     /** The person chose a "notify when" themselves. */
     val notifyTouched: Boolean = false,
+    /** The type (spec 3.9.0): Agentic runs on [device], in [cwd]; Chat on the server. */
+    val agentic: Boolean = false,
+    /** The linked computers, and -- for a schedule being edited -- its own, linked now or not. */
+    val devices: List<LinkedDevice> = emptyList(),
+    val device: String = "",
+    val cwd: String = "",
+    /** The agent's mode on the computer: `manual`, `edit` or `auto`. */
+    val agentMode: String = "edit",
+    /** How long an approval waits, in minutes, as typed; empty: the instance's own. */
+    val wait: String = "",
+    /** An Agentic schedule's model; empty: the folder's usual model. */
+    val model: String = "",
+    /** The models scheduled work may run on (`GET /schedules/models`): never an interactive-only one. */
+    val models: List<SchedulingModel> = emptyList(),
+    /** The person changed the type or one of its fields themselves. */
+    val whereTouched: Boolean = false,
+    /** What the schedule being edited was when it was read: Agentic or Chat. */
+    val wasAgentic: Boolean = false,
 )
+
+/** Agentic is offered only while one of the person's computers accepts scheduled work. */
+val EditState.agenticOffered: Boolean get() = devices.any { it.scheduled }
+
+/** The computer chosen, when it is one of those listed. */
+val EditState.chosenDevice: LinkedDevice? get() = devices.firstOrNull { it.id == device }
+
+/** An approval's wait as a number of minutes, or null for the instance's own (empty, or not a number). */
+val EditState.waitMinutes: Int? get() = wait.trim().toIntOrNull()?.takeIf { it > 0 }
+
+/** What an Agentic schedule still lacks before it can be saved: a computer and a full path. */
+val EditState.whereComplete: Boolean get() = !agentic || (device.isNotBlank() && cwd.isNotBlank())
+
+/**
+ * Where a save says the schedule runs -- its type. A new schedule says a computer when it is
+ * Agentic and nothing otherwise (the server's own default is Chat). An edit says something only
+ * for what the form knows: nothing where the schedule could not be read, or was read and left
+ * alone as a Chat schedule; the computer for an Agentic one; and "the server" only when an
+ * Agentic schedule was made a Chat one.
+ */
+fun whereToSend(state: EditState, editing: Boolean): WhereToRun = when {
+    editing && !state.loaded -> WhereToRun.Leave
+    state.agentic -> WhereToRun.Computer(state.device, state.cwd.trim(), state.agentMode, state.waitMinutes, state.model)
+    editing && state.wasAgentic -> WhereToRun.Server
+    else -> WhereToRun.Leave
+}
+
+/** A schedule as the form holds where it runs; what the person changed meanwhile stays changed. */
+fun EditState.read(s: Schedule): EditState {
+    val on = s.runsOn
+    val known = devices.any { it.id == on?.device }
+    return copy(
+        wasAgentic = on != null,
+        // Its own computer is in the list also when it is not linked now, so it can stay chosen.
+        devices = if (on == null || known) devices else devices + LinkedDevice(id = on.device, name = on.deviceName),
+        agentic = if (whereTouched) agentic else on != null,
+        device = if (whereTouched || on == null) device else on.device,
+        cwd = if (whereTouched || on == null) cwd else on.cwd,
+        agentMode = if (whereTouched || on == null) agentMode else on.mode.ifBlank { agentMode },
+        wait = if (whereTouched || on == null) wait else on.approvalWaitMinutes?.toString().orEmpty(),
+        model = if (whereTouched || on == null) model else s.model.orEmpty(),
+    )
+}
+
+/** The linked computers as the form lists them, keeping a schedule's own that is not among them. */
+fun EditState.listed(linked: List<LinkedDevice>): EditState {
+    val own = devices.filter { mine -> linked.none { it.id == mine.id } && mine.id == device }
+    val all = linked + own
+    // A new Agentic schedule starts on the first computer that accepts scheduled work.
+    return copy(devices = all, device = device.ifBlank { all.firstOrNull { it.scheduled }?.id.orEmpty() })
+}
 
 /**
  * The `notify` a save sends, or null for none: only to an instance with Reports, and when
@@ -841,11 +966,19 @@ class ScheduleEditViewModel(app: Application) : AndroidViewModel(app) {
             val has = runCatching { getApplication<Application>().api().reports(unread = true) }.isSuccess
             _state.update { it.copy(reports = has) }
         }
+        // The type's choices: the computers (Agentic is offered while one accepts scheduled
+        // work) and the models a schedule may run on. Either may be missing on an older server.
+        viewModelScope.launch {
+            runCatching { getApplication<Application>().api().devices() }.onSuccess { linked -> _state.update { it.listed(linked) } }
+        }
+        viewModelScope.launch {
+            runCatching { getApplication<Application>().api().schedulingModels() }.onSuccess { m -> _state.update { it.copy(models = m.models) } }
+        }
         if (id == null) return
         viewModelScope.launch {
             runCatching { getApplication<Application>().api().schedule(id) }.onSuccess { s ->
                 _state.update {
-                    it.copy(
+                    it.read(s).copy(
                         words = s.request.ifBlank { s.instruction },
                         // What the person chose while it was read stays chosen.
                         notify = if (it.notifyTouched) it.notify else notifyChoice(s.notify),
@@ -866,6 +999,15 @@ class ScheduleEditViewModel(app: Application) : AndroidViewModel(app) {
     fun notify(value: String) = _state.update { it.copy(notify = notifyChoice(value), notifyTouched = true) }
 
     fun notifyWhen(text: String) = _state.update { it.copy(notifyWhen = text, notifyTouched = true) }
+
+    /** A change to the type or one of its fields: the person's, so a schedule read later does not undo it. */
+    fun where(change: (EditState) -> EditState) = _state.update { change(it).copy(whereTouched = true, error = null) }
+
+    /** The chosen computer, asked for a directory (`""`: its places), for the folder picker. */
+    suspend fun directories(path: String): DeviceDirectory {
+        val device = _state.value.device.ifBlank { return DeviceDirectory(code = "device_not_linked") }
+        return getApplication<Application>().api().deviceDirectories(device, path)
+    }
 
     /** The server reads the words: the title, the instruction, the rule and the next runs. */
     fun preview() {
@@ -896,6 +1038,7 @@ class ScheduleEditViewModel(app: Application) : AndroidViewModel(app) {
                     editing,
                     notify = notifyToSend(now, editing = editing != null),
                     notifyWhen = now.notifyWhen,
+                    where = whereToSend(now, editing = editing != null),
                 )
                 then(saved.id)
             } catch (e: Exception) {
@@ -923,6 +1066,8 @@ fun ScheduleEditScreen(
         onSave = { model.save(onSaved) },
         onNotify = model::notify,
         onNotifyWhen = model::notifyWhen,
+        onWhere = model::where,
+        directories = model::directories,
     )
 }
 
@@ -942,6 +1087,8 @@ fun ScheduleEditContent(
     onSave: () -> Unit = {},
     onNotify: (String) -> Unit = {},
     onNotifyWhen: (String) -> Unit = {},
+    onWhere: ((EditState) -> EditState) -> Unit = {},
+    directories: suspend (String) -> DeviceDirectory = { DeviceDirectory() },
 ) {
     val palette = LocalPalette.current
     Scaffold(
@@ -951,7 +1098,7 @@ fun ScheduleEditContent(
             Box(Modifier.background(palette.bg).navigationBarsPadding().imePadding().padding(16.dp)) {
                 Button(
                     onClick = onSave,
-                    enabled = state.compiled?.savable == true && !state.saving && !state.loadFailed,
+                    enabled = state.compiled?.savable == true && !state.saving && !state.loadFailed && state.whereComplete,
                     modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
                 ) { Text(stringResource(R.string.save)) }
             }
@@ -961,6 +1108,9 @@ fun ScheduleEditContent(
             Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            // The type comes first: it decides where the task runs and what else the form asks.
+            TypeChoice(state, onWhere)
+            if (state.agentic) OnComputer(state, onWhere, directories)
             Text(stringResource(R.string.schedule_words_hint), style = MaterialTheme.typography.bodyMedium, color = palette.inkMuted)
             OutlinedTextField(
                 value = state.words,
@@ -988,6 +1138,198 @@ fun ScheduleEditContent(
             Spacer(Modifier.height(24.dp))
         }
     }
+}
+
+/**
+ * The type (spec 3.9.0): Chat runs on the server, Agentic on one of the person's computers, each
+ * with one line saying what that means. Agentic cannot be chosen while no computer accepts
+ * scheduled work, and says so; one that is Agentic already stays shown as it is.
+ */
+@Composable
+private fun TypeChoice(state: EditState, onWhere: ((EditState) -> EditState) -> Unit) {
+    val palette = LocalPalette.current
+    val offered = state.agenticOffered || state.agentic
+    Surface(shape = RoundedCornerShape(20.dp), color = palette.surfaceRaised, contentColor = palette.ink, modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(vertical = 12.dp)) {
+            Text(
+                stringResource(R.string.schedule_type),
+                style = MaterialTheme.typography.labelLarge,
+                color = palette.accent,
+                modifier = Modifier.padding(horizontal = 16.dp),
+            )
+            ChoiceRow(
+                selected = !state.agentic,
+                title = stringResource(R.string.schedule_chat),
+                line = stringResource(R.string.schedule_chat_line),
+                onClick = { onWhere { it.copy(agentic = false) } },
+            )
+            ChoiceRow(
+                selected = state.agentic,
+                enabled = offered,
+                title = stringResource(R.string.schedule_agentic),
+                line = stringResource(if (offered) R.string.schedule_agentic_line else R.string.schedule_agentic_unavailable),
+                onClick = { onWhere { it.copy(agentic = true) } },
+            )
+        }
+    }
+}
+
+/** One choice of a few: the radio button keeps its size, the words give. The whole row is the target. */
+@Composable
+private fun ChoiceRow(selected: Boolean, title: String, line: String?, onClick: () -> Unit, enabled: Boolean = true) {
+    val palette = LocalPalette.current
+    Row(
+        Modifier.fillMaxWidth().clickable(
+            enabled = enabled,
+            onClick = onClick,
+        ).heightIn(min = 56.dp).padding(start = 4.dp, end = 16.dp, top = 4.dp, bottom = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        RadioButton(selected = selected, onClick = onClick, enabled = enabled)
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.bodyLarge, color = if (enabled) palette.ink else palette.inkFaint)
+            line?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = palette.inkMuted) }
+        }
+    }
+}
+
+/**
+ * An Agentic schedule's own fields: the computer, the folder there (the picker, or a typed
+ * path), the mode, how long an approval waits, and the model -- the folder's usual one unless
+ * another is chosen.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun OnComputer(state: EditState, onWhere: ((EditState) -> EditState) -> Unit, directories: suspend (String) -> DeviceDirectory) {
+    val palette = LocalPalette.current
+    var browsing by remember { mutableStateOf(false) }
+    var choosingModel by remember { mutableStateOf(false) }
+    Surface(shape = RoundedCornerShape(20.dp), color = palette.surfaceRaised, contentColor = palette.ink, modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(vertical = 12.dp)) {
+            FieldLabel(stringResource(R.string.schedule_computer))
+            state.devices.forEach { d ->
+                // A computer that does not accept scheduled work cannot be chosen; the one the
+                // schedule already has stays shown, whatever it says now.
+                val mine = d.id == state.device
+                ChoiceRow(
+                    selected = mine,
+                    enabled = d.scheduled || mine,
+                    title = d.label,
+                    line = if (d.scheduled) null else stringResource(R.string.schedule_computer_refuses),
+                    onClick = { onWhere { it.copy(device = d.id) } },
+                )
+            }
+            Text(
+                stringResource(R.string.schedule_computer_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = palette.inkMuted,
+                modifier = Modifier.padding(horizontal = 16.dp),
+            )
+
+            FieldLabel(stringResource(R.string.schedule_folder))
+            Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+                OutlinedTextField(
+                    value = state.cwd,
+                    onValueChange = { text -> onWhere { it.copy(cwd = text) } },
+                    singleLine = true,
+                    placeholder = { Text(stringResource(R.string.directory_path)) },
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier.weight(1f),
+                )
+                Spacer(Modifier.width(8.dp))
+                IconButton(onClick = { browsing = true }, enabled = state.device.isNotBlank()) {
+                    Icon(Icons.Filled.Folder, contentDescription = stringResource(R.string.directory_browse), tint = palette.accent)
+                }
+            }
+
+            FieldLabel(stringResource(R.string.schedule_agent_mode))
+            FlowRow(Modifier.padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf("manual" to R.string.mode_manual, "edit" to R.string.mode_edit, "auto" to R.string.mode_auto).forEach { (value, name) ->
+                    FilterChip(selected = state.agentMode == value, onClick = {
+                        onWhere { it.copy(agentMode = value) }
+                    }, label = { Text(stringResource(name)) })
+                }
+            }
+            Text(
+                stringResource(R.string.schedule_agent_mode_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = palette.inkMuted,
+                modifier = Modifier.padding(horizontal = 16.dp),
+            )
+
+            FieldLabel(stringResource(R.string.schedule_approval_wait))
+            OutlinedTextField(
+                value = state.wait,
+                onValueChange = { text -> onWhere { it.copy(wait = text.filter(Char::isDigit).take(4)) } },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                supportingText = { Text(stringResource(R.string.schedule_approval_wait_hint)) },
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            )
+
+            FieldLabel(stringResource(R.string.model))
+            Row(
+                Modifier.fillMaxWidth().clickable { choosingModel = true }.heightIn(min = 56.dp).padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        state.models.firstOrNull { it.id == state.model }?.let { it.name.ifBlank { it.id } }
+                            ?: state.model.ifBlank { stringResource(R.string.schedule_folder_model) },
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+                    Text(stringResource(R.string.schedule_folder_model_hint), style = MaterialTheme.typography.bodySmall, color = palette.inkMuted)
+                }
+                Spacer(Modifier.width(12.dp))
+                Icon(Icons.Filled.Tune, contentDescription = null, tint = palette.inkMuted)
+            }
+        }
+    }
+    if (browsing) {
+        DirectoryPicker(
+            title = state.chosenDevice?.label ?: stringResource(R.string.schedule_folder),
+            initial = state.cwd,
+            load = directories,
+            onPick = { path ->
+                onWhere { it.copy(cwd = path) }
+                browsing = false
+            },
+            onDismiss = { browsing = false },
+        )
+    }
+    if (choosingModel) {
+        AlertDialog(
+            onDismissRequest = { choosingModel = false },
+            title = { Text(stringResource(R.string.model)) },
+            text = {
+                Column(Modifier.verticalScroll(rememberScrollState())) {
+                    val pick: (String) -> Unit = { id ->
+                        onWhere { it.copy(model = id) }
+                        choosingModel = false
+                    }
+                    ChoiceRow(selected = state.model.isBlank(), title = stringResource(R.string.schedule_folder_model), line = null, onClick = { pick("") })
+                    // The schedule's own model stays offered where the instance no longer lists it: the server says why on Save.
+                    val own = state.model.takeIf { m -> m.isNotBlank() && state.models.none { it.id == m } }
+                    own?.let { ChoiceRow(selected = true, title = it, line = null, onClick = { pick(it) }) }
+                    state.models.forEach { m ->
+                        ChoiceRow(selected = state.model == m.id, title = m.name.ifBlank { m.id }, line = null, onClick = { pick(m.id) })
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { choosingModel = false }) { Text(stringResource(R.string.cancel)) } },
+        )
+    }
+}
+
+@Composable
+private fun FieldLabel(text: String) {
+    Text(
+        text,
+        style = MaterialTheme.typography.labelLarge,
+        color = LocalPalette.current.accent,
+        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 4.dp),
+    )
 }
 
 /**

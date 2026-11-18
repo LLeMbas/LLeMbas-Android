@@ -35,6 +35,8 @@ import eu.llembas.android.assist.AssistUiState
 import eu.llembas.android.share.ShareActions
 import eu.llembas.android.share.ShareSheetContent
 import eu.llembas.android.share.ShareState
+import eu.llembas.android.ui.DirectoryPickerContent
+import eu.llembas.android.ui.PickerActions
 import eu.llembas.android.ui.chat.ActivityActions
 import eu.llembas.android.ui.chat.ActivityContent
 import eu.llembas.android.ui.chat.CardSheet
@@ -270,6 +272,26 @@ class ScreenShots {
         // "Notify when": the three choices, and "When…" with the person's words.
         shoot("11-schedule-edit-notify", Phone.Scroll) { ScheduleEditContent(Fakes.editingNotify, editing = true) }
         shoot("11-schedule-edit-notify", Phone.SmallScroll, fontScale = 1.5f) { ScheduleEditContent(Fakes.editingNotify, editing = true) }
+    }
+
+    @Test
+    fun scheduleTypes() {
+        // Agentic: the computer, the folder, the mode, the wait and the model -- and the form
+        // where no computer accepts scheduled work.
+        shoot("43-schedule-edit-agentic", Phone.Scroll) { ScheduleEditContent(Fakes.editingAgentic, editing = false) }
+        shoot("43-schedule-edit-agentic", Phone.SmallScroll, fontScale = 1.5f) { ScheduleEditContent(Fakes.editingAgentic, editing = false) }
+        shoot("43-schedule-edit-no-computer", Phone.Scroll) { ScheduleEditContent(Fakes.editingNoComputer, editing = false) }
+        // A run that says where it ran and that its model was the folder's usual one.
+        shoot("43-schedule-agentic-run", Phone.Scroll) { ScheduleContent(Fakes.scheduleAgenticRun) }
+        shoot("43-schedule-agentic-run", Phone.SmallScroll, fontScale = 1.5f) { ScheduleContent(Fakes.scheduleAgenticRun) }
+    }
+
+    @Test
+    fun directoryPicker() {
+        val none = object : PickerActions {}
+        shoot("44-directory-picker") { DirectoryPickerContent("Workstation", Fakes.picker, none) }
+        shoot("44-directory-picker", Phone.Small, fontScale = 1.5f) { DirectoryPickerContent("Workstation", Fakes.picker, none) }
+        shoot("44-directory-picker-no-listing") { DirectoryPickerContent("Workstation", Fakes.pickerNoListing, none) }
     }
 
     @Test

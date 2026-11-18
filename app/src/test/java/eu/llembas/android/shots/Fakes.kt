@@ -9,6 +9,7 @@ import eu.llembas.android.api.Attachment
 import eu.llembas.android.api.Chat
 import eu.llembas.android.api.ContextPart
 import eu.llembas.android.api.DataGroup
+import eu.llembas.android.api.DeviceDirectory
 import eu.llembas.android.api.Folder
 import eu.llembas.android.api.GeneratedImage
 import eu.llembas.android.api.LembasJson
@@ -48,6 +49,7 @@ import eu.llembas.android.auth.Instance
 import eu.llembas.android.auth.Prefs
 import eu.llembas.android.share.ShareState
 import eu.llembas.android.share.SharedFile
+import eu.llembas.android.ui.PickerState
 import eu.llembas.android.ui.chat.ChatState
 import eu.llembas.android.ui.chat.Draft
 import eu.llembas.android.ui.home.ChatsState
@@ -740,6 +742,40 @@ object Fakes {
             instance = listOf("gpt-oss", "qwen", "gemma"),
             mine = listOf("gpt-oss", "qwen"),
         ),
+    )
+
+    /** The form for an Agentic schedule: a computer that takes scheduled work and one that does not, a folder, a mode. */
+    val editingAgentic: EditState get() = editing.copy(
+        agentic = true,
+        devices = listOf(
+            LinkedDevice(id = "d1", name = "Workstation", host = "workstation", scheduled = true),
+            LinkedDevice(id = "d2", name = "Laptop", host = "laptop"),
+        ),
+        device = "d1",
+        cwd = "/home/user/src/garden",
+        agentMode = "edit",
+        wait = "30",
+    )
+
+    /** The form where no computer accepts scheduled work: Agentic says why it cannot be chosen. */
+    val editingNoComputer: EditState get() = editing.copy(devices = listOf(LinkedDevice(id = "d2", name = "Laptop", host = "laptop")))
+
+    /** The folder picker inside a directory: one folder with its model, one the device will not open. */
+    val picker = PickerState(
+        listing = LembasJson.decodeFromString(DeviceDirectory.serializer(), text("device_directories")),
+        typed = "/home/user/project",
+    )
+
+    /** The picker where the device cannot list: the sentence, and the typed path still there. */
+    val pickerNoListing = PickerState(
+        typed = "/home/user/src/garden",
+        error = LembasJson.decodeFromString(DeviceDirectory.serializer(), text("device_directories_cli_too_old")).error,
+    )
+
+    /** A run of an Agentic schedule: where it ran, on the folder's usual model. */
+    val scheduleAgenticRun: ScheduleState get() = ScheduleState(
+        schedule = onComputer,
+        runs = listOf(LembasJson.decodeFromString(RunResult.serializer(), text("schedule_run_agentic")).run),
     )
 
     /** The form with "When…" chosen and the person's own words in it. */

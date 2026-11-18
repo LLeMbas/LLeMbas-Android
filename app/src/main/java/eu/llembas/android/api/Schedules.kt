@@ -11,7 +11,12 @@ import kotlinx.serialization.json.JsonObject
 // `event_schedules.json`; `ContractTest` reads every one). Every field has a default, so a
 // server that says less still parses.
 
-/** The model a run used: [reason] `switched` when it stood in for [switchedFrom], which was busy. */
+/**
+ * The model a run used, and how it came to it ([reason]): `pinned` (the schedule's own),
+ * `switched` (it stood in for [switchedFrom], which was busy), `directory` (the folder's usual
+ * model, asked of the computer), `default` (the person's default, where the folder had none) or
+ * `session` (a continued conversation kept its own).
+ */
 @Serializable
 data class RunModel(
     val id: String? = null,
@@ -72,6 +77,8 @@ data class ScheduleRun(
     val note: String = "",
     /** The report this run filed, when it filed one: its id (or an object carrying it). */
     val report: JsonElement? = null,
+    /** Where an Agentic schedule's run ran (spec 3.9.0); null for a Chat schedule's, or from an older server. */
+    @SerialName("ran_on") val ranOn: RanOn? = null,
 ) {
     val reportId: String? get() = idOf(report)
 }
@@ -235,5 +242,26 @@ data class RunsOn(
     @SerialName("approval_wait_minutes") val approvalWaitMinutes: Int? = null,
 )
 
+/** Where one run ran: the computer ([deviceName]), the folder there and the mode it had. */
+@Serializable
+data class RanOn(val device: String = "", @SerialName("device_name") val deviceName: String = "", val cwd: String = "", val mode: String = "")
+
+/** The two types of schedule (spec 3.9.0). There is no field for it: Agentic is one with a computer. */
+val Schedule.agentic: Boolean get() = runsOn != null
+
 /** A run that waits because its computer is not linked (`error.class` `device_away`). */
 val ScheduleRun.computerAway: Boolean get() = error?.kind == "device_away"
+
+/**
+ * What a save says about where a schedule runs, which is its type: nothing ([Leave]), on the
+ * server ([Server]: Chat), or on a computer ([Computer]: Agentic) -- in a folder there, in a
+ * mode, with an approval's wait in minutes (null: the server's default) and a model, where the
+ * empty one is the folder's usual model.
+ */
+sealed interface WhereToRun {
+    data object Leave : WhereToRun
+
+    data object Server : WhereToRun
+
+    data class Computer(val device: String, val cwd: String, val mode: String, val approvalWaitMinutes: Int?, val model: String) : WhereToRun
+}

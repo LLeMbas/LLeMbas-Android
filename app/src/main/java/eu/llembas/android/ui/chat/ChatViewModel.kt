@@ -21,12 +21,15 @@ import eu.llembas.android.api.Card
 import eu.llembas.android.api.CardAnswer
 import eu.llembas.android.api.Chat
 import eu.llembas.android.api.ChatDetail
+import eu.llembas.android.api.DeviceDirectory
 import eu.llembas.android.api.LembasJson
 import eu.llembas.android.api.LinkedDevice
 import eu.llembas.android.api.LiveReply
+import eu.llembas.android.api.Mention
 import eu.llembas.android.api.Message
 import eu.llembas.android.api.MessagePage
 import eu.llembas.android.api.ModelInfo
+import eu.llembas.android.api.StartModel
 import eu.llembas.android.api.StreamClient
 import eu.llembas.android.api.SubagentTree
 import eu.llembas.android.api.Turn
@@ -35,6 +38,7 @@ import eu.llembas.android.ui.explain
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -83,6 +87,14 @@ data class ChatState(
     val tree: SubagentTree? = null,
     /** For a new agent chat: whether it may have subagents, and whether its device runs them. */
     val agentSubagents: AgentSubagents? = null,
+    /**
+     * For a new agent chat: the model it starts on in the chosen device and folder when the
+     * person picks none (spec 3.9.0) -- the folder's usual model, as the instance asked the
+     * device. Shown, never sent and never kept: the instance does the same on its own.
+     */
+    val start: StartModel? = null,
+    /** What `@` offers for the word being typed: the server's files, earlier attachments and pages, or an agent chat's device's files. */
+    val mentions: List<Mention> = emptyList(),
 )
 
 /**
@@ -104,9 +116,17 @@ data class Draft(
 /** The one tool a message may force (the server's `FORCEABLE_TOOLS`): make a picture. */
 const val IMAGE_TOOL = "image_generate"
 
-/** The model in force: the chat's, else the one chosen for the new chat, else the default. */
+/**
+ * The model in force: the chat's, else the one chosen for the new chat, else the folder's usual
+ * one (a new agent chat's, where the person still has it), else the default. A model the
+ * person picked is never set aside by the folder's.
+ */
 val ChatState.modelId: String?
-    get() = chat?.model?.ifBlank { null } ?: draft.model ?: models.firstOrNull { it.default }?.id ?: models.firstOrNull()?.id
+    get() = chat?.model?.ifBlank { null } ?: draft.model ?: folderModel ?: models.firstOrNull { it.default }?.id ?: models.firstOrNull()?.id
+
+/** The folder's usual model for a chat not made yet, when it is one of the models offered here. */
+val ChatState.folderModel: String?
+    get() = start?.model?.takeIf { id -> chat == null && id.isNotBlank() && models.any { it.id == id } }
 
 val ChatState.modelInfo: ModelInfo? get() = models.firstOrNull { it.id == modelId }
 
@@ -193,9 +213,18 @@ interface ChatActions {
 
     /** A new agent chat with no computer linked: read the linked devices again. */
     fun recheckDevices() {}
+
+    /** A new agent chat's device, asked for a directory (`""`: its places), for the folder picker. */
+    suspend fun directories(path: String): DeviceDirectory = DeviceDirectory()
     fun setAgents(agents: AgentsSetting) {}
     fun updateDraft(change: (Draft) -> Draft) {}
     fun attach(uris: List<Uri>) {}
+
+    /** The `@` word being typed ([query]; null: none) -- what it offers comes to the state's `mentions`. */
+    fun suggest(query: String?) {}
+
+    /** Attach what an `@` entry names: an earlier attachment, a file of the tree, or a page. */
+    fun mention(item: Mention) {}
     fun unattach(attachment: Attachment) {}
     fun photoTarget(): Uri? = null
     fun rename(title: String) {}
@@ -233,18 +262,41 @@ class ChatViewModel(app: Application) :
     override fun clearUnsent() = _state.update { it.copy(unsent = null) }
 
     override fun updateDraft(change: (Draft) -> Draft) {
-        val before = _state.value.device?.id
+        val before = _state.value.let { it.device?.id to it.draft.directory }
         _state.update { it.copy(draft = change(it.draft)) }
-        if (agentChat && _state.value.chat == null && _state.value.device?.id != before) readAgentFacts()
+        val after = _state.value.let { it.device?.id to it.draft.directory }
+        // Another computer or another folder: its Subagents fact and its usual model are read again.
+        if (agentChat && _state.value.chat == null && after != before) readAgentFacts()
     }
 
-    /** A new agent chat's Subagents fact, for the device chosen now; an older server says nothing. */
+    /**
+     * A new agent chat's facts for the device and folder chosen now: whether it may have
+     * subagents, and the model it starts on there. An older server says neither; an answer for
+     * a choice that has changed meanwhile is dropped.
+     */
     private fun readAgentFacts() {
         val device = _state.value.device?.id
+        val directory = _state.value.draft.directory
+        // What was read for another device or folder is not this one's.
+        _state.update { it.copy(start = null) }
         viewModelScope.launch {
-            val facts = runCatching { api().agentModelList(device) }.getOrNull()?.agentSubagents
-            _state.update { if (it.device?.id == device) it.copy(agentSubagents = facts) else it }
+            val list = runCatching { api().agentModelList(device, directory) }.getOrNull()
+            _state.update {
+                if (it.device?.id == device &&
+                    it.draft.directory == directory
+                ) {
+                    it.copy(agentSubagents = list?.agentSubagents, start = list?.start)
+                } else {
+                    it
+                }
+            }
         }
+    }
+
+    override suspend fun directories(path: String): DeviceDirectory {
+        // No computer linked: there is nothing to list, and the typed path is what remains.
+        val device = _state.value.device ?: return DeviceDirectory(code = "device_not_linked")
+        return api().deviceDirectories(device.id, path)
     }
 
     override fun rename(title: String) = change("title", title.trim())
@@ -623,6 +675,53 @@ class ChatViewModel(app: Application) :
         }
     }
 
+    private var suggesting: Job? = null
+
+    override fun suggest(query: String?) {
+        suggesting?.cancel()
+        if (query == null) {
+            if (_state.value.mentions.isNotEmpty()) _state.update { it.copy(mentions = emptyList()) }
+            return
+        }
+        suggesting = viewModelScope.launch {
+            // Asked once the typing pauses, not at every letter.
+            delay(MENTION_PAUSE_MS)
+            val found = try {
+                offered(query)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                // An older server, or a device that cannot answer: nothing is offered.
+                emptyList()
+            }
+            _state.update { it.copy(mentions = found) }
+        }
+    }
+
+    /** An agent chat's `@` is its device's files (the device reads them); a chat's is the server's. */
+    private suspend fun offered(query: String): List<Mention> {
+        val now = _state.value
+        val chat = now.chat
+        if (chat?.kind == "agent" || (chat == null && agentChat)) {
+            val device = chat?.device?.tokenId ?: now.device?.id ?: return emptyList()
+            return api().deviceFiles(device, query, chatId = chat?.id, cwd = now.draft.directory).files.map { it.asMention() }
+        }
+        return api().mentions(query, chat?.id).items
+    }
+
+    override fun mention(item: Mention) {
+        _state.update { it.copy(mentions = emptyList(), uploading = true) }
+        viewModelScope.launch {
+            try {
+                val stored = api().attachFrom(item, _state.value.chat?.id)
+                _state.update { it.copy(pending = it.pending + stored) }
+            } catch (e: Exception) {
+                fail(e)
+            }
+            _state.update { it.copy(uploading = false) }
+        }
+    }
+
     private val photoAuthority get() = "${getApplication<Application>().packageName}.files"
 
     /**
@@ -649,5 +748,9 @@ class ChatViewModel(app: Application) :
                 fail(e)
             }
         }
+    }
+
+    private companion object {
+        const val MENTION_PAUSE_MS = 250L
     }
 }

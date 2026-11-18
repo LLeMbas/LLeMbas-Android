@@ -5,6 +5,7 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
@@ -150,8 +151,11 @@ class ApiClient(val base: String, private val token: String, val http: OkHttpCli
     suspend fun modelList(chatId: String? = null): ModelList = get(if (chatId != null) "/models?chat=$chatId" else "/models")
 
     /** The models for a new agent chat on [deviceId], with whether it may have subagents (`agent_subagents`). */
-    suspend fun agentModelList(deviceId: String?): ModelList =
-        get("/models?kind=agent" + deviceId?.let { "&device=" + java.net.URLEncoder.encode(it, "UTF-8") }.orEmpty())
+    suspend fun agentModelList(deviceId: String?, directory: String? = null): ModelList = get(
+        "/models?kind=agent" + deviceId?.let { "&device=" + segment(it) }.orEmpty() +
+            // With a directory (spec 3.9.0) the answer carries `start`: the model a chat there starts on.
+            directory?.takeIf { deviceId != null && it.isNotBlank() }?.let { "&directory=" + segment(it.trim()) }.orEmpty(),
+    )
 
     suspend fun folders(): List<Folder> = get<FolderList>("/folders").folders
 
@@ -173,6 +177,16 @@ class ApiClient(val base: String, private val token: String, val http: OkHttpCli
 
     /** The app releases this server recommends; 404 from a server older than the route. */
     suspend fun apps(): AppsInfo = get("/apps")
+
+    /**
+     * What `@` offers in an agent chat: the device's files matching [q], from the chat's
+     * directory ([chatId]) or, before the chat exists, from the folder chosen for it ([cwd]).
+     */
+    suspend fun deviceFiles(deviceId: String, q: String, chatId: String? = null, cwd: String? = null): DeviceFiles = get(
+        "/devices/${segment(deviceId)}/files?q=${segment(q)}" +
+            chatId?.let { "&chat=${segment(it)}" }.orEmpty() +
+            cwd?.takeIf { chatId == null && it.isNotBlank() }?.let { "&cwd=${segment(it.trim())}" }.orEmpty(),
+    )
 
     /** What `@` offers from the server for [q]: the chat's earlier attachments, files of the tree, a web address. */
     suspend fun mentions(q: String, chatId: String? = null): Mentions = get("/mentions?q=${segment(q)}" + (chatId?.let { "&chat=${segment(it)}" } ?: ""))
@@ -218,6 +232,14 @@ class ApiClient(val base: String, private val token: String, val http: OkHttpCli
     suspend fun forgetMemory(id: String) = empty(authed("$v2/memories/${segment(id)}").delete().build())
 
     suspend fun devices(): List<LinkedDevice> = get<DeviceList>("/devices").devices
+
+    /**
+     * A directory on a linked device, for choosing where an agent chat or an Agentic schedule
+     * works; without a [path], the device's places. No listing is still an answer: its `code`
+     * and `error` say why.
+     */
+    suspend fun deviceDirectories(deviceId: String, path: String? = null): DeviceDirectory =
+        get("/devices/${segment(deviceId)}/directories" + path?.takeIf { it.isNotEmpty() }?.let { "?path=" + segment(it) }.orEmpty())
 
     /** The token revokes itself (`lembas logout`'s route). */
     suspend fun signOut() = empty(authed("$base/api/v1/token").delete().build())
@@ -379,8 +401,36 @@ class ApiClient(val base: String, private val token: String, val http: OkHttpCli
      * Save what the compile made of [words]: a new schedule (201), or with [id] the one being
      * edited. The words go along as the schedule's `request`, so editing starts from them.
      */
-    suspend fun saveSchedule(compiled: ScheduleCompiled, words: String, id: String? = null, notify: String? = null, notifyWhen: String = ""): Schedule {
+    suspend fun saveSchedule(
+        compiled: ScheduleCompiled,
+        words: String,
+        id: String? = null,
+        notify: String? = null,
+        notifyWhen: String = "",
+        where: WhereToRun = WhereToRun.Leave,
+    ): Schedule {
         val body = buildJsonObject {
+            // The type (spec 3.9.0): Agentic is a schedule with a computer, Chat one without. Left
+            // out where the form did not say, so a schedule is never moved by a form that did not read it.
+            when (where) {
+                WhereToRun.Leave -> Unit
+
+                WhereToRun.Server -> put("runs_on", JsonNull)
+
+                is WhereToRun.Computer -> {
+                    put(
+                        "runs_on",
+                        buildJsonObject {
+                            put("device", where.device)
+                            put("cwd", where.cwd)
+                            put("mode", where.mode)
+                            where.approvalWaitMinutes?.let { put("approval_wait_minutes", it) }
+                        },
+                    )
+                    // Empty: the folder's usual model, asked of the computer as each run starts.
+                    put("model", where.model)
+                }
+            }
             put("title", compiled.title)
             put("instruction", compiled.instruction)
             put("rule", compiled.rule)

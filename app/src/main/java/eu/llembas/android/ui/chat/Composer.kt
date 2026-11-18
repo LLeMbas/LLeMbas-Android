@@ -28,12 +28,16 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Brush
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.PhotoLibrary
@@ -51,7 +55,6 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.InputChip
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RangeSlider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
@@ -83,11 +86,13 @@ import androidx.core.content.ContextCompat
 import eu.llembas.android.R
 import eu.llembas.android.api.AgentsSetting
 import eu.llembas.android.api.LinkedDevice
+import eu.llembas.android.api.Mention
 import eu.llembas.android.assist.PhoneRecognizer
 import eu.llembas.android.assist.Recorder
 import eu.llembas.android.assist.usePhoneRecognizer
 import eu.llembas.android.auth.Prefs
 import eu.llembas.android.lembas
+import eu.llembas.android.ui.DirectoryPicker
 import eu.llembas.android.ui.theme.LocalPalette
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -209,6 +214,7 @@ fun Composer(state: ChatState, actions: ChatActions, agent: Boolean, onTune: () 
     }
     // A suggestion from the empty chat lands here (a new value each tap).
     LaunchedEffect(initial) { if (initial.isNotBlank()) text = initial }
+    LaunchedEffect(text) { actions.suggest(mentionQuery(text)) }
     val newAgent = agent && state.chat == null
     val canSend = (text.isNotBlank() || state.pending.isNotEmpty()) && !state.uploading && (!newAgent || state.device != null)
     val summary = tuneSummary(state, agent)
@@ -260,6 +266,19 @@ fun Composer(state: ChatState, actions: ChatActions, agent: Boolean, onTune: () 
                             }
                         }
                     }
+                }
+            }
+            // What `@` offers for the word being typed, above the words: a tap attaches it (the
+            // server's files, earlier attachments, pages) or completes it (a device's file).
+            if (state.mentions.isNotEmpty() && mentionQuery(text) != null) {
+                MentionList(state.mentions) { item ->
+                    if (item.kind == MENTION_DEVICE) {
+                        text = withMention(text, item.path)
+                    } else {
+                        text = withoutMention(text)
+                        actions.mention(item)
+                    }
+                    actions.suggest(null)
                 }
             }
             TextField(
@@ -419,6 +438,48 @@ fun Composer(state: ChatState, actions: ChatActions, agent: Boolean, onTune: () 
     }
 }
 
+/**
+ * The `@` list: at most a few rows in view, the rest scrolled to. A row is 48 dp; its name
+ * gives, and where it is (a path, a kind) is one quiet line under it.
+ */
+@Composable
+private fun MentionList(items: List<Mention>, onPick: (Mention) -> Unit) {
+    val palette = LocalPalette.current
+    Column(Modifier.fillMaxWidth().heightIn(max = 216.dp).verticalScroll(rememberScrollState()).padding(top = 8.dp)) {
+        items.forEach { item ->
+            Row(
+                Modifier.fillMaxWidth().clickable { onPick(item) }.heightIn(min = 48.dp).padding(horizontal = 16.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    when (item.kind) {
+                        "url" -> Icons.Filled.Link
+                        "attachment" -> Icons.Filled.AttachFile
+                        else -> if (item.detail.endsWith("/")) Icons.Filled.Folder else Icons.Filled.Description
+                    },
+                    contentDescription = null,
+                    tint = palette.inkMuted,
+                    modifier = Modifier.size(20.dp),
+                )
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        item.name.ifBlank {
+                            item.path.ifBlank { item.url }
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    if (item.detail.isNotBlank() && item.detail != item.name) {
+                        Text(item.detail, style = MaterialTheme.typography.bodySmall, color = palette.inkFaint, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                }
+            }
+        }
+    }
+}
+
 // --- The tune sheet --------------------------------------------------------------------------
 
 /**
@@ -549,26 +610,15 @@ fun TuneContent(state: ChatState, actions: ChatActions, agent: Boolean, modifier
     }
 
     if (askDirectory) {
-        var typed by remember { mutableStateOf(state.draft.directory) }
-        androidx.compose.material3.AlertDialog(
-            onDismissRequest = { askDirectory = false },
-            title = { Text(stringResource(R.string.agent_directory)) },
-            text = {
-                OutlinedTextField(
-                    value = typed,
-                    onValueChange = { typed = it },
-                    singleLine = true,
-                    placeholder = { Text(stringResource(R.string.agent_directory_hint)) },
-                    modifier = Modifier.fillMaxWidth(),
-                )
+        DirectoryPicker(
+            title = stringResource(R.string.agent_directory),
+            initial = state.draft.directory,
+            load = actions::directories,
+            onPick = { path ->
+                actions.updateDraft { it.copy(directory = path) }
+                askDirectory = false
             },
-            confirmButton = {
-                androidx.compose.material3.TextButton(onClick = {
-                    actions.updateDraft { it.copy(directory = typed.trim()) }
-                    askDirectory = false
-                }) { Text(stringResource(R.string.save)) }
-            },
-            dismissButton = { androidx.compose.material3.TextButton(onClick = { askDirectory = false }) { Text(stringResource(R.string.cancel)) } },
+            onDismiss = { askDirectory = false },
         )
     }
 }

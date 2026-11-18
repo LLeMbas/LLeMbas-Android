@@ -5,6 +5,34 @@ is in alpha and releases come off `main`.
 
 ## [Unreleased]
 
+Needs LLeMbas 2.0.0-beta.14 for what is new here; with an older instance the app works as before.
+
+### Added
+
+- **Choose a folder on your computer instead of typing its path.** A new agent chat's *Folder
+  on the device* opens a picker: the computer's places, then down through its folders and back
+  up -- the back gesture goes up a level and closes at the top. A folder the computer will not
+  open a session in says why and cannot be chosen; a folder you worked in before names the
+  model you last used there. The path can still be typed, and that is what remains when the
+  computer is not linked, does not answer, or runs a LLeMbas CLI too old to list its folders --
+  the picker says which.
+- **A new agent chat starts on the model you last used in that folder.** Once the computer and
+  the folder are chosen, the model shown is the folder's usual one (the computer remembers it;
+  the app keeps nothing), and it changes when you choose another computer or folder. A model
+  you pick yourself stays picked.
+- **Scheduled tasks have two types: Chat and Agentic.** The form asks the type first. *Chat*
+  runs on your instance, as tasks always have. *Agentic* runs on one of your computers, in one
+  folder there, as an agent: you choose the computer, the folder (with the picker, or typed),
+  the mode, how long an approval waits, and the model -- *The folder's usual model* unless you
+  choose one of your scheduling models. Agentic can be chosen only while one of your computers
+  accepts scheduled work, and says so otherwise. A task's page shows its type, computer, folder
+  and model; each run says where it ran and when its model was the folder's usual one, your
+  default or the conversation's own.
+- **`@` in the composer.** Type `@` and a few letters at the end of a message: in a chat the
+  list offers your files, what was attached earlier in the chat and a web address, and a tap
+  attaches it; in an agent chat it offers the files in the chat's folder on the computer, and
+  a tap completes the path for the agent to read.
+
 ### Changed
 
 - **The badge on Reports is live.** The count of unread reports in the drawer follows the

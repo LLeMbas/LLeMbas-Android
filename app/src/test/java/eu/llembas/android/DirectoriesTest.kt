@@ -1,0 +1,174 @@
+package eu.llembas.android
+
+import eu.llembas.android.api.ApiClient
+import eu.llembas.android.api.Chat
+import eu.llembas.android.api.DeviceDirectory
+import eu.llembas.android.api.DeviceList
+import eu.llembas.android.api.LembasJson
+import eu.llembas.android.api.ModelList
+import eu.llembas.android.api.StartModel
+import eu.llembas.android.ui.PickerState
+import eu.llembas.android.ui.canChoose
+import eu.llembas.android.ui.chat.ChatState
+import eu.llembas.android.ui.chat.Draft
+import eu.llembas.android.ui.chat.folderModel
+import eu.llembas.android.ui.chat.modelId
+import eu.llembas.android.ui.refusedHere
+import eu.llembas.android.ui.took
+import eu.llembas.android.ui.up
+import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.KSerializer
+import okhttp3.mockwebserver.MockResponse
+import okhttp3.mockwebserver.MockWebServer
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+/**
+ * A linked device's directories and the folder's usual model (harness spec 3.9.0), from the
+ * server's own fixtures (`contract/device_directories*.json`, `models_agent_directory.json`):
+ * the shapes, the picker's walk, and which model a new agent chat shows.
+ */
+class DirectoriesTest {
+    private fun text(name: String): String = requireNotNull(javaClass.classLoader!!.getResource("$name.json")) { "contract/$name.json is missing" }.readText()
+
+    private fun <T> read(name: String, serializer: KSerializer<T>): T = LembasJson.decodeFromString(serializer, text(name))
+
+    private val project = read("device_directories", DeviceDirectory.serializer())
+    private val places = read("device_directories_places", DeviceDirectory.serializer())
+
+    @Test
+    fun aDirectoryItsEntriesAndTheModelsLastUsedThere() {
+        assertEquals("/home/user/project", project.path)
+        assertEquals("/home/user", project.parent)
+        assertTrue(project.accepted)
+        assertTrue(project.listed)
+        assertFalse(project.places)
+        assertEquals("Qwen", project.model?.label)
+        val (docs, server, vendor) = project.entries
+        assertNull(docs.model)
+        assertEquals("gpt-oss", server.model?.label)
+        assertFalse(vendor.accepted)
+        assertEquals("This directory is not trusted on the device.", vendor.reason)
+        // Without a path: the device's places, each a directory to walk into.
+        assertTrue(places.places)
+        assertEquals(listOf("/home/user", "/home/user/project"), places.entries.map { it.path })
+        assertEquals("Qwen", places.entries.last().model?.label)
+    }
+
+    @Test
+    fun noListingIsACodeAndASentence() {
+        val away = read("device_directories_not_linked", DeviceDirectory.serializer())
+        assertFalse(away.listed)
+        assertEquals("device_not_linked", away.code)
+        assertEquals("This device is not linked right now.", away.error)
+        val old = read("device_directories_cli_too_old", DeviceDirectory.serializer())
+        assertEquals("cli_too_old", old.code)
+        assertTrue(old.error.isNotBlank())
+    }
+
+    @Test
+    fun thePickerWalksDownAndUpAndClosesAtTheTop() {
+        val start = PickerState(loading = true).took(places)
+        assertFalse(start.loading)
+        // At the places there is no "up": back closes. And no path yet, so nothing to choose.
+        assertNull(start.up)
+        assertEquals("", start.typed)
+        assertFalse(start.canChoose)
+        val inside = start.took(project)
+        assertEquals("/home/user/project", inside.typed)
+        assertEquals("/home/user", inside.up)
+        assertTrue(inside.canChoose)
+        // A directory with no parent leads back to the places.
+        assertEquals("", inside.took(project.copy(path = "/home/user", parent = "")).up)
+        // Back at the places the field keeps the last path: it is still what would be chosen.
+        assertEquals("/home/user/project", inside.took(places).typed)
+    }
+
+    @Test
+    fun aDirectoryTheDeviceRefusesCannotBeChosenButATypedPathCan() {
+        val refused = PickerState().took(
+            project.copy(path = "/home/user/project/vendor", accepted = false, reason = "This directory is not trusted on the device."),
+        )
+        assertTrue(refused.refusedHere)
+        assertFalse(refused.canChoose)
+        // Another path written over it has not been refused by anybody: the instance checks it.
+        val typed = refused.copy(typed = "/srv/garden")
+        assertFalse(typed.refusedHere)
+        assertTrue(typed.canChoose)
+        assertFalse(typed.copy(typed = "  ").canChoose)
+    }
+
+    @Test
+    fun aDeviceThatCannotListKeepsTheTypedPathAndSaysWhy() {
+        val typed = PickerState(typed = "/home/user/garden", loading = true)
+        for (name in listOf("device_directories_not_linked", "device_directories_cli_too_old")) {
+            val answer = read(name, DeviceDirectory.serializer())
+            val after = typed.took(answer, fallback = "It cannot be listed.")
+            assertEquals("/home/user/garden", after.typed)
+            assertEquals(answer.error, after.error)
+            assertFalse(after.loading)
+            assertTrue(after.canChoose)
+        }
+        // The listing shown before stays where it was; a code without a sentence gets the app's own.
+        val walked = PickerState().took(project)
+        val silent = walked.took(DeviceDirectory(code = "no_answer"), fallback = "It cannot be listed.")
+        assertEquals(project, silent.listing)
+        assertEquals("It cannot be listed.", silent.error)
+        // The next listing clears the sentence.
+        assertNull(silent.took(places).error)
+    }
+
+    @Test
+    fun aNewAgentChatShowsTheFoldersUsualModelUnlessOneWasPicked() {
+        val list = read("models_agent_directory", ModelList.serializer())
+        assertEquals(StartModel(model = "gpt-oss", from = "directory"), list.start)
+        assertTrue(list.models.none { it.interactiveOnly })
+        val draft = ChatState(models = list.models, start = list.start)
+        // The default is Qwen; the folder's usual model is shown instead.
+        assertEquals("qwen", ChatState(models = list.models).modelId)
+        assertEquals("gpt-oss", draft.modelId)
+        // A model the person picked in this draft is never set aside.
+        assertEquals("vision-small", draft.copy(draft = Draft(model = "vision-small")).modelId)
+        // A model the person no longer has is not shown, and a chat that exists has its own.
+        assertNull(draft.copy(start = StartModel(model = "gone", from = "directory")).folderModel)
+        assertEquals("qwen", draft.copy(start = StartModel(model = "gone", from = "directory")).modelId)
+        assertEquals("qwen", draft.copy(chat = Chat(id = "c", model = "qwen")).modelId)
+        // Without a directory the list says nothing of it.
+        assertNull(read("models_agent", ModelList.serializer()).start)
+    }
+
+    @Test
+    fun aDeviceSaysWhetherItTakesScheduledWorkAndRemembers() {
+        val (workstation, laptop) = read("devices", DeviceList.serializer()).devices
+        assertTrue(workstation.scheduled)
+        assertEquals("edit", workstation.maxMode)
+        assertTrue(workstation.directoryModel)
+        assertFalse(laptop.scheduled)
+        assertFalse(laptop.directoryModel)
+        assertEquals("LLeMbas CLI on laptop", laptop.label)
+    }
+
+    @Test
+    fun theRoutesNameTheDeviceThePathAndTheDirectory() = runTest {
+        val server = MockWebServer().apply { start() }
+        try {
+            val api = ApiClient(server.url("/").toString().trimEnd('/'), "lmb_test")
+            repeat(2) { server.enqueue(MockResponse().setBody(text("device_directories_places"))) }
+            repeat(2) { server.enqueue(MockResponse().setBody(text("models_agent_directory"))) }
+            assertTrue(api.deviceDirectories("token1").places)
+            assertEquals("/api/v2/devices/token1/directories", server.takeRequest().path)
+            api.deviceDirectories("token1", "/home/user/my project")
+            assertEquals("/api/v2/devices/token1/directories?path=%2Fhome%2Fuser%2Fmy%20project", server.takeRequest().path)
+            assertEquals("gpt-oss", api.agentModelList("token1", " /home/user/project ").start?.model)
+            assertEquals("/api/v2/models?kind=agent&device=token1&directory=%2Fhome%2Fuser%2Fproject", server.takeRequest().path)
+            // No folder chosen: the question is the old one.
+            api.agentModelList("token1", "")
+            assertEquals("/api/v2/models?kind=agent&device=token1", server.takeRequest().path)
+        } finally {
+            server.shutdown()
+        }
+    }
+}
