@@ -34,9 +34,13 @@ data class RunTokens(val prompt: Long = 0, val completion: Long = 0)
 @Serializable
 data class RunCost(val micro: Long = 0, val currency: String = "")
 
-/** Why a run failed or waits: [kind] a class the app may read, [text] the server's own sentence. */
+/**
+ * Why a run failed or waits: [kind] a class the app may read, [text] the sentence to show (the
+ * server's, or the device's own), and [reason] a narrower word where there is one -- `terminal`:
+ * the schedule's session was open in a terminal on the computer.
+ */
 @Serializable
-data class RunError(@SerialName("class") val kind: String = "", val text: String = "")
+data class RunError(@SerialName("class") val kind: String = "", val text: String = "", val reason: String? = null)
 
 /**
  * One run of a schedule: when it was due and how it went. [status] is `running`, `waiting` (no
@@ -192,7 +196,22 @@ data class SchedulingModel(
     val free: Boolean = false,
     val busy: String? = null,
     val chosen: Boolean = true,
-)
+    /** The model's unambiguous name (`provider/id`) and its connection's, as on every model object. */
+    val ref: String = "",
+    val connection: String = "",
+) {
+    /** What a schedule's model is chosen and sent by: its [ref], or its [id] from a server without refs. */
+    val key: String get() = ref.ifBlank { id }
+}
+
+/** The scheduling model a name means: by its `ref`, else the first with that `id`. */
+fun List<SchedulingModel>.named(name: String?): SchedulingModel? {
+    if (name.isNullOrBlank()) return null
+    return firstOrNull { it.ref == name } ?: firstOrNull { it.id == name }
+}
+
+/** A scheduling model's name in a list of [all]: with its connection where another there shares its id. */
+fun SchedulingModel.titleAmong(all: List<SchedulingModel>): String = twinTitle(name.ifBlank { id }, connection, all.count { it.id == id } > 1)
 
 /** `GET`/`PUT /schedules/models`: the models, the instance's order, and the person's narrowing. */
 @Serializable

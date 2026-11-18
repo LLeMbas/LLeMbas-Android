@@ -119,7 +119,18 @@ data class ModelInfo(
     val subagents: SubagentsOffer? = null,
     /** On a connection whose terms allow interactive use only: never a schedule's model. */
     @SerialName("interactive_only") val interactiveOnly: Boolean = false,
+    /**
+     * The model's one unambiguous name, `provider/id` (server 2.0.0-beta.14): two connections may
+     * serve one [id], which alone names only the first of them. Empty from an older server.
+     */
+    val ref: String = "",
+    val provider: String = "",
+    /** The connection's name, for telling two models with one [id] apart. */
+    val connection: String = "",
 ) {
+    /** What this model is chosen, kept and sent by: its [ref], or its [id] from a server without refs. */
+    val key: String get() = ref.ifBlank { id }
+
     /**
      * The levels, for a server that says them; an older one said only `efforts`, offered after
      * an `off` that meant "the model's default" -- as the app showed it before.
@@ -153,6 +164,22 @@ data class ModelInfo(
         val CONTROLS = setOf("none", "switch", "slider")
     }
 }
+
+/**
+ * The model a name means, in a list: by its `ref`, else the first with that `id` -- which is
+ * what a bare id names on the server too. So a name kept from before refs (a setting, a chat's
+ * `model`, a schedule's) still finds its model.
+ */
+fun List<ModelInfo>.named(name: String?): ModelInfo? {
+    if (name.isNullOrBlank()) return null
+    return firstOrNull { it.ref == name } ?: firstOrNull { it.id == name }
+}
+
+/** A model's name in a list of [all]: with its connection where another model there shares its id. */
+fun ModelInfo.titleAmong(all: List<ModelInfo>): String = twinTitle(name.ifBlank { id }, connection, all.count { it.id == id } > 1)
+
+/** "Name · Connection" for a model one of two that share an id ([twin]), where the connection has a name; else the name. */
+fun twinTitle(name: String, connection: String, twin: Boolean): String = if (twin && connection.isNotBlank()) "$name · $connection" else name
 
 @Serializable
 data class ModelList(

@@ -133,7 +133,7 @@ fun SchedulingModelsContent(state: ModelsState, onBack: () -> Unit = {}, onToggl
                     )
                 }
                 state.error?.let { item { Text(it, color = palette.danger, style = MaterialTheme.typography.bodyMedium) } }
-                items(models, key = { it.id }) { m -> ModelRow(m, onToggle = { onToggle(m) }) }
+                items(models.distinctBy { it.key }, key = { it.key }) { m -> ModelRow(m, onToggle = { onToggle(m) }) }
             }
         }
     }

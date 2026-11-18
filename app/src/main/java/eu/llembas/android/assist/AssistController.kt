@@ -19,6 +19,7 @@ import eu.llembas.android.api.LiveReply
 import eu.llembas.android.api.ModelInfo
 import eu.llembas.android.api.Step
 import eu.llembas.android.api.StreamClient
+import eu.llembas.android.api.named
 import eu.llembas.android.lembas
 import eu.llembas.android.notify.NotificationAccess
 import eu.llembas.android.notify.NotificationReader
@@ -113,7 +114,7 @@ data class AssistUiState(
     val held: Boolean get() = waiting.isNotBlank() || waitingRecording
 
     val screenAvailable: Boolean get() = screenText || screenshot != null
-    val modelInfo: ModelInfo? get() = models.firstOrNull { it.id == modelId }
+    val modelInfo: ModelInfo? get() = models.named(modelId)
     val empty: Boolean get() = turns.isEmpty()
 }
 
@@ -834,8 +835,9 @@ class AssistController(
          * account's default, the instance's, or its first.
          */
         fun assistantModelFor(chosen: String, accountDefault: String?, models: List<ModelInfo>): String? {
-            val has = { id: String? -> !id.isNullOrBlank() && models.any { it.id == id } }
-            return chosen.takeIf(has) ?: accountDefault?.takeIf(has) ?: models.firstOrNull { it.default }?.id ?: models.firstOrNull()?.id
+            // By ref, or -- a choice saved before refs, the account's default -- by id: either
+            // way what comes back is the row's own unambiguous name.
+            return (models.named(chosen) ?: models.named(accountDefault) ?: models.firstOrNull { it.default } ?: models.firstOrNull())?.key
         }
 
         /** A reply's words, for a voice: its text steps, without the markup. */

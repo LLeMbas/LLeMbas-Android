@@ -37,7 +37,8 @@ class ChatStateTest {
 
     @Test
     fun theModelIsTheChatsThenTheDraftsThenTheDefault() {
-        assertEquals("qwen", ChatState(models = models).modelId)
+        // A model is named by its ref; a chat and an older choice still name it by its id.
+        assertEquals("local/qwen", ChatState(models = models).modelId)
         assertEquals("gpt-oss", ChatState(models = models, draft = Draft(model = "gpt-oss")).modelId)
         assertEquals("vision-small", ChatState(models = models, chat = Chat(id = "c", model = "vision-small"), draft = Draft(model = "gpt-oss")).modelId)
     }

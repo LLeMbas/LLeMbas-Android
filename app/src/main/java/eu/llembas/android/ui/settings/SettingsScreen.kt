@@ -95,6 +95,8 @@ import eu.llembas.android.BuildConfig
 import eu.llembas.android.R
 import eu.llembas.android.actions.NavApp
 import eu.llembas.android.api.ModelInfo
+import eu.llembas.android.api.named
+import eu.llembas.android.api.titleAmong
 import eu.llembas.android.assist.LembasAssistService
 import eu.llembas.android.assist.PhoneRecognizer
 import eu.llembas.android.auth.Instance
@@ -1190,11 +1192,11 @@ fun WakeChoices(which: WakeChoice, prefs: Prefs, onPick: ((SettingsActions) -> U
 @Composable
 private fun assistantModelLabel(state: SettingsState): String {
     val chosen = state.prefs.assistantModel
-    val model = state.assistantModels.firstOrNull { it.id == chosen }
+    val model = state.assistantModels.named(chosen)
     // While the list is not read yet, or could not be: the choice as it was saved.
     return when {
         chosen.isBlank() -> stringResource(R.string.assistant_model_default)
-        model != null -> model.name.ifBlank { model.id }
+        model != null -> model.titleAmong(state.assistantModels)
         state.assistantModels.isEmpty() -> chosen
         else -> stringResource(R.string.assistant_model_default)
     }
@@ -1207,10 +1209,11 @@ private fun assistantModelLabel(state: SettingsState): String {
  */
 @Composable
 fun AssistantModelChoices(state: SettingsState, onPick: (String) -> Unit) {
-    val chosen = state.prefs.assistantModel.takeIf { id -> state.assistantModels.any { it.id == id } }.orEmpty()
+    // A choice saved before models had refs is an id: it still finds its model.
+    val chosen = state.assistantModels.named(state.prefs.assistantModel)?.key.orEmpty()
     val choices = listOf(
         Choice(INSTANCE_DEFAULT, stringResource(R.string.assistant_model_default), stringResource(R.string.assistant_model_default_line), chosen.isEmpty()),
-    ) + state.assistantModels.map { Choice(it.id, it.name.ifBlank { it.id }, null, it.id == chosen) }
+    ) + state.assistantModels.distinctBy { it.key }.map { Choice(it.key, it.titleAmong(state.assistantModels), null, it.key == chosen) }
     ChoiceList(stringResource(R.string.assistant_model), choices) { id -> onPick(if (id == INSTANCE_DEFAULT) "" else id) }
 }
 

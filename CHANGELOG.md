@@ -30,6 +30,10 @@ Needs LLeMbas 2.0.0-beta.14 for what is new here; with an older instance the app
   accepts scheduled work, and says so otherwise. A task's page shows its type, computer, folder
   and model; each run says where it ran and when its model was the folder's usual one, your
   default or the conversation's own.
+- **Two models with the same name on different connections are told apart.** Where an instance
+  serves one model through two connections, the pickers say *Name · Connection*, and the one
+  you pick is the one used -- in a chat, as the assistant's model, in a scheduled task. A
+  model chosen before this still finds its row.
 - **`@` in the composer.** Type `@` and a few letters at the end of a message: in a chat the
   list offers your files, what was attached earlier in the chat and a web address, and a tap
   attaches it; in an agent chat it offers the files in the chat's folder on the computer, and

@@ -5,8 +5,12 @@ import eu.llembas.android.api.Chat
 import eu.llembas.android.api.DeviceDirectory
 import eu.llembas.android.api.DeviceList
 import eu.llembas.android.api.LembasJson
+import eu.llembas.android.api.ModelInfo
 import eu.llembas.android.api.ModelList
 import eu.llembas.android.api.StartModel
+import eu.llembas.android.api.named
+import eu.llembas.android.api.titleAmong
+import eu.llembas.android.assist.AssistController
 import eu.llembas.android.ui.PICKER_ENTRIES
 import eu.llembas.android.ui.PICKER_WORDS
 import eu.llembas.android.ui.PickerState
@@ -17,6 +21,7 @@ import eu.llembas.android.ui.chat.ChatState
 import eu.llembas.android.ui.chat.Draft
 import eu.llembas.android.ui.chat.folderModel
 import eu.llembas.android.ui.chat.modelId
+import eu.llembas.android.ui.chat.modelInfo
 import eu.llembas.android.ui.refusedHere
 import eu.llembas.android.ui.took
 import eu.llembas.android.ui.unanswered
@@ -181,20 +186,64 @@ class DirectoriesTest {
     @Test
     fun aNewAgentChatShowsTheFoldersUsualModelUnlessOneWasPicked() {
         val list = read("models_agent_directory", ModelList.serializer())
-        assertEquals(StartModel(model = "gpt-oss", from = "directory"), list.start)
+        assertEquals(StartModel(model = "gpt-oss", from = "directory", ref = "local/gpt-oss"), list.start)
         assertTrue(list.models.none { it.interactiveOnly })
         val draft = ChatState(models = list.models, start = list.start)
         // The default is Qwen; the folder's usual model is shown instead.
-        assertEquals("qwen", ChatState(models = list.models).modelId)
-        assertEquals("gpt-oss", draft.modelId)
+        assertEquals("local/qwen", ChatState(models = list.models).modelId)
+        assertEquals("local/gpt-oss", draft.modelId)
+        assertEquals("gpt-oss", draft.modelInfo?.id)
         // A model the person picked in this draft is never set aside.
-        assertEquals("vision-small", draft.copy(draft = Draft(model = "vision-small")).modelId)
+        assertEquals("local/vision-small", draft.copy(draft = Draft(model = "local/vision-small")).modelId)
         // A model the person no longer has is not shown, and a chat that exists has its own.
         assertNull(draft.copy(start = StartModel(model = "gone", from = "directory")).folderModel)
-        assertEquals("qwen", draft.copy(start = StartModel(model = "gone", from = "directory")).modelId)
-        assertEquals("qwen", draft.copy(chat = Chat(id = "c", model = "qwen")).modelId)
+        assertEquals("local/qwen", draft.copy(start = StartModel(model = "gone", from = "directory")).modelId)
+        assertEquals("qwen", draft.copy(chat = Chat(id = "c", model = "qwen")).modelInfo?.id)
+        // A server before refs says the id alone: it still finds the row.
+        assertEquals("local/gpt-oss", draft.copy(start = StartModel(model = "gpt-oss", from = "directory")).folderModel)
         // Without a directory the list says nothing of it.
         assertNull(read("models_agent", ModelList.serializer()).start)
+    }
+
+    @Test
+    fun twoModelsWithOneIdAreToldApartByTheirRef() {
+        val home = ModelInfo(id = "qwen", name = "Qwen", ref = "local/qwen", provider = "local", connection = "Local", default = true)
+        val cloud = ModelInfo(id = "qwen", name = "Qwen", ref = "studio/qwen", provider = "studio", connection = "Model Studio")
+        val other = ModelInfo(id = "gpt-oss", name = "gpt-oss", ref = "local/gpt-oss", connection = "Local")
+        val models = listOf(home, cloud, other)
+        // A ref names its own row; a bare id the first of them, as on the server.
+        assertEquals(cloud, models.named("studio/qwen"))
+        assertEquals(home, models.named("qwen"))
+        assertNull(models.named("gone"))
+        assertNull(models.named(""))
+        // The twins say their connection; a model alone with its id does not.
+        assertEquals("Qwen · Model Studio", cloud.titleAmong(models))
+        assertEquals("Qwen · Local", home.titleAmong(models))
+        assertEquals("gpt-oss", other.titleAmong(models))
+        // The folder's usual model by its ref: the second twin, not the first.
+        val draft = ChatState(models = models, start = StartModel(model = "qwen", from = "directory", ref = "studio/qwen"))
+        assertEquals("studio/qwen", draft.modelId)
+        assertEquals(cloud, draft.modelInfo)
+        // A pick is kept and sent by its ref.
+        assertEquals(cloud, draft.copy(start = null, draft = Draft(model = "studio/qwen")).modelInfo)
+        // An open chat says the id; the ref picked here says which twin, while the id still fits.
+        val open = ChatState(models = models, chat = Chat(id = "c", model = "qwen"))
+        assertEquals(home, open.modelInfo)
+        assertEquals(cloud, open.copy(picked = "studio/qwen").modelInfo)
+        assertEquals(other, open.copy(chat = Chat(id = "c", model = "gpt-oss"), picked = "studio/qwen").modelInfo)
+        // A model from a server before refs is its id.
+        assertEquals("qwen", ModelInfo(id = "qwen").key)
+    }
+
+    @Test
+    fun theAssistantsSavedModelStillFindsItsRowAfterRefs() {
+        val models = read("models", ModelList.serializer()).models
+        // Saved as an id before refs, or as a ref since: the same model, named by its ref.
+        assertEquals("local/gpt-oss", AssistController.assistantModelFor("gpt-oss", "qwen", models))
+        assertEquals("local/gpt-oss", AssistController.assistantModelFor("local/gpt-oss", "qwen", models))
+        // Gone, or "Instance default": the account's default, an id.
+        assertEquals("local/qwen", AssistController.assistantModelFor("retired", "qwen", models))
+        assertEquals("local/qwen", AssistController.assistantModelFor("", null, models))
     }
 
     @Test

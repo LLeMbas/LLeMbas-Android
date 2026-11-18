@@ -28,6 +28,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import eu.llembas.android.R
 import eu.llembas.android.api.ModelInfo
+import eu.llembas.android.api.named
+import eu.llembas.android.api.titleAmong
 import eu.llembas.android.ui.ModelAvatar
 import eu.llembas.android.ui.theme.LocalPalette
 
@@ -99,12 +101,14 @@ fun ModelPickerContent(models: List<ModelInfo>, current: String?, onPick: (Strin
             modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
         )
         LazyColumn(Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
-            items(models, key = { it.id }) { m ->
-                val chosen = m.id == current
+            // By its ref: two connections may serve one id, and a row is its own key.
+            val inUse = models.named(current)?.key
+            items(models.distinctBy { it.key }, key = { it.key }) { m ->
+                val chosen = m.key == inUse
                 Row(
                     Modifier
                         .fillMaxWidth()
-                        .clickable { onPick(m.id) }
+                        .clickable { onPick(m.key) }
                         .heightIn(min = 72.dp)
                         .padding(horizontal = 24.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -112,7 +116,7 @@ fun ModelPickerContent(models: List<ModelInfo>, current: String?, onPick: (Strin
                     ModelAvatar(m, m.id, size = 44.dp)
                     Spacer(Modifier.width(16.dp))
                     Column(Modifier.weight(1f)) {
-                        Text(m.name.ifBlank { m.id }, style = MaterialTheme.typography.titleMedium)
+                        Text(m.titleAmong(models), style = MaterialTheme.typography.titleMedium)
                         modelNotes(m).takeIf { it.isNotEmpty() }?.let {
                             Text(it, style = MaterialTheme.typography.bodyMedium, color = palette.inkMuted)
                         }

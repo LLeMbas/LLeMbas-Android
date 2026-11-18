@@ -33,6 +33,7 @@ import eu.llembas.android.api.StartModel
 import eu.llembas.android.api.StreamClient
 import eu.llembas.android.api.SubagentTree
 import eu.llembas.android.api.Turn
+import eu.llembas.android.api.named
 import eu.llembas.android.lembas
 import eu.llembas.android.ui.explain
 import kotlinx.coroutines.CancellationException
@@ -97,6 +98,8 @@ data class ChatState(
     val mentions: List<Mention> = emptyList(),
     /** The message this app sent last, by its id: what the transcript shows whoever has scrolled where. */
     val lastSent: String? = null,
+    /** The model picked for this open chat, by its ref: which of two models with one id the chat is on. */
+    val picked: String? = null,
 )
 
 /**
@@ -124,13 +127,24 @@ const val IMAGE_TOOL = "image_generate"
  * person picked is never set aside by the folder's.
  */
 val ChatState.modelId: String?
-    get() = chat?.model?.ifBlank { null } ?: draft.model ?: folderModel ?: models.firstOrNull { it.default }?.id ?: models.firstOrNull()?.id
+    get() = chatModel ?: draft.model ?: folderModel ?: models.firstOrNull { it.default }?.key ?: models.firstOrNull()?.key
+
+/**
+ * An open chat's model. The chat says its model's id, which two connections may share; the one
+ * picked here ([ChatState.picked], a ref) says which of them, for as long as the chat is still
+ * on a model of that id.
+ */
+val ChatState.chatModel: String?
+    get() {
+        val served = chat?.model?.ifBlank { null } ?: return null
+        return picked?.takeIf { models.named(it)?.id == served } ?: served
+    }
 
 /** The folder's usual model for a chat not made yet, when it is one of the models offered here. */
 val ChatState.folderModel: String?
-    get() = start?.model?.takeIf { id -> chat == null && id.isNotBlank() && models.any { it.id == id } }
+    get() = start?.takeIf { chat == null }?.let { models.named(it.key) ?: models.named(it.model) }?.key
 
-val ChatState.modelInfo: ModelInfo? get() = models.firstOrNull { it.id == modelId }
+val ChatState.modelInfo: ModelInfo? get() = models.named(modelId)
 
 /** The thinking level in force, by the model's levels; null for a model with no choice. */
 val ChatState.level: String?
@@ -545,7 +559,7 @@ class ChatViewModel(app: Application) :
 
     override fun change(key: String, value: String?) = control { api, chat ->
         val updated = api.updateChat(chat.id, JsonObject(mapOf(key to JsonPrimitive(value))))
-        _state.update { it.copy(chat = updated) }
+        _state.update { it.copy(chat = updated, picked = if (key == "model") value else it.picked) }
         // Another model may serve one request at a time, or more: whether a team is offered
         // follows it.
         if (key == "model") {

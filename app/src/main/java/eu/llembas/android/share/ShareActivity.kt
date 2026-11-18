@@ -16,6 +16,7 @@ import eu.llembas.android.AppLanguage
 import eu.llembas.android.MainActivity
 import eu.llembas.android.R
 import eu.llembas.android.api.ApiException
+import eu.llembas.android.api.named
 import eu.llembas.android.assist.AssistSheetFrame
 import eu.llembas.android.assist.LastAssist
 import eu.llembas.android.auth.Prefs
@@ -107,7 +108,7 @@ class ShareActivity :
                     // The assistant's model while the instance still has it; a model that is
                     // gone is not asked for (the instance's default answers instead).
                     val chosen = prefs.assistantModel
-                    val gone = chosen.isNotBlank() && runCatching { api.models() }.getOrNull()?.none { it.id == chosen } == true
+                    val gone = chosen.isNotBlank() && runCatching { api.models() }.getOrNull()?.let { it.named(chosen) == null } == true
                     val made = api.createChat(message, files, model = chosen.takeIf { it.isNotBlank() && !gone })
                     store.savePrefs {
                         it.copy(

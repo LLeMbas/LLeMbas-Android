@@ -92,6 +92,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import eu.llembas.android.R
+import eu.llembas.android.api.titleAmong
 import eu.llembas.android.ui.ModelAvatar
 import eu.llembas.android.ui.ProgressStatus
 import eu.llembas.android.ui.chat.PhoneCard
@@ -425,15 +426,15 @@ private fun ModelChip(state: AssistUiState, actions: AssistActions) {
             state.models.forEach { model ->
                 DropdownMenuItem(
                     leadingIcon = { ModelAvatar(model, model.id, size = 24.dp) },
-                    text = { Text(model.name.ifBlank { model.id }, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                    trailingIcon = if (model.id == state.modelId) {
+                    text = { Text(model.titleAmong(state.models), maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                    trailingIcon = if (model.key == state.modelInfo?.key) {
                         { Box(Modifier.size(8.dp).clip(CircleShape).background(palette.accent)) }
                     } else {
                         null
                     },
                     onClick = {
                         open = false
-                        actions.pickModel(model.id)
+                        actions.pickModel(model.key)
                     },
                 )
             }

@@ -10,7 +10,7 @@ import kotlinx.serialization.Serializable
 
 /** The model last used in a directory on the device, as one the person still has. */
 @Serializable
-data class DirectoryModel(val id: String = "", val name: String = "") {
+data class DirectoryModel(val id: String = "", val name: String = "", val ref: String = "") {
     /** What to call it: its name, else its id. */
     val label: String get() = name.ifBlank { id }
 }
@@ -59,4 +59,7 @@ data class DeviceDirectory(
  * there) or `default`. The device remembers it; nothing here is kept by the app.
  */
 @Serializable
-data class StartModel(val model: String = "", val from: String = "")
+data class StartModel(val model: String = "", val from: String = "", val ref: String = "") {
+    /** The model's unambiguous name where the server says one, else its id. */
+    val key: String get() = ref.ifBlank { model }
+}

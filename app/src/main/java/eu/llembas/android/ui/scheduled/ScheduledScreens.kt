@@ -99,7 +99,9 @@ import eu.llembas.android.api.WatchCommand
 import eu.llembas.android.api.WhereToRun
 import eu.llembas.android.api.agentic
 import eu.llembas.android.api.computerAway
+import eu.llembas.android.api.named
 import eu.llembas.android.api.notifyChoice
+import eu.llembas.android.api.titleAmong
 import eu.llembas.android.lembas
 import eu.llembas.android.ui.DirectoryPicker
 import eu.llembas.android.ui.explain
@@ -1381,7 +1383,7 @@ private fun OnComputer(state: EditState, onWhere: ((EditState) -> EditState) -> 
             ) {
                 Column(Modifier.weight(1f)) {
                     Text(
-                        state.models.firstOrNull { it.id == state.model }?.let { it.name.ifBlank { it.id } }
+                        state.models.named(state.model)?.titleAmong(state.models)
                             ?: state.model.ifBlank { stringResource(R.string.schedule_folder_model) },
                         style = MaterialTheme.typography.bodyLarge,
                     )
@@ -1416,10 +1418,12 @@ private fun OnComputer(state: EditState, onWhere: ((EditState) -> EditState) -> 
                     }
                     ChoiceRow(selected = state.model.isBlank(), title = stringResource(R.string.schedule_folder_model), line = null, onClick = { pick("") })
                     // The schedule's own model stays offered where the instance no longer lists it: the server says why on Save.
-                    val own = state.model.takeIf { m -> m.isNotBlank() && state.models.none { it.id == m } }
+                    val own = state.model.takeIf { m -> m.isNotBlank() && state.models.named(m) == null }
                     own?.let { ChoiceRow(selected = true, title = it, line = null, onClick = { pick(it) }) }
-                    state.models.forEach { m ->
-                        ChoiceRow(selected = state.model == m.id, title = m.name.ifBlank { m.id }, line = null, onClick = { pick(m.id) })
+                    // By ref: a schedule read from the instance names its model by id, which still finds it.
+                    val chosen = state.models.named(state.model)?.key
+                    state.models.distinctBy { it.key }.forEach { m ->
+                        ChoiceRow(selected = chosen == m.key, title = m.titleAmong(state.models), line = null, onClick = { pick(m.key) })
                     }
                 }
             },
