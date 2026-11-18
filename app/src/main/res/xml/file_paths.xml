@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- The one folder the app shares with another app: the cache folder a photo for the composer
-     is taken into. The camera app may write the one file it was given, and nothing else. -->
+<!-- The two folders of the private cache another app may be handed one file of, and nothing
+     else: `camera/`, the one file a photo for the composer is taken into (the camera app may
+     write it); `shared/`, the copy of one of the account's files that Open with or Share hands
+     over, read-only, for that one grant (ui/files/Transfers.kt deletes them). -->
 <paths>
     <cache-path name="camera" path="camera/" />
+    <cache-path name="shared" path="shared/" />
 </paths>

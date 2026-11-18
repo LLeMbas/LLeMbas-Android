@@ -211,7 +211,9 @@
             android:name=".push.ScheduleActionReceiver"
             android:exported="false" />
 
-        <!-- A photo for the composer: the camera app writes into one file in the cache. -->
+        <!-- One file of the private cache at a time, to one other app: the photo the camera app
+             takes for the composer, and the copy of a file that Open with or Share hands over
+             (res/xml/file_paths.xml names the two folders). Not exported. -->
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.files"

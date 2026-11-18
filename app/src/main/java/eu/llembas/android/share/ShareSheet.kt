@@ -21,6 +21,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
 import androidx.compose.material.icons.filled.EditNote
+import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material3.Button
@@ -64,6 +65,8 @@ data class ShareState(
     val last: LastAssist? = null,
     val sending: Boolean = false,
     val error: String? = null,
+    /** Where "Save to Files" would put it: the person's own folder until they choose another; null while it is not known. */
+    val folder: String? = null,
 )
 
 /** What the share sheet can do; nothing by default, for the screenshot tests. */
@@ -71,20 +74,28 @@ interface ShareActions {
     /** Send it with [ask] (empty: the default request) to a new chat, or [toLast] to the last assistant chat. */
     fun send(ask: String, toLast: Boolean) {}
 
+    /** Keep what was shared as files in [ShareState.folder], asking no model anything. */
+    fun saveToFiles() {}
+
+    /** Choose another folder to save into. */
+    fun chooseFolder() {}
+
     fun cancel() {}
 }
 
 /**
  * The share sheet's contents, from [state] alone: what came in (the text, the files by name),
- * what to do with it (a line of the person's own, optional), where it goes -- a new chat, or the
- * last chat the assistant made -- and Send. Rows of unknown height stack; the two choices are
- * whole-row tap targets of at least 56 dp.
+ * what to do with it (a line of the person's own, optional), where it goes -- a new chat, the
+ * last chat the assistant made, or the person's Files, where nothing is asked of a model -- and
+ * Send or Save. Rows of unknown height stack; the choices are whole-row tap targets of at least
+ * 56 dp.
  */
 @Composable
 fun ColumnScope.ShareSheetContent(state: ShareState, actions: ShareActions, handle: Modifier = Modifier) {
     val palette = LocalPalette.current
     var ask by remember { mutableStateOf("") }
     var toLast by remember { mutableStateOf(false) }
+    var toFiles by remember { mutableStateOf(false) }
     val last = state.last
 
     Column(handle.fillMaxWidth()) {
@@ -157,25 +168,43 @@ fun ColumnScope.ShareSheetContent(state: ShareState, actions: ShareActions, hand
                 unfocusedIndicatorColor = Color.Transparent,
             ),
             maxLines = 4,
-            enabled = !state.sending,
+            // Files keep what was shared as it is: there is nobody to tell what to do with it.
+            enabled = !state.sending && !toFiles,
             modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
         )
 
         // Where it goes.
-        if (last != null) {
-            Surface(
-                shape = RoundedCornerShape(20.dp),
-                color = palette.surfaceRaised,
-                border = BorderStroke(1.dp, palette.border),
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Column {
-                    Destination(Icons.Filled.EditNote, stringResource(R.string.new_chat), null, selected = !toLast, enabled = !state.sending) { toLast = false }
-                    Destination(Icons.Filled.History, stringResource(R.string.assist_continue), last.title, selected = toLast, enabled = !state.sending) {
-                        toLast =
-                            true
+        Surface(
+            shape = RoundedCornerShape(20.dp),
+            color = palette.surfaceRaised,
+            border = BorderStroke(1.dp, palette.border),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Column {
+                Destination(Icons.Filled.EditNote, stringResource(R.string.new_chat), null, selected = !toLast && !toFiles, enabled = !state.sending) {
+                    toLast = false
+                    toFiles = false
+                }
+                if (last != null) {
+                    Destination(
+                        Icons.Filled.History,
+                        stringResource(R.string.assist_continue),
+                        last.title,
+                        selected = toLast && !toFiles,
+                        enabled = !state.sending,
+                    ) {
+                        toLast = true
+                        toFiles = false
                     }
                 }
+                Destination(Icons.Filled.Folder, stringResource(R.string.share_to_files), state.folder, selected = toFiles, enabled = !state.sending) {
+                    toFiles = true
+                }
+            }
+        }
+        if (toFiles) {
+            TextButton(onClick = actions::chooseFolder, enabled = !state.sending, modifier = Modifier.heightIn(min = 48.dp)) {
+                Text(stringResource(R.string.files_choose_folder))
             }
         }
         state.error?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = palette.danger) }
@@ -189,11 +218,21 @@ fun ColumnScope.ShareSheetContent(state: ShareState, actions: ShareActions, hand
         TextButton(onClick = actions::cancel, modifier = Modifier.heightIn(min = 48.dp)) { Text(stringResource(R.string.cancel)) }
         Spacer(Modifier.width(8.dp))
         Button(
-            onClick = { actions.send(ask, toLast && last != null) },
-            enabled = !state.sending && (state.text.isNotBlank() || state.files.isNotEmpty()),
+            onClick = { if (toFiles) actions.saveToFiles() else actions.send(ask, toLast && last != null) },
+            enabled = !state.sending && (state.text.isNotBlank() || state.files.isNotEmpty()) && (!toFiles || state.folder != null),
             colors = ButtonDefaults.buttonColors(containerColor = palette.accent, contentColor = palette.accentInk),
             modifier = Modifier.heightIn(min = 48.dp),
-        ) { Text(stringResource(if (state.sending) R.string.share_sending else R.string.send)) }
+        ) {
+            Text(
+                stringResource(
+                    when {
+                        toFiles -> R.string.save
+                        state.sending -> R.string.share_sending
+                        else -> R.string.send
+                    },
+                ),
+            )
+        }
     }
 }
 
@@ -228,3 +267,7 @@ fun shareMessage(ask: String, shared: String, fallback: String): String {
     val request = ask.trim().ifBlank { fallback }
     return if (shared.isBlank()) request else "$request\n\n---\n\n${shared.trim()}"
 }
+
+/** What shared text is called when it is kept as a file: `shared-20260102-030405.txt`, from the moment it was saved. */
+fun sharedNoteName(at: java.time.LocalDateTime): String =
+    "shared-" + at.format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss", java.util.Locale.ROOT)) + ".txt"

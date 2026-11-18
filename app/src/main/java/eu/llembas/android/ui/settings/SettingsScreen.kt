@@ -104,6 +104,7 @@ import eu.llembas.android.auth.Prefs
 import eu.llembas.android.lembas
 import eu.llembas.android.notify.NotificationAccess
 import eu.llembas.android.push.Push
+import eu.llembas.android.ui.files.FileCache
 import eu.llembas.android.ui.theme.LocalPalette
 import eu.llembas.android.update.AppVersion
 import eu.llembas.android.update.ReleaseCheck
@@ -265,6 +266,8 @@ fun SettingsScreen(onBack: () -> Unit, onAddInstance: () -> Unit) {
                     Push.disable(context, instance)
                     runCatching { store.clientFor(instance).signOut() }
                     store.remove(instance.id)
+                    // The copies of the account's files this phone held for a viewer or another app go with it.
+                    FileCache.clear(context)
                 }
             }
 

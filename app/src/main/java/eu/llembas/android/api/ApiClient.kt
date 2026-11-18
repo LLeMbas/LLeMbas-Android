@@ -1,6 +1,7 @@
 package eu.llembas.android.api
 
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.KSerializer
@@ -22,6 +23,7 @@ import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import java.io.IOException
+import java.io.OutputStream
 import java.util.concurrent.TimeUnit
 import kotlin.coroutines.resumeWithException
 
@@ -598,6 +600,181 @@ class ApiClient(val base: String, private val token: String, val http: OkHttpCli
     suspend fun fileContent(path: String): FileContent {
         val url = "$v2/files/content".toHttpUrl().newBuilder().addQueryParameter("path", path).build()
         return call(authed(url.toString()).get().build(), FileContent.serializer())
+    }
+
+    // --- The file manager's writes, the trash, versions and bytes ---------------------------------
+    // Each write answers the listing of the directory it changed; a refusal is the tree's own
+    // sentence (400), a path that cannot be read a 404, and both come back as an ApiException.
+
+    private fun filesUrl(path: String, vararg query: Pair<String, String?>): String = "$v2/files$path".toHttpUrl().newBuilder()
+        .apply { query.forEach { (name, value) -> if (value != null) addQueryParameter(name, value) } }
+        .build()
+        .toString()
+
+    suspend fun makeFolder(dir: String, name: String): FileListing = send(
+        "POST",
+        "/files/mkdir",
+        buildJsonObject {
+            put("path", dir)
+            put("name", name)
+        },
+    )
+
+    suspend fun renameFile(path: String, name: String): FileListing = send(
+        "POST",
+        "/files/rename",
+        buildJsonObject {
+            put("path", path)
+            put("name", name)
+        },
+    )
+
+    /** Copy [path] into the directory [to]; the answer's `copied` says what the copy is called. */
+    suspend fun copyFile(path: String, to: String, name: String? = null): FileListing = send(
+        "POST",
+        "/files/copy",
+        buildJsonObject {
+            put("path", path)
+            put("to", to)
+            name?.let { put("name", it) }
+        },
+    )
+
+    /**
+     * Move or copy [paths] into the directory [to], or delete them (to the trash): `op` is
+     * `move`, `copy` or `delete`. Each path is done by itself, so the answer is read for what
+     * failed even though the request succeeded.
+     */
+    suspend fun batchFiles(op: String, paths: List<String>, to: String? = null): BatchAnswer = send(
+        "POST",
+        "/files/batch",
+        buildJsonObject {
+            put("op", op)
+            put("paths", JsonArray(paths.map { JsonPrimitive(it) }))
+            to?.let { put("to", it) }
+        },
+    )
+
+    /**
+     * Save a text file. [base] is the `sha` the file had when it was opened: when it holds
+     * something else by now the server writes nothing and this throws [SaveConflict] with its
+     * sentence, unless [force]. Without a [base] nothing is compared, and a path with no file
+     * makes one.
+     */
+    suspend fun saveFile(path: String, text: String, base: String? = null, force: Boolean = false): FileContent = withContext(Dispatchers.IO) {
+        val body = buildJsonObject {
+            put("path", path)
+            put("text", text)
+            base?.takeIf { it.isNotBlank() }?.let { put("base", it) }
+            if (force) put("force", true)
+        }
+        http.newCall(authed("$v2/files/content").put(body.toString().toRequestBody(JSON)).build()).await().use { response ->
+            val said = runCatching { response.body?.string().orEmpty() }.getOrDefault("")
+            if (response.code == 409) {
+                val conflict = runCatching { LembasJson.parseToJsonElement(said) as? JsonObject }.getOrNull() ?: JsonObject(emptyMap())
+                if ((conflict["conflict"] as? JsonPrimitive)?.content == "true") {
+                    throw SaveConflict(refusal(said).orEmpty(), (conflict["sha"] as? JsonPrimitive)?.takeUnless { it is JsonNull }?.content.orEmpty())
+                }
+            }
+            if (!response.isSuccessful) throw ApiException(response.code, refusal(said) ?: "The server answered ${response.code}.")
+            LembasJson.decodeFromString(FileContent.serializer(), said)
+        }
+    }
+
+    suspend fun trash(): TrashList = get("/files/trash")
+
+    suspend fun restoreTrashed(id: String): TrashList = send("POST", "/files/restore", buildJsonObject { put("id", id) })
+
+    /** Remove for good: the one thing named, or with no [id] everything in the trash. */
+    suspend fun removeTrashed(id: String? = null): TrashList = call(authed(filesUrl("/trash", "id" to id)).delete().build(), TrashList.serializer())
+
+    suspend fun fileVersions(path: String): FileVersions = call(authed(filesUrl("/versions", "path" to path)).get().build(), FileVersions.serializer())
+
+    /** Make an older version the file again, as a new version: nothing is lost. */
+    suspend fun restoreVersion(path: String, version: String): FileVersions = send(
+        "POST",
+        "/files/versions/restore",
+        buildJsonObject {
+            put("path", path)
+            put("version", version)
+        },
+    )
+
+    /**
+     * Upload one file into the directory [dir], streamed: [body] writes the file's bytes as they
+     * are read, so a large file is never held in memory. A file over the instance's limit is a
+     * 413 whose sentence names it.
+     */
+    suspend fun uploadFile(dir: String, name: String, body: RequestBody): FileListing {
+        val form = MultipartBody.Builder().setType(MultipartBody.FORM).addFormDataPart("files", name, body).build()
+        return call(authed(filesUrl("/upload", "path" to dir)).post(form).build(), FileListing.serializer())
+    }
+
+    /**
+     * The request for a file's bytes (`/files/raw`), or for [range] of them. The token goes in
+     * the Authorization header, as on every call: the address names the path and nothing else.
+     */
+    fun rawFile(path: String, range: LongRange? = null, inline: Boolean = false): Request = authed(
+        filesUrl(
+            "/raw",
+            "path" to path,
+            "inline" to if (inline) "1" else null,
+        ),
+    )
+        .header("Accept", "*/*")
+        .apply { range?.let { header("Range", "bytes=${it.first}-${it.last}") } }
+        .get()
+        .build()
+
+    /** The request for [paths] (files and folders) as one zip. */
+    fun zipFiles(paths: List<String>): Request = authed("$v2/files/zip")
+        .header("Accept", "*/*")
+        .post(buildJsonObject { put("paths", JsonArray(paths.map { JsonPrimitive(it) })) }.toString().toRequestBody(JSON))
+        .build()
+
+    /**
+     * Run [request] and copy what it answers into [out] as it comes, saying how far it is
+     * ([progress]: bytes so far, and the total when the server said one, else -1). At most
+     * [most] bytes are taken: more than that is refused as a 413, with nothing more read.
+     */
+    suspend fun download(request: Request, out: OutputStream, most: Long = Long.MAX_VALUE, progress: (done: Long, total: Long) -> Unit = { _, _ -> }): Long =
+        withContext(Dispatchers.IO) {
+            http.newCall(request).await().use { response ->
+                if (!response.isSuccessful) throw ApiException(response.code, detail(response))
+                val body = response.body ?: throw ApiException(response.code, "")
+                val total = body.contentLength()
+                if (total > most) throw ApiException(413, "")
+                val buffer = ByteArray(64 * 1024)
+                var done = 0L
+                body.byteStream().use { stream ->
+                    while (true) {
+                        ensureActive()
+                        val n = stream.read(buffer)
+                        if (n < 0) break
+                        done += n
+                        if (done > most) throw ApiException(413, "")
+                        out.write(buffer, 0, n)
+                        progress(done, total)
+                    }
+                }
+                out.flush()
+                done
+            }
+        }
+
+    /**
+     * The bytes `[from, to]` of a file, for a player or a table's first rows: a `Range` request,
+     * blocking, on whatever thread asks (never the main one). A server that answers the whole
+     * file to a range that does not start at 0 is refused rather than read from the wrong place.
+     */
+    fun rawBytes(path: String, from: Long, to: Long): ByteArray = http.newCall(rawFile(path, from..to)).execute().use { response ->
+        if (!response.isSuccessful) throw ApiException(response.code, detail(response))
+        if (response.code != 206 && from > 0) throw ApiException(416, "")
+        val want = to - from + 1
+        response.body!!.source().use { source ->
+            source.request(want)
+            source.buffer.readByteArray(minOf(source.buffer.size, want))
+        }
     }
 
     /** A file of the tree in the web UI's own viewer (`/files/view`), for what the app does not draw. */

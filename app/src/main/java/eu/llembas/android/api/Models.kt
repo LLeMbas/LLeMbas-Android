@@ -563,6 +563,12 @@ data class FileEntry(
     val name: String = "",
     val path: String = "",
     val kind: String = "file",
+    /**
+     * What the file is, read by the server from its name and its own bytes: `markdown`, `code`,
+     * `text`, `html`, `image`, `svg`, `pdf`, `audio`, `video`, `table`, `notebook`, `model3d`,
+     * `archive` or `binary`. Null for a folder, and from a server that does not say it.
+     */
+    @SerialName("file_kind") val fileKind: String? = null,
     val size: Long = 0,
     val mime: String = "",
     @SerialName("updated_at") val updatedAt: String? = null,
@@ -573,7 +579,13 @@ data class FileEntry(
 
 /** A directory, through the person's own access. `parent` is null at `/`. */
 @Serializable
-data class FileListing(val path: String = "/", val parent: String? = null, val entries: List<FileEntry> = emptyList())
+data class FileListing(
+    val path: String = "/",
+    val parent: String? = null,
+    val entries: List<FileEntry> = emptyList(),
+    /** After a copy: the new entry, under the name the server gave it (a taken name is numbered). */
+    val copied: FileEntry? = null,
+)
 
 /** Why a file's text did not come: `reason` is `not_text` or `too_large`; `message` says it. */
 @Serializable
@@ -590,7 +602,12 @@ data class FileContent(
     val size: Long = 0,
     val mime: String = "",
     val kind: String = "text",
+    /** What the file is ([FileEntry.fileKind]); null from a server that does not say it. */
+    @SerialName("file_kind") val fileKind: String? = null,
+    /** Whether the person may change it; null from a server that does not say (then: no editing). */
+    val writable: Boolean? = null,
     val language: String = "",
+    /** What the file holds now: sent back as a save's `base`, so a save over somebody else's change is refused. */
     val sha: String = "",
     val text: String = "",
     val withheld: Withheld? = null,

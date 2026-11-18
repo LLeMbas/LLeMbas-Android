@@ -33,6 +33,8 @@ class LembasApp : Application() {
     override fun onCreate() {
         super.onCreate()
         instances = InstanceStore(this)
+        // Copies of the account's files a viewer or another app was handed, left by a process that was killed.
+        eu.llembas.android.ui.files.FileCache.clear(this)
         // Whether the app is on screen: the wake word may open the assistant's sheet as an
         // activity only then (Android blocks one started from the background, silently).
         registerActivityLifecycleCallbacks(

@@ -112,31 +112,6 @@ fun FileViewer(chatId: String, show: ShowCard, onClose: () -> Unit) {
     )
 }
 
-/**
- * A file of the person's tree (the Files screen), in the same viewer and under the same rules:
- * the person's own files are no more trusted than a model's, since a model may have written
- * them. A file the server withholds (not text, over 1 MB) says why, and offers the web UI.
- */
-@Composable
-fun TreeFileViewer(path: String, onClose: () -> Unit) {
-    Viewer(
-        file = Viewed(path.substringAfterLast('/').ifBlank { path }, path, 0, "text"),
-        key = path,
-        webUrl = { it.webFile(path) },
-        load = { api, context ->
-            val file = api.fileContent(path)
-            val withheld = file.withheld
-            when {
-                withheld == null -> Loaded.Text(file.text, file.viewKind, file.language)
-                withheld.message.isNotBlank() -> Loaded.Failed(withheld.message)
-                withheld.reason == "too_large" -> Loaded.Failed(context.getString(R.string.viewer_too_large))
-                else -> Loaded.Failed(context.getString(R.string.viewer_not_text))
-            }
-        },
-        onClose = onClose,
-    )
-}
-
 @Composable
 private fun Viewer(file: Viewed, key: Any, webUrl: (ApiClient) -> String?, load: suspend (ApiClient, Context) -> Loaded, onClose: () -> Unit) {
     val context = LocalContext.current
@@ -321,12 +296,12 @@ private fun linesOf(text: AnnotatedString): List<AnnotatedString> {
     }
 }
 
-private fun copy(context: Context, label: String, text: String) {
+internal fun copy(context: Context, label: String, text: String) {
     context.getSystemService(ClipboardManager::class.java)?.setPrimaryClip(ClipData.newPlainText(label, text))
 }
 
 /** The web UI's viewer, in the browser (a Custom Tab), where the person's own session is. */
-private fun openOutside(context: Context, url: String) {
+internal fun openOutside(context: Context, url: String) {
     val uri = Uri.parse(url)
     if (uri.scheme?.lowercase() !in setOf("http", "https")) return
     runCatching { CustomTabsIntent.Builder().build().launchUrl(context, uri) }

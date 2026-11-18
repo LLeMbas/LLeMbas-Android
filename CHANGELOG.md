@@ -5,6 +5,33 @@ is in alpha and releases come off `main`.
 
 ## [Unreleased]
 
+For Files as described here the instance must be newer than LLeMbas 2.0.0-beta.16. On an older
+one Files lists and shows text as before, and says so where it cannot do more.
+
+### Added
+
+- **Files is a file manager.** Upload from the phone (several at once, with progress; a file
+  over the instance's limit is refused in the instance's own words and the others still go),
+  make a folder or a text file, rename, move and copy by walking to the folder rather than
+  typing a path, and delete to the trash. A long press chooses; with several chosen, a bar moves,
+  copies, downloads, shares or deletes them all, and says which the instance refused.
+- **The trash and a file's versions.** What was deleted can be restored or removed for good,
+  one thing or everything. A file's earlier versions are listed, and any of them can be made
+  the file again without losing the others.
+- **Download, Open with and Share.** A file is saved where you choose in the phone's own
+  "Save to" page; several files or a folder come as one zip. Open with and Share hand another
+  app a copy from the app's private storage, which is deleted again. The app asks for no
+  storage permission.
+- **Text files can be edited.** Markdown, code, plain text, a page's source and a table's text,
+  up to the instance's 1 MB. If the file changed on the instance while you were writing, nothing
+  is written over: you choose Reload or Save anyway. Leaving with unsaved text asks first.
+- **A viewer for each kind of file.** Pictures, with zoom and pan; PDFs, page by page; sound and
+  video, streamed, with seeking; CSV and TSV as a grid; notebooks as their cells' text. For
+  archives, 3D models and anything else: what it is, with Download, Open with and Share. An
+  HTML page and an SVG are shown as their source -- the app draws nothing a file could script.
+- **"Save to Files" in the share sheet.** Something shared from another app can be kept in a
+  folder of your files instead of being sent into a chat; shared text is kept as a note.
+
 ### Fixed
 
 - **A chat on a model two connections serve shows the right connection.** When an instance has

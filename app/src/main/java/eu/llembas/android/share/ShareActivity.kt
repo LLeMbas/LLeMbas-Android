@@ -5,17 +5,20 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.provider.OpenableColumns
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.res.stringResource
 import androidx.core.content.IntentCompat
 import androidx.lifecycle.lifecycleScope
 import eu.llembas.android.AppLanguage
 import eu.llembas.android.MainActivity
 import eu.llembas.android.R
 import eu.llembas.android.api.ApiException
+import eu.llembas.android.api.FileKinds
 import eu.llembas.android.api.named
 import eu.llembas.android.assist.AssistSheetFrame
 import eu.llembas.android.assist.LastAssist
@@ -23,6 +26,10 @@ import eu.llembas.android.auth.Prefs
 import eu.llembas.android.lembas
 import eu.llembas.android.push.Notifications
 import eu.llembas.android.ui.explain
+import eu.llembas.android.ui.files.FolderPicker
+import eu.llembas.android.ui.files.describe
+import eu.llembas.android.ui.files.filesSay
+import eu.llembas.android.ui.files.uploadFrom
 import eu.llembas.android.ui.theme.LembasTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -43,6 +50,7 @@ class ShareActivity :
     ShareActions {
     private val state = MutableStateFlow(ShareState())
     private var uris: List<Uri> = emptyList()
+    private val choosing = MutableStateFlow(false)
 
     override fun attachBaseContext(newBase: Context) = super.attachBaseContext(AppLanguage.wrap(newBase))
 
@@ -70,17 +78,64 @@ class ShareActivity :
                         ?.let { id -> LastAssist(id, prefs.lastAssistTitle, prefs.lastAssistAt) },
                 )
             }
+            // Where "Save to Files" starts: the folder the instance opens the person's files at.
+            runCatching { store.client()?.files("/")?.path }.getOrNull()?.let { home -> state.update { it.copy(folder = it.folder ?: home) } }
         }
         setContent {
             val prefs by lembas.instances.prefs.collectAsState(initial = Prefs())
             val shown by state.collectAsState()
+            val picking by choosing.collectAsState()
             LembasTheme(prefs.theme) {
                 AssistSheetFrame(onDismiss = ::cancel) { handle, _ -> ShareSheetContent(shown, this@ShareActivity, handle) }
+                if (picking) {
+                    FolderPicker(
+                        stringResource(R.string.files_choose_folder),
+                        stringResource(R.string.files_save_here),
+                        shown.folder ?: "/",
+                        onPick = { folder ->
+                            choosing.value = false
+                            state.update { it.copy(folder = folder) }
+                        },
+                        onDismiss = { choosing.value = false },
+                    )
+                }
             }
         }
     }
 
     override fun cancel() = finish()
+
+    override fun chooseFolder() {
+        choosing.value = true
+    }
+
+    /**
+     * Keep what was shared in the person's files: each file streamed into the folder as it is,
+     * the text (when there is any) as a note beside them. No chat is made and no model is asked.
+     * What the instance refuses -- a file over its limit, a folder that may not be written --
+     * is said in its own sentence, and the sheet stays.
+     */
+    override fun saveToFiles() {
+        val now = state.value
+        val folder = now.folder ?: return
+        if (now.sending) return
+        state.update { it.copy(sending = true, error = null) }
+        lifecycleScope.launch {
+            try {
+                val api = lembas.instances.client() ?: run {
+                    startActivity(Intent(this@ShareActivity, MainActivity::class.java))
+                    finish()
+                    return@launch
+                }
+                for (uri in uris) api.uploadFrom(contentResolver, contentResolver.describe(uri), folder)
+                if (now.text.isNotBlank()) api.saveFile(FileKinds.child(folder, sharedNoteName(java.time.LocalDateTime.now())), now.text + "\n")
+                Toast.makeText(this@ShareActivity, R.string.files_uploaded, Toast.LENGTH_SHORT).show()
+                finish()
+            } catch (e: Exception) {
+                state.update { it.copy(sending = false, error = filesSay(e)) }
+            }
+        }
+    }
 
     override fun send(ask: String, toLast: Boolean) {
         if (state.value.sending) return
