@@ -592,6 +592,10 @@
     <string name="schedule_agent_mode_hint">Edit salvo que elijas otro; Auto ejecuta comandos sin preguntar. El ordenador puede rebajarlo.</string>
     <string name="schedule_approval_wait">Una aprobación espera (minutos)</string>
     <string name="schedule_approval_wait_hint">Un comando que la ejecución necesita aprobar llega a tu teléfono como tarjeta. Sin respuesta para entonces, cuenta como denegado.</string>
+    <string name="schedule_watch_command_hint">Opcional, en el ordenador. Se ejecuta en la carpeta antes de cada ejecución; cuando su salida es la misma que la última vez, la ejecución se detiene ahí. Se rechaza un comando por el que el modo preguntaría.</string>
+    <string name="schedule_watch_timeout">El comando puede tardar (segundos)</string>
+    <string name="schedule_watch_timeout_hint">Después se detiene y la ejecución falla.</string>
+    <string name="schedule_chat_drops_watch">Esta tarea vigila un comando en su ordenador. Como tarea de tipo Chat ya no lo hace: se ejecuta siempre.</string>
     <string name="schedule_folder_model">El modelo habitual de la carpeta</string>
     <string name="schedule_folder_model_hint">El modelo habitual de la carpeta es el último que usó en esa carpeta de ese ordenador — el ordenador lo recuerda y cada ejecución se lo pregunta — o su modelo predeterminado donde no hay ninguno. Un modelo elegido aquí es el de la ejecución, sea cual sea el de la carpeta. Una ejecución nunca cambia el modelo de la carpeta.</string>
     <string name="schedule_first_free_model">El primero libre de sus modelos para programación</string>

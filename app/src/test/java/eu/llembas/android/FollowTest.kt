@@ -6,6 +6,13 @@ import eu.llembas.android.ui.chat.followsAt
 import eu.llembas.android.ui.chat.keptRow
 import eu.llembas.android.ui.chat.movesToEnd
 import eu.llembas.android.ui.chat.transcriptChange
+import eu.llembas.android.ui.chat.yielding
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -44,11 +51,39 @@ class FollowTest {
 
     @Test
     fun aMessageSentAlwaysShows() {
-        val change = transcriptChange(talk, talk + person("q3") + reply("a3"))
+        val change = transcriptChange(talk, talk + person("q3") + reply("a3"), sent = "q3")
         assertEquals(TranscriptChange.Sent, change)
         assertTrue(movesToEnd(change, following = false))
         // A prompt queued behind a running reply: the person's row alone.
-        assertEquals(TranscriptChange.Sent, transcriptChange(talk, talk + person("q3")))
+        assertEquals(TranscriptChange.Sent, transcriptChange(talk, talk + person("q3"), sent = "q3"))
+    }
+
+    @Test
+    fun aMessageWrittenElsewhereDoesNotDragAReaderDown() {
+        // The person's row arrives from the page or another device: this app did not send it.
+        val elsewhere = transcriptChange(talk, talk + person("q3") + reply("a3"))
+        assertEquals(TranscriptChange.Appended, elsewhere)
+        assertFalse(movesToEnd(elsewhere, following = false))
+        assertTrue(movesToEnd(elsewhere, following = true))
+        // Nor is it "sent" because this app sent something earlier.
+        assertEquals(TranscriptChange.Appended, transcriptChange(talk, talk + person("q3"), sent = "q2"))
+    }
+
+    @Test
+    fun aScrollAFingerInterruptsDoesNotEndTheFollower() = runTest {
+        // Compose ends a scroll of ours by cancelling it: the follower goes on.
+        var after = false
+        yielding { throw CancellationException("a finger took the list") }
+        after = true
+        assertTrue(after)
+        // The follower itself cancelled: it ends.
+        var went = false
+        val follower = launch(start = CoroutineStart.UNDISPATCHED) {
+            yielding { awaitCancellation() }
+            went = true
+        }
+        follower.cancelAndJoin()
+        assertFalse(went)
     }
 
     @Test

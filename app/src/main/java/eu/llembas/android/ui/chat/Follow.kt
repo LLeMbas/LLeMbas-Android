@@ -1,6 +1,9 @@
 package eu.llembas.android.ui.chat
 
 import eu.llembas.android.api.Message
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 
 /*
  * Whether a list keeps to its end while something is written into it. The rule, the same for the
@@ -17,7 +20,7 @@ enum class TranscriptChange {
     /** A chat shown for the first time, or another chat in the same place. */
     Opened,
 
-    /** The person's own message is new at the end: sending always shows what was sent. */
+    /** A message this app just sent is new at the end: sending always shows what was sent. */
     Sent,
 
     /** New rows at the end that the person did not write: a reply, the queue's next turn. */
@@ -33,9 +36,12 @@ enum class TranscriptChange {
 /**
  * What changed from [before] to [after]. [before] is null when this draw is the first one this
  * list makes; [restored] then says the list had rows before (a rotation, a return to the
- * screen), so its place is the one it kept, not a chat being opened.
+ * screen), so its place is the one it kept, not a chat being opened. [sent] is the id of the
+ * message this app sent last: only that one is "sent". The person's row arriving from
+ * elsewhere -- written on the page or another device while this chat is open here -- is a row
+ * like a reply's, and does not pull a reader down.
  */
-fun transcriptChange(before: List<Message>?, after: List<Message>, restored: Boolean = false): TranscriptChange {
+fun transcriptChange(before: List<Message>?, after: List<Message>, restored: Boolean = false, sent: String? = null): TranscriptChange {
     if (after.isEmpty()) return TranscriptChange.None
     if (before == null) return if (restored) TranscriptChange.Changed else TranscriptChange.Opened
     val known = before.mapTo(HashSet()) { it.id }
@@ -43,7 +49,7 @@ fun transcriptChange(before: List<Message>?, after: List<Message>, restored: Boo
     if (firstKept < 0) return TranscriptChange.Opened
     val added = after.subList(after.indexOfLast { it.id in known } + 1, after.size)
     return when {
-        added.any { it.isUser && !it.machine } -> TranscriptChange.Sent
+        sent != null && added.any { it.id == sent } -> TranscriptChange.Sent
         added.isNotEmpty() -> TranscriptChange.Appended
         firstKept > 0 -> TranscriptChange.Older
         before == after -> TranscriptChange.None
@@ -76,4 +82,18 @@ fun followsAt(distance: Int, slack: Int): Boolean = distance <= slack
 fun keptRow(before: List<Message>, after: List<Message>): Int? {
     val first = before.firstOrNull() ?: return null
     return after.indexOfFirst { it.id == first.id }.takeIf { it >= 0 }
+}
+
+/**
+ * A scroll this app makes for the person ([scroll]: to the end, as the reply grows). A finger
+ * on the list takes it over, and Compose ends the scroll by cancelling it -- which, left
+ * alone, would also end whatever follower called it, for good. So that cancellation is taken
+ * here, and only that one: when the follower itself is cancelled, it still ends.
+ */
+suspend fun yielding(scroll: suspend () -> Unit) {
+    try {
+        scroll()
+    } catch (e: CancellationException) {
+        currentCoroutineContext().ensureActive()
+    }
 }

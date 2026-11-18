@@ -27,5 +27,20 @@ fun withoutMention(text: String): String = if (mentionQuery(text) == null) text 
 /** [text] with the `@word` it ends with made `@path` and a space: a device's file, which the device reads. */
 fun withMention(text: String, path: String): String = if (mentionQuery(text) == null) text else text.substring(0, text.lastIndexOf('@')) + "@" + path + " "
 
-/** A device's file as an entry of the `@` list: its name, and its path as the detail. */
-fun DeviceFile.asMention(): Mention = Mention(kind = MENTION_DEVICE, path = path, name = name.ifBlank { path }, detail = if (kind == "dir") "$path/" else path)
+/** The most entries the `@` list shows. */
+const val MENTION_LIMIT = 50
+
+/** The longest path a device's file may have to be offered. */
+const val MENTION_PATH = 512
+
+/**
+ * A device's file as an entry of the `@` list: its name, and its path as the detail. Null for
+ * one that is not offered: its path goes into the message as it is, so a path with a line
+ * break or another control character in it -- which the one-line row would not show -- or one
+ * too long to be a path is left out.
+ */
+fun DeviceFile.asMention(): Mention? {
+    if (path.isBlank() || path.length > MENTION_PATH || path.any { it.isISOControl() }) return null
+    val shown = name.filterNot { it.isISOControl() }.take(MENTION_PATH).ifBlank { path }
+    return Mention(kind = MENTION_DEVICE, path = path, name = shown, detail = if (kind == "dir") "$path/" else path)
+}

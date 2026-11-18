@@ -95,6 +95,8 @@ data class ChatState(
     val start: StartModel? = null,
     /** What `@` offers for the word being typed: the server's files, earlier attachments and pages, or an agent chat's device's files. */
     val mentions: List<Mention> = emptyList(),
+    /** The message this app sent last, by its id: what the transcript shows whoever has scrolled where. */
+    val lastSent: String? = null,
 )
 
 /**
@@ -254,7 +256,7 @@ class ChatViewModel(app: Application) :
     private fun fail(e: Throwable) {
         // A follow that was replaced by a newer one is cancelled, not failed: nothing to say.
         if (e is CancellationException) return
-        _state.update { it.copy(error = getApplication<Application>().explain(e), loading = false, uploading = false) }
+        _state.update { it.copy(error = getApplication<Application>().explain(e), loading = false, uploading = uploads > 0) }
     }
 
     fun clearError() = _state.update { it.copy(error = null, notice = null) }
@@ -442,7 +444,10 @@ class ChatViewModel(app: Application) :
 
     private fun took(turn: Turn) {
         _state.update { s ->
-            s.copy(messages = s.messages.filterNot { m -> m.id == turn.message?.id || m.id == turn.reply?.id } + listOfNotNull(turn.message, turn.reply))
+            s.copy(
+                messages = s.messages.filterNot { m -> m.id == turn.message?.id || m.id == turn.reply?.id } + listOfNotNull(turn.message, turn.reply),
+                lastSent = turn.message?.id ?: s.lastSent,
+            )
         }
         turn.reply?.let { follow(it.id) }
     }
@@ -487,7 +492,7 @@ class ChatViewModel(app: Application) :
                         agents = agents,
                         forceTool = if (picture) IMAGE_TOOL else null,
                     )
-                    _state.update { it.copy(chat = made.chat, messages = listOfNotNull(made.message, made.reply)) }
+                    _state.update { it.copy(chat = made.chat, messages = listOfNotNull(made.message, made.reply), lastSent = made.message?.id) }
                     made.reply?.let { follow(it.id) }
                 } else {
                     took(client.sendMessage(chat.id, text, files, forceTool = if (picture) IMAGE_TOOL else null))
@@ -649,10 +654,23 @@ class ChatViewModel(app: Application) :
         then()
     }
 
+    /** How many uploads and attachings are under way: `uploading` holds until the last has ended. */
+    private var uploads = 0
+
+    private fun uploadBegins() {
+        uploads++
+        _state.update { it.copy(uploading = true) }
+    }
+
+    private fun uploadEnds() {
+        uploads = (uploads - 1).coerceAtLeast(0)
+        _state.update { it.copy(uploading = uploads > 0) }
+    }
+
     override fun attach(uris: List<Uri>) {
         if (uris.isEmpty()) return
         viewModelScope.launch {
-            _state.update { it.copy(uploading = true) }
+            uploadBegins()
             try {
                 val resolver = getApplication<Application>().contentResolver
                 for (uri in uris) {
@@ -671,7 +689,7 @@ class ChatViewModel(app: Application) :
             } catch (e: Exception) {
                 fail(e)
             }
-            _state.update { it.copy(uploading = false) }
+            uploadEnds()
         }
     }
 
@@ -686,6 +704,7 @@ class ChatViewModel(app: Application) :
         suggesting = viewModelScope.launch {
             // Asked once the typing pauses, not at every letter.
             delay(MENTION_PAUSE_MS)
+            val where = _state.value.let { Triple(it.chat?.id, it.device?.id, it.draft.directory) }
             val found = try {
                 offered(query)
             } catch (e: CancellationException) {
@@ -694,7 +713,8 @@ class ChatViewModel(app: Application) :
                 // An older server, or a device that cannot answer: nothing is offered.
                 emptyList()
             }
-            _state.update { it.copy(mentions = found) }
+            // Another computer or folder was chosen meanwhile: these were its files, not this one's.
+            _state.update { if (Triple(it.chat?.id, it.device?.id, it.draft.directory) == where) it.copy(mentions = found) else it }
         }
     }
 
@@ -704,21 +724,22 @@ class ChatViewModel(app: Application) :
         val chat = now.chat
         if (chat?.kind == "agent" || (chat == null && agentChat)) {
             val device = chat?.device?.tokenId ?: now.device?.id ?: return emptyList()
-            return api().deviceFiles(device, query, chatId = chat?.id, cwd = now.draft.directory).files.map { it.asMention() }
+            return api().deviceFiles(device, query, chatId = chat?.id, cwd = now.draft.directory).files.mapNotNull { it.asMention() }.take(MENTION_LIMIT)
         }
-        return api().mentions(query, chat?.id).items
+        return api().mentions(query, chat?.id).items.take(MENTION_LIMIT)
     }
 
     override fun mention(item: Mention) {
-        _state.update { it.copy(mentions = emptyList(), uploading = true) }
+        _state.update { it.copy(mentions = emptyList()) }
         viewModelScope.launch {
+            uploadBegins()
             try {
                 val stored = api().attachFrom(item, _state.value.chat?.id)
                 _state.update { it.copy(pending = it.pending + stored) }
             } catch (e: Exception) {
                 fail(e)
             }
-            _state.update { it.copy(uploading = false) }
+            uploadEnds()
         }
     }
 

@@ -6,14 +6,20 @@ import eu.llembas.android.api.LinkedDevice
 import eu.llembas.android.api.RunResult
 import eu.llembas.android.api.ScheduleCompiled
 import eu.llembas.android.api.ScheduleEnvelope
+import eu.llembas.android.api.WatchCommand
 import eu.llembas.android.api.WhereToRun
 import eu.llembas.android.api.agentic
 import eu.llembas.android.ui.scheduled.EditState
 import eu.llembas.android.ui.scheduled.agenticOffered
+import eu.llembas.android.ui.scheduled.dropsWatch
 import eu.llembas.android.ui.scheduled.listed
+import eu.llembas.android.ui.scheduled.modelToSend
+import eu.llembas.android.ui.scheduled.modesOffered
 import eu.llembas.android.ui.scheduled.read
 import eu.llembas.android.ui.scheduled.runModelWhy
 import eu.llembas.android.ui.scheduled.waitMinutes
+import eu.llembas.android.ui.scheduled.watchToSend
+import eu.llembas.android.ui.scheduled.watched
 import eu.llembas.android.ui.scheduled.whereComplete
 import eu.llembas.android.ui.scheduled.whereToSend
 import kotlinx.coroutines.test.runTest
@@ -58,7 +64,11 @@ class ScheduleTypesTest {
     fun aNewScheduleSaysAComputerOnlyWhenItIsAgentic() {
         assertEquals(WhereToRun.Leave, whereToSend(EditState(), editing = false))
         val agentic = EditState(agentic = true, device = "tok1", cwd = " /home/user/project ", agentMode = "auto", wait = "45", model = "")
-        assertEquals(WhereToRun.Computer("tok1", "/home/user/project", "auto", 45, ""), whereToSend(agentic, editing = false))
+        assertEquals(WhereToRun.Computer("tok1", "/home/user/project", "auto", 45), whereToSend(agentic, editing = false))
+        // Its model is said only when one was chosen; the folder's usual model needs no word.
+        assertNull(modelToSend(agentic, editing = false))
+        assertEquals("qwen", modelToSend(agentic.copy(model = "qwen"), editing = false))
+        assertNull(modelToSend(EditState(model = "qwen"), editing = false))
         // No wait typed, or nonsense: the instance's own.
         assertNull(agentic.copy(wait = "").waitMinutes)
         assertNull(agentic.copy(wait = "0").waitMinutes)
@@ -83,12 +93,75 @@ class ScheduleTypesTest {
         assertEquals("edit", read.agentMode)
         assertEquals("30", read.wait)
         assertEquals("", read.model)
-        assertEquals(WhereToRun.Computer("tok1", "/home/frodo/waybread", "edit", 30, ""), whereToSend(read, editing = true))
+        // Left as it was read: nothing is said of where it runs, its model or its command -- so
+        // its words can be put right while its computer is not linked or its model is gone.
+        assertEquals(WhereToRun.Leave, whereToSend(read, editing = true))
+        assertNull(modelToSend(read, editing = true))
+        assertNull(watchToSend(read, editing = true))
+        // What was changed is said, and only that.
+        assertEquals(WhereToRun.Computer("tok1", "/home/frodo/lembas", "edit", 30), whereToSend(read.copy(cwd = "/home/frodo/lembas"), editing = true))
+        assertEquals(WhereToRun.Computer("tok1", "/home/frodo/waybread", "auto", 30), whereToSend(read.copy(agentMode = "auto"), editing = true))
+        assertEquals("qwen", modelToSend(read.copy(model = "qwen"), editing = true))
+        assertEquals(WhereToRun.Leave, whereToSend(read.copy(model = "qwen"), editing = true))
+        // Back to the folder's usual model: the empty one is said.
+        val pinned = EditState().read(on.copy(model = "qwen")).copy(loaded = true)
+        assertEquals("qwen", pinned.model)
+        assertNull(modelToSend(pinned, editing = true))
+        assertEquals("", modelToSend(pinned.copy(model = ""), editing = true))
         // Made a Chat schedule: the server is told so. A Chat schedule left alone: nothing.
         assertEquals(WhereToRun.Server, whereToSend(read.copy(agentic = false), editing = true))
         val chat = EditState().read(read("schedule", ScheduleEnvelope.serializer()).schedule).copy(loaded = true)
         assertFalse(chat.agentic)
         assertEquals(WhereToRun.Leave, whereToSend(chat, editing = true))
+        assertNull(modelToSend(chat, editing = true))
+    }
+
+    @Test
+    fun aChatSchedulesModelIsShownWhenItIsMadeAgentic() {
+        val chat = read("schedule", ScheduleEnvelope.serializer()).schedule.copy(model = "gpt-oss")
+        val form = EditState().read(chat).copy(loaded = true, agentic = true, device = "tok1", cwd = "/home/user/project")
+        // Its own model is the one the form shows, and it is kept: nothing is said of it.
+        assertEquals("gpt-oss", form.model)
+        assertNull(modelToSend(form, editing = true))
+        assertEquals(WhereToRun.Computer("tok1", "/home/user/project", "edit", null), whereToSend(form, editing = true))
+    }
+
+    @Test
+    fun theWatchedCommandIsSaidWhenItChangesAndGoesWhenTheScheduleBecomesChat() {
+        val on = read("schedule_on_device", ScheduleEnvelope.serializer()).schedule
+        val read = EditState().read(on).copy(loaded = true)
+        assertEquals("git log -1 --format=%H", read.watchCommand)
+        assertEquals("30", read.watchTimeout)
+        assertEquals(WatchCommand("git log -1 --format=%H", 30), read.watched)
+        assertNull(watchToSend(read, editing = true))
+        assertEquals(WatchCommand("git status --short", 30), watchToSend(read.copy(watchCommand = " git status --short "), editing = true))
+        // Emptied: watch nothing. Seconds outside 1..600, or without a command, are not said.
+        assertEquals(WatchCommand("", null), watchToSend(read.copy(watchCommand = ""), editing = true))
+        assertNull(read.copy(watchTimeout = "900").watched.timeoutS)
+        // A new one: only when a command was written.
+        assertNull(watchToSend(EditState(agentic = true), editing = false))
+        assertEquals(WatchCommand("make check", null), watchToSend(EditState(agentic = true, watchCommand = "make check"), editing = false))
+        // Made Chat: the command cannot go along, the form says so, and the save takes it off.
+        val chat = read.copy(agentic = false)
+        assertTrue(chat.dropsWatch)
+        assertEquals(WatchCommand("", null), watchToSend(chat, editing = true))
+        assertFalse(read.dropsWatch)
+        // A page a Chat schedule watches is not this form's: nothing is said of it.
+        val watching = EditState().read(read("schedule_watching", ScheduleEnvelope.serializer()).schedule).copy(loaded = true)
+        assertEquals("", watching.watchCommand)
+        assertNull(watchToSend(watching, editing = true))
+        // Not read: nothing.
+        assertNull(watchToSend(EditState(agentic = true, watchCommand = "make check"), editing = true))
+    }
+
+    @Test
+    fun onlyTheModesTheComputerAllowsAreOffered() {
+        assertEquals(listOf("manual", "edit", "auto"), modesOffered("", "edit"))
+        assertEquals(listOf("manual", "edit", "auto"), modesOffered("auto", "edit"))
+        assertEquals(listOf("manual", "edit"), modesOffered("edit", "edit"))
+        assertEquals(listOf("manual"), modesOffered("manual", "manual"))
+        // The mode the schedule has stays shown, whatever the computer says now.
+        assertEquals(listOf("manual", "auto"), modesOffered("manual", "auto"))
     }
 
     @Test
@@ -147,8 +220,18 @@ class ScheduleTypesTest {
             repeat(3) { server.enqueue(MockResponse().setBody(text("schedule_on_device"))) }
             fun sent(): JsonObject = LembasJson.parseToJsonElement(server.takeRequest().body.readUtf8()).jsonObject
 
-            api.saveSchedule(compiled, "every night", where = WhereToRun.Computer("tok1", "/home/user/project", "edit", null, ""))
+            api.saveSchedule(
+                compiled,
+                "every night",
+                where = WhereToRun.Computer("tok1", "/home/user/project", "edit", null),
+                model = "",
+                watch = WatchCommand("make check", 60),
+            )
             val agentic = sent()
+            val watch = agentic.getValue("watch").jsonObject
+            assertEquals("command", watch.getValue("kind").jsonPrimitive.content)
+            assertEquals("make check", watch.getValue("command").jsonPrimitive.content)
+            assertEquals("60", watch.getValue("timeout_s").jsonPrimitive.content)
             val on = agentic.getValue("runs_on").jsonObject
             assertEquals("tok1", on.getValue("device").jsonPrimitive.content)
             assertEquals("/home/user/project", on.getValue("cwd").jsonPrimitive.content)
@@ -157,13 +240,17 @@ class ScheduleTypesTest {
             // The empty model is the folder's usual one: said, so a model set before is taken off.
             assertEquals("", agentic.getValue("model").jsonPrimitive.content)
 
-            api.saveSchedule(compiled, "every night", id = "sched3", where = WhereToRun.Server)
-            assertEquals(JsonNull, sent().getValue("runs_on"))
+            api.saveSchedule(compiled, "every night", id = "sched3", where = WhereToRun.Server, watch = WatchCommand("", null))
+            val chat = sent()
+            assertEquals(JsonNull, chat.getValue("runs_on"))
+            assertEquals(JsonNull, chat.getValue("watch"))
+            assertFalse("model" in chat)
 
             api.saveSchedule(compiled, "every night", id = "sched3")
             val left = sent()
             assertFalse("runs_on" in left)
             assertFalse("model" in left)
+            assertFalse("watch" in left)
         } finally {
             server.shutdown()
         }

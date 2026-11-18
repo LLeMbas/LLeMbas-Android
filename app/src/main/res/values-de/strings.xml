@@ -592,6 +592,10 @@
     <string name="schedule_agent_mode_hint">Edit, sofern Sie nichts anderes wählen; Auto führt Befehle ohne Nachfrage aus. Der Computer kann ihn herabsetzen.</string>
     <string name="schedule_approval_wait">Eine Genehmigung wartet (Minuten)</string>
     <string name="schedule_approval_wait_hint">Ein Befehl, den der Lauf genehmigt braucht, kommt als Karte auf Ihr Telefon. Bis dahin unbeantwortet, gilt er als abgelehnt.</string>
+    <string name="schedule_watch_command_hint">Optional, auf dem Computer. Läuft vor jedem Lauf im Ordner; ist seine Ausgabe dieselbe wie beim letzten Mal, endet der Lauf dort. Ein Befehl, bei dem der Modus nachfragen würde, wird abgelehnt.</string>
+    <string name="schedule_watch_timeout">Der Befehl darf dauern (Sekunden)</string>
+    <string name="schedule_watch_timeout_hint">Danach wird er gestoppt, und der Lauf schlägt fehl.</string>
+    <string name="schedule_chat_drops_watch">Diese Aufgabe überwacht einen Befehl auf ihrem Computer. Als Chat-Aufgabe tut sie das nicht mehr: Sie läuft jedes Mal.</string>
     <string name="schedule_folder_model">Das übliche Modell des Ordners</string>
     <string name="schedule_folder_model_hint">Das übliche Modell des Ordners ist das, das Sie in diesem Ordner auf diesem Computer zuletzt verwendet haben — der Computer merkt es sich, und jeder Lauf fragt ihn danach — oder Ihr Standardmodell, wo es keines gibt. Ein hier gewähltes Modell ist das des Laufs, was auch immer das des Ordners ist. Ein Lauf ändert das Modell des Ordners nie.</string>
     <string name="schedule_first_free_model">Das erste freie Ihrer Modelle für geplante Aufgaben</string>

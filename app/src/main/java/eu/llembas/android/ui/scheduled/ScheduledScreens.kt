@@ -95,7 +95,7 @@ import eu.llembas.android.api.ScheduleCompiled
 import eu.llembas.android.api.ScheduleRun
 import eu.llembas.android.api.SchedulesFrame
 import eu.llembas.android.api.SchedulingModel
-import eu.llembas.android.api.StreamClient
+import eu.llembas.android.api.WatchCommand
 import eu.llembas.android.api.WhereToRun
 import eu.llembas.android.api.agentic
 import eu.llembas.android.api.computerAway
@@ -162,9 +162,10 @@ class ScheduledViewModel(app: Application) : AndroidViewModel(app) {
     private fun watch() {
         if (live?.isActive == true) return
         live = viewModelScope.launch {
-            val client = runCatching { getApplication<Application>().api() }.getOrNull() ?: return@launch
+            // The one connection the drawer's badge listens on too (`EventsHub`).
+            val frames = runCatching { getApplication<Application>().lembas.eventFrames() }.getOrNull() ?: return@launch
             try {
-                StreamClient(client).watch { client.events() }.collect { frame ->
+                frames.collect { frame ->
                     if (frame.event != "schedules") return@collect
                     val read = runCatching { LembasJson.decodeFromString(SchedulesFrame.serializer(), frame.data) }.getOrNull() ?: return@collect
                     _state.update { it.copy(schedules = read.schedules) }
@@ -883,7 +884,37 @@ data class EditState(
     val whereTouched: Boolean = false,
     /** What the schedule being edited was when it was read: Agentic or Chat. */
     val wasAgentic: Boolean = false,
+    /** Where the schedule being edited ran, its model and its watched command, as they were read: a save says only what differs. */
+    val readWhere: WhereToRun.Computer? = null,
+    val readModel: String = "",
+    val readWatch: WatchCommand = WatchCommand("", null),
+    /** An Agentic schedule's watched command (empty: none), and the seconds it may take, as typed. */
+    val watchCommand: String = "",
+    val watchTimeout: String = "",
 )
+
+/** The agent modes, narrowest first. */
+val AGENT_MODES = listOf("manual", "edit", "auto")
+
+/**
+ * The modes the form offers for a computer whose widest is [maxMode]: none wider than it
+ * (every one where it names none, as an older computer does), and the mode the schedule
+ * already has ([current]) whatever the computer says now -- it lowers it itself.
+ */
+fun modesOffered(maxMode: String, current: String): List<String> {
+    val widest = AGENT_MODES.indexOf(maxMode).takeIf { it >= 0 } ?: AGENT_MODES.lastIndex
+    return AGENT_MODES.filterIndexed { i, mode -> i <= widest || mode == current }
+}
+
+/** Where the form says the schedule runs, as a save would say it. */
+val EditState.computer: WhereToRun.Computer get() = WhereToRun.Computer(device, cwd.trim(), agentMode, waitMinutes)
+
+/** The watched command as the form holds it: the seconds only between 1 and 600, and only with a command. */
+val EditState.watched: WatchCommand
+    get() = watchCommand.trim().let { command -> WatchCommand(command, watchTimeout.trim().toIntOrNull()?.takeIf { command.isNotEmpty() && it in 1..600 }) }
+
+/** An Agentic schedule that watches a command is being made a Chat one: the command cannot go with it. */
+val EditState.dropsWatch: Boolean get() = !agentic && wasAgentic && readWatch.command.isNotEmpty()
 
 /** Agentic is offered only while one of the person's computers accepts scheduled work. */
 val EditState.agenticOffered: Boolean get() = devices.any { it.scheduled }
@@ -899,24 +930,55 @@ val EditState.whereComplete: Boolean get() = !agentic || (device.isNotBlank() &&
 
 /**
  * Where a save says the schedule runs -- its type. A new schedule says a computer when it is
- * Agentic and nothing otherwise (the server's own default is Chat). An edit says something only
- * for what the form knows: nothing where the schedule could not be read, or was read and left
- * alone as a Chat schedule; the computer for an Agentic one; and "the server" only when an
+ * Agentic and nothing otherwise (the server's own default is Chat). An edit says only what
+ * the form knows and what differs from what it read: nothing where the schedule could not be
+ * read, nothing for a schedule whose computer, folder, mode and wait are as they were (so its
+ * words can be put right while its computer is not linked), and "the server" only when an
  * Agentic schedule was made a Chat one.
  */
 fun whereToSend(state: EditState, editing: Boolean): WhereToRun = when {
     editing && !state.loaded -> WhereToRun.Leave
-    state.agentic -> WhereToRun.Computer(state.device, state.cwd.trim(), state.agentMode, state.waitMinutes, state.model)
+    state.agentic -> state.computer.takeUnless { editing && it == state.readWhere } ?: WhereToRun.Leave
     editing && state.wasAgentic -> WhereToRun.Server
     else -> WhereToRun.Leave
+}
+
+/**
+ * The model a save says, or null for none: an Agentic schedule's, when it is new and one was
+ * chosen, or when it differs from the one read (the empty one is then said too: back to the
+ * folder's usual model). A Chat schedule's model is not this form's to change.
+ */
+fun modelToSend(state: EditState, editing: Boolean): String? = when {
+    !state.agentic || (editing && !state.loaded) -> null
+    editing -> state.model.takeIf { it != state.readModel }
+    else -> state.model.ifBlank { null }
+}
+
+/**
+ * The watched command a save says, or null for none: an Agentic schedule's when it differs
+ * from the one read (an emptied field is said: watch nothing), a new one's when one was
+ * written -- and "watch nothing" for a schedule made Chat that watched a command, which the
+ * server would otherwise refuse.
+ */
+fun watchToSend(state: EditState, editing: Boolean): WatchCommand? = when {
+    editing && !state.loaded -> null
+    state.agentic -> state.watched.takeIf { if (editing) it != state.readWatch else it.command.isNotEmpty() }
+    state.dropsWatch -> WatchCommand("", null)
+    else -> null
 }
 
 /** A schedule as the form holds where it runs; what the person changed meanwhile stays changed. */
 fun EditState.read(s: Schedule): EditState {
     val on = s.runsOn
     val known = devices.any { it.id == on?.device }
+    val watch = s.watch?.takeIf { it.kind == "command" }?.let { WatchCommand(it.command.ifBlank { it.target }.trim(), it.timeoutS) } ?: WatchCommand("", null)
     return copy(
         wasAgentic = on != null,
+        readWhere = on?.let {
+            WhereToRun.Computer(it.device, it.cwd.trim(), it.mode.ifBlank { "edit" }, it.approvalWaitMinutes?.takeIf { minutes -> minutes > 0 })
+        },
+        readModel = s.model.orEmpty(),
+        readWatch = watch,
         // Its own computer is in the list also when it is not linked now, so it can stay chosen.
         devices = if (on == null || known) devices else devices + LinkedDevice(id = on.device, name = on.deviceName),
         agentic = if (whereTouched) agentic else on != null,
@@ -924,7 +986,10 @@ fun EditState.read(s: Schedule): EditState {
         cwd = if (whereTouched || on == null) cwd else on.cwd,
         agentMode = if (whereTouched || on == null) agentMode else on.mode.ifBlank { agentMode },
         wait = if (whereTouched || on == null) wait else on.approvalWaitMinutes?.toString().orEmpty(),
-        model = if (whereTouched || on == null) model else s.model.orEmpty(),
+        // A Chat schedule's own model too: made Agentic, it is shown as the model it keeps.
+        model = if (whereTouched) model else s.model.orEmpty(),
+        watchCommand = if (whereTouched) watchCommand else watch.command,
+        watchTimeout = if (whereTouched) watchTimeout else watch.timeoutS?.toString().orEmpty(),
     )
 }
 
@@ -1039,6 +1104,8 @@ class ScheduleEditViewModel(app: Application) : AndroidViewModel(app) {
                     notify = notifyToSend(now, editing = editing != null),
                     notifyWhen = now.notifyWhen,
                     where = whereToSend(now, editing = editing != null),
+                    model = modelToSend(now, editing = editing != null),
+                    watch = watchToSend(now, editing = editing != null),
                 )
                 then(saved.id)
             } catch (e: Exception) {
@@ -1109,7 +1176,8 @@ fun ScheduleEditContent(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             // The type comes first: it decides where the task runs and what else the form asks.
-            TypeChoice(state, onWhere)
+            // Not until a schedule being edited has been read: a choice made before would be the form's guess.
+            TypeChoice(state, onWhere, ready = !editing || state.loaded)
             if (state.agentic) OnComputer(state, onWhere, directories)
             Text(stringResource(R.string.schedule_words_hint), style = MaterialTheme.typography.bodyMedium, color = palette.inkMuted)
             OutlinedTextField(
@@ -1146,30 +1214,43 @@ fun ScheduleEditContent(
  * scheduled work, and says so; one that is Agentic already stays shown as it is.
  */
 @Composable
-private fun TypeChoice(state: EditState, onWhere: ((EditState) -> EditState) -> Unit) {
+private fun TypeChoice(state: EditState, onWhere: ((EditState) -> EditState) -> Unit, ready: Boolean = true) {
     val palette = LocalPalette.current
-    val offered = state.agenticOffered || state.agentic
+    val offered = ready && (state.agenticOffered || state.agentic)
     Surface(shape = RoundedCornerShape(20.dp), color = palette.surfaceRaised, contentColor = palette.ink, modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(vertical = 12.dp)) {
-            Text(
-                stringResource(R.string.schedule_type),
-                style = MaterialTheme.typography.labelLarge,
-                color = palette.accent,
-                modifier = Modifier.padding(horizontal = 16.dp),
-            )
+            Row(Modifier.padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    stringResource(R.string.schedule_type),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = palette.accent,
+                    modifier = Modifier.weight(1f),
+                )
+                // The schedule is still being read: its type is not known yet, and not to be chosen.
+                if (!ready && !state.loadFailed) CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(16.dp))
+            }
             ChoiceRow(
-                selected = !state.agentic,
+                selected = ready && !state.agentic,
+                enabled = ready,
                 title = stringResource(R.string.schedule_chat),
                 line = stringResource(R.string.schedule_chat_line),
                 onClick = { onWhere { it.copy(agentic = false) } },
             )
             ChoiceRow(
-                selected = state.agentic,
+                selected = ready && state.agentic,
                 enabled = offered,
                 title = stringResource(R.string.schedule_agentic),
-                line = stringResource(if (offered) R.string.schedule_agentic_line else R.string.schedule_agentic_unavailable),
+                line = stringResource(if (offered || !ready) R.string.schedule_agentic_line else R.string.schedule_agentic_unavailable),
                 onClick = { onWhere { it.copy(agentic = true) } },
             )
+            if (state.dropsWatch) {
+                Text(
+                    stringResource(R.string.schedule_chat_drops_watch),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = palette.warning,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                )
+            }
         }
     }
 }
@@ -1244,10 +1325,13 @@ private fun OnComputer(state: EditState, onWhere: ((EditState) -> EditState) -> 
 
             FieldLabel(stringResource(R.string.schedule_agent_mode))
             FlowRow(Modifier.padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf("manual" to R.string.mode_manual, "edit" to R.string.mode_edit, "auto" to R.string.mode_auto).forEach { (value, name) ->
-                    FilterChip(selected = state.agentMode == value, onClick = {
-                        onWhere { it.copy(agentMode = value) }
-                    }, label = { Text(stringResource(name)) })
+                // Only the modes the chosen computer allows, and the one the schedule has.
+                modesOffered(state.chosenDevice?.maxMode.orEmpty(), state.agentMode).forEach { value ->
+                    FilterChip(
+                        selected = state.agentMode == value,
+                        onClick = { onWhere { it.copy(agentMode = value) } },
+                        label = { Text(agentModeWords(value) ?: value) },
+                    )
                 }
             }
             Text(
@@ -1267,6 +1351,28 @@ private fun OnComputer(state: EditState, onWhere: ((EditState) -> EditState) -> 
                 shape = RoundedCornerShape(16.dp),
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
             )
+
+            FieldLabel(stringResource(R.string.schedule_watching_command))
+            OutlinedTextField(
+                value = state.watchCommand,
+                onValueChange = { text -> onWhere { it.copy(watchCommand = text.take(1000)) } },
+                singleLine = true,
+                supportingText = { Text(stringResource(R.string.schedule_watch_command_hint)) },
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            )
+            if (state.watchCommand.isNotBlank()) {
+                FieldLabel(stringResource(R.string.schedule_watch_timeout))
+                OutlinedTextField(
+                    value = state.watchTimeout,
+                    onValueChange = { text -> onWhere { it.copy(watchTimeout = text.filter(Char::isDigit).take(3)) } },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    supportingText = { Text(stringResource(R.string.schedule_watch_timeout_hint)) },
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                )
+            }
 
             FieldLabel(stringResource(R.string.model))
             Row(

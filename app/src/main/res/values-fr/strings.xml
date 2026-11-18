@@ -592,6 +592,10 @@
     <string name="schedule_agent_mode_hint">Edit sauf choix contraire ; Auto exécute les commandes sans demander. L’ordinateur peut l’abaisser.</string>
     <string name="schedule_approval_wait">Une approbation attend (minutes)</string>
     <string name="schedule_approval_wait_hint">Une commande que l’exécution doit faire approuver arrive sur votre téléphone sous forme de carte. Sans réponse d’ici là, elle compte comme refusée.</string>
+    <string name="schedule_watch_command_hint">Facultatif, sur l’ordinateur. Exécutée dans le dossier avant chaque exécution ; quand sa sortie est la même que la dernière fois, l’exécution s’arrête là. Une commande pour laquelle le mode demanderait est refusée.</string>
+    <string name="schedule_watch_timeout">La commande peut durer (secondes)</string>
+    <string name="schedule_watch_timeout_hint">Arrêtée au-delà ; l’exécution échoue alors.</string>
+    <string name="schedule_chat_drops_watch">Cette tâche surveille une commande sur son ordinateur. En tâche de type Chat, elle ne le fait plus : elle s’exécute à chaque fois.</string>
     <string name="schedule_folder_model">Le modèle habituel du dossier</string>
     <string name="schedule_folder_model_hint">Le modèle habituel du dossier est celui que vous avez utilisé en dernier dans ce dossier sur cet ordinateur — l\'ordinateur s\'en souvient et chaque exécution le lui demande — ou votre modèle par défaut s\'il n\'y en a pas. Un modèle choisi ici est celui de l\'exécution, quel que soit celui du dossier. Une exécution ne change jamais le modèle du dossier.</string>
     <string name="schedule_first_free_model">Le premier libre de vos modèles de planification</string>

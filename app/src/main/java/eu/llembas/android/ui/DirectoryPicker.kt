@@ -60,20 +60,66 @@ import kotlinx.coroutines.launch
  * Choosing a folder on a linked computer: the last listing the device gave ([listing]; null
  * before the first, or where there never was one), the path in the field ([typed]: where the
  * walk is, or what the person wrote -- the way in that always works), and the sentence for a
- * listing that could not be had ([error]).
+ * listing that could not be had, or that came with one ([error]). [edited]: the person wrote in
+ * the field since the device was last asked, so its answer does not write over them.
+ * [failed]: the last question got no listing.
  */
-data class PickerState(val listing: DeviceDirectory? = null, val loading: Boolean = false, val typed: String = "", val error: String? = null)
+data class PickerState(
+    val listing: DeviceDirectory? = null,
+    val loading: Boolean = false,
+    val typed: String = "",
+    val error: String? = null,
+    val edited: Boolean = false,
+    val failed: Boolean = false,
+)
+
+/** The most subdirectories shown; a device that names more is cut there. */
+const val PICKER_ENTRIES = 500
+
+/** The longest a device's own words are kept: a name, a reason, a sentence. */
+const val PICKER_WORDS = 300
+
+private fun String.kept(): String = if (length > PICKER_WORDS) take(PICKER_WORDS) + "…" else this
 
 /**
- * The device's answer. A listing is shown and the field follows it (the places have no path,
- * so the field keeps what it had). No listing -- the device is away, too old, silent or said
- * no -- leaves the last listing and the typed path where they were, with the server's sentence
- * ([fallback] where it sent none).
+ * A listing as the picker holds it: each path once (the rows are keyed by it), at most
+ * [PICKER_ENTRIES] of them, and the device's words -- names, reasons, a model's name -- cut to
+ * a length that cannot push the controls away.
+ */
+fun DeviceDirectory.bounded(): DeviceDirectory = copy(
+    reason = reason.kept(),
+    error = error.kept(),
+    model = model?.let { it.copy(name = it.name.kept(), id = it.id.kept()) },
+    entries = entries.filter { it.path.isNotEmpty() }.distinctBy { it.path }.take(PICKER_ENTRIES).map { entry ->
+        entry.copy(name = entry.name.kept(), reason = entry.reason.kept(), model = entry.model?.let { it.copy(name = it.name.kept(), id = it.id.kept()) })
+    },
+)
+
+/** The device is being asked: what is typed from now on is the person's, newer than the answer. */
+fun PickerState.asking(): PickerState = copy(loading = true, error = null, edited = false)
+
+/**
+ * The device's answer. A listing is shown ([bounded]) and the field follows it -- unless the
+ * person wrote in the field while the device was answering, or the listing is the places,
+ * which have no path: then the field keeps what it has. A listing may come with a sentence
+ * (part of it could not be read): it is shown with it. No listing -- the device is away, too
+ * old, silent or said no -- leaves the last listing and the typed path where they were, with
+ * the server's sentence ([fallback] where it sent none).
  */
 fun PickerState.took(answer: DeviceDirectory, fallback: String = ""): PickerState = when {
-    answer.listed -> copy(listing = answer, loading = false, error = null, typed = answer.path.ifEmpty { typed })
-    else -> copy(loading = false, error = answer.error.ifBlank { fallback })
+    answer.listed -> copy(
+        listing = answer.bounded(),
+        loading = false,
+        failed = false,
+        error = answer.error.kept().ifBlank { null },
+        typed = if (edited) typed else answer.path.ifEmpty { typed },
+    )
+
+    else -> copy(loading = false, failed = true, error = answer.error.kept().ifBlank { fallback })
 }
+
+/** The device could not be asked at all ([said]: why): as an answer without a listing. */
+fun PickerState.unanswered(said: String): PickerState = copy(loading = false, failed = true, error = said.kept())
 
 /**
  * Where "up" leads from the listing shown: the parent, the places (`""`) from a directory that
@@ -82,6 +128,13 @@ fun PickerState.took(answer: DeviceDirectory, fallback: String = ""): PickerStat
  */
 val PickerState.up: String?
     get() = listing?.takeIf { !it.places }?.parent
+
+/**
+ * Where Back leads: up a level, or null to close -- at the top, and after a question that got
+ * no listing (the device went away mid-walk), where "up" would only ask it again for ever.
+ */
+val PickerState.back: String?
+    get() = if (failed) null else up
 
 /**
  * Whether the path in the field may be chosen: something is written, and it is not the listed
@@ -117,16 +170,16 @@ fun DirectoryPicker(title: String, initial: String, load: suspend (String) -> De
     val fallback = stringResource(R.string.directory_no_listing)
     val read: (String) -> Unit = { path ->
         reading?.cancel()
-        state = state.copy(loading = true, error = null)
+        state = state.asking()
         reading = scope.launch {
             try {
                 val answer = load(path)
-                // Applied to the state as it is now: what was typed while the device answered stays.
+                // Applied to the state as it is now: `took` leaves what was typed meanwhile.
                 state = state.took(answer, fallback)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                state = state.copy(loading = false, error = context.explain(e))
+                state = state.unanswered(context.explain(e))
             }
         }
     }
@@ -135,7 +188,7 @@ fun DirectoryPicker(title: String, initial: String, load: suspend (String) -> De
         override fun open(path: String) = read(path)
 
         override fun typed(text: String) {
-            state = state.copy(typed = text)
+            state = state.copy(typed = text, edited = true)
         }
 
         override fun choose() {
@@ -143,7 +196,7 @@ fun DirectoryPicker(title: String, initial: String, load: suspend (String) -> De
         }
 
         override fun back() {
-            val up = state.up
+            val up = state.back
             if (up == null) onDismiss() else read(up)
         }
 
@@ -181,16 +234,26 @@ fun DirectoryPickerContent(title: String, state: PickerState, actions: PickerAct
                     overflow = TextOverflow.Ellipsis,
                 )
                 listing?.model?.let {
-                    Text(stringResource(R.string.directory_last_used, it.label), style = MaterialTheme.typography.bodySmall, color = palette.inkMuted)
+                    Text(
+                        stringResource(R.string.directory_last_used, it.label),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = palette.inkMuted,
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis,
+                    )
                 }
                 if (listing != null && !listing.places && !listing.accepted) {
                     Text(
                         listing.reason.ifBlank { stringResource(R.string.directory_refused) },
                         style = MaterialTheme.typography.bodySmall,
                         color = palette.warning,
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
-                state.error?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = palette.danger) }
+                state.error?.let {
+                    Text(it, style = MaterialTheme.typography.bodyMedium, color = palette.danger, maxLines = 4, overflow = TextOverflow.Ellipsis)
+                }
             }
             LazyColumn(Modifier.fillMaxWidth().weight(1f).padding(top = 8.dp)) {
                 // The way out of a directory, and -- where nothing is listed -- the way to the places.

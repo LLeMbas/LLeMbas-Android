@@ -592,6 +592,10 @@
     <string name="schedule_agent_mode_hint">Edit, hacsak mást nem választ; az Auto kérdezés nélkül futtat parancsokat. A számítógép csökkentheti.</string>
     <string name="schedule_approval_wait">Egy jóváhagyás vár (perc)</string>
     <string name="schedule_approval_wait_hint">A futás által jóváhagyást igénylő parancs kártyaként érkezik a telefonjára. Ha addig nem válaszol, elutasítottnak számít.</string>
+    <string name="schedule_watch_command_hint">Nem kötelező, a számítógépen. Minden futás előtt lefut a mappában; ha a kimenete ugyanaz, mint legutóbb, a futás ott leáll. Az a parancs, amelyre a mód rákérdezne, elutasításra kerül.</string>
+    <string name="schedule_watch_timeout">A parancs ennyi ideig tarthat (másodperc)</string>
+    <string name="schedule_watch_timeout_hint">Ezután leáll, és a futás sikertelen.</string>
+    <string name="schedule_chat_drops_watch">Ez a feladat egy parancsot figyel a számítógépén. Chat típusú feladatként már nem teszi: minden alkalommal lefut.</string>
     <string name="schedule_folder_model">A mappa szokásos modellje</string>
     <string name="schedule_folder_model_hint">A mappa szokásos modellje az, amelyet abban a mappában azon a számítógépen legutóbb használt — a számítógép megjegyzi, és minden futás megkérdezi tőle —, vagy az alapértelmezett modellje, ha nincs ilyen. Az itt választott modell a futásé, bármi is a mappáé. Egy futás soha nem változtatja meg a mappa modelljét.</string>
     <string name="schedule_first_free_model">Az ütemezési modelljei közül az első szabad</string>

@@ -55,19 +55,25 @@ class StreamClient(private val api: ApiClient) {
     /**
      * Follow an events route that ends itself now and then (`close` after a while, as the
      * activity panel's does): opened again at once after a `close`, and after a pause that
-     * grows to 30 seconds when the connection drops. It runs until its collector stops; a
-     * refusal (4xx) ends it with the error.
+     * grows to 30 seconds when the connection drops or closes without a frame. It runs until
+     * its collector stops; a refusal (4xx) ends it with the error.
      */
     fun watch(request: () -> Request): Flow<Frame> = flow {
         var wait = 1_000L
         while (true) {
             var closed = false
+            var said = false
             var refused: ApiException? = null
             once(request()).collect { result ->
                 when (result) {
                     is Outcome.Event -> {
-                        wait = 1_000L
-                        if (result.frame.event == "close") closed = true else emit(result.frame)
+                        if (result.frame.event == "close") {
+                            closed = true
+                        } else {
+                            said = true
+                            wait = 1_000L
+                            emit(result.frame)
+                        }
                     }
 
                     is Outcome.Refused -> refused = result.error
@@ -76,7 +82,10 @@ class StreamClient(private val api: ApiClient) {
                 }
             }
             refused?.let { throw it }
-            if (closed) continue
+            // A route that closes after it has said something is opened again at once. One
+            // that closes having said nothing waits as a dropped one does: a server that only
+            // ever answers `close` must not be asked in a tight loop.
+            if (reopenAtOnce(closed, said)) continue
             delay(wait)
             wait = (wait * 2).coerceAtMost(30_000L)
         }
@@ -115,3 +124,6 @@ class StreamClient(private val api: ApiClient) {
         awaitClose { source.cancel() }
     }
 }
+
+/** Whether an events route that ended is opened again without a pause: only one that [closed] itself after it [said] something. */
+fun reopenAtOnce(closed: Boolean, said: Boolean): Boolean = closed && said

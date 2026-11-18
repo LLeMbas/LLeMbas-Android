@@ -97,6 +97,7 @@ import eu.llembas.android.ui.ProgressStatus
 import eu.llembas.android.ui.chat.PhoneCard
 import eu.llembas.android.ui.chat.Steps
 import eu.llembas.android.ui.chat.followsAt
+import eu.llembas.android.ui.chat.yielding
 import eu.llembas.android.ui.progressLineOf
 import eu.llembas.android.ui.theme.LocalPalette
 import kotlinx.coroutines.launch
@@ -239,7 +240,10 @@ fun ColumnScope.AssistSheetContent(
     // The end moves when the answer grows and when the keyboard opens; before the first layout
     // it is not known yet.
     LaunchedEffect(scroll) {
-        snapshotFlow { if (following) scroll.maxValue else -1 }.collect { end -> if (end in 0 until Int.MAX_VALUE) scroll.scrollTo(end) }
+        // Never against a finger: nothing is moved while a scroll is under way, and one of
+        // ours that a finger interrupts does not end this follower (`yielding`).
+        snapshotFlow { if (following && !scroll.isScrollInProgress) scroll.maxValue else -1 }
+            .collect { end -> if (end in 0 until Int.MAX_VALUE) yielding { scroll.scrollTo(end) } }
     }
 
     // The top: the handle and the bar. Both drag the sheet.

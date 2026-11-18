@@ -592,6 +592,10 @@
     <string name="schedule_agent_mode_hint">Edit, chyba że wybierzesz inaczej; Auto uruchamia polecenia bez pytania. Komputer może go obniżyć.</string>
     <string name="schedule_approval_wait">Zatwierdzenie czeka (minuty)</string>
     <string name="schedule_approval_wait_hint">Polecenie, które uruchomienie musi zatwierdzić, trafia na Twój telefon jako karta. Bez odpowiedzi do tego czasu liczy się jako odrzucone.</string>
+    <string name="schedule_watch_command_hint">Opcjonalne, na komputerze. Uruchamiane w folderze przed każdym uruchomieniem; gdy jego wynik jest taki sam jak ostatnio, uruchomienie kończy się w tym miejscu. Polecenie, o które tryb by zapytał, jest odrzucane.</string>
+    <string name="schedule_watch_timeout">Polecenie może trwać (sekundy)</string>
+    <string name="schedule_watch_timeout_hint">Potem jest zatrzymywane, a uruchomienie kończy się błędem.</string>
+    <string name="schedule_chat_drops_watch">To zadanie obserwuje polecenie na swoim komputerze. Jako zadanie typu Chat już tego nie robi: uruchamia się za każdym razem.</string>
     <string name="schedule_folder_model">Zwykły model folderu</string>
     <string name="schedule_folder_model_hint">Zwykły model folderu to ten, którego ostatnio użyłeś w tym folderze na tym komputerze — komputer go pamięta, a każde uruchomienie go o niego pyta — albo twój model domyślny, gdy takiego nie ma. Model wybrany tutaj jest modelem uruchomienia, niezależnie od modelu folderu. Uruchomienie nigdy nie zmienia modelu folderu.</string>
     <string name="schedule_first_free_model">Pierwszy wolny z modeli do harmonogramów</string>

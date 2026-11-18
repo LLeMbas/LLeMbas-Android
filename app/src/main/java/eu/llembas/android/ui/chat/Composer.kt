@@ -214,7 +214,9 @@ fun Composer(state: ChatState, actions: ChatActions, agent: Boolean, onTune: () 
     }
     // A suggestion from the empty chat lands here (a new value each tap).
     LaunchedEffect(initial) { if (initial.isNotBlank()) text = initial }
-    LaunchedEffect(text) { actions.suggest(mentionQuery(text)) }
+    // Asked again when the words change -- and when the computer or the folder does: an
+    // agent chat's `@` is that folder's files.
+    LaunchedEffect(text, state.chat?.id, state.device?.id, state.draft.directory) { actions.suggest(mentionQuery(text)) }
     val newAgent = agent && state.chat == null
     val canSend = (text.isNotBlank() || state.pending.isNotEmpty()) && !state.uploading && (!newAgent || state.device != null)
     val summary = tuneSummary(state, agent)
@@ -446,7 +448,7 @@ fun Composer(state: ChatState, actions: ChatActions, agent: Boolean, onTune: () 
 private fun MentionList(items: List<Mention>, onPick: (Mention) -> Unit) {
     val palette = LocalPalette.current
     Column(Modifier.fillMaxWidth().heightIn(max = 216.dp).verticalScroll(rememberScrollState()).padding(top = 8.dp)) {
-        items.forEach { item ->
+        items.take(MENTION_LIMIT).forEach { item ->
             Row(
                 Modifier.fillMaxWidth().clickable { onPick(item) }.heightIn(min = 48.dp).padding(horizontal = 16.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,

@@ -592,6 +592,10 @@
     <string name="schedule_agent_mode_hint">Edit, salvo diversa scelta; Auto esegue i comandi senza chiedere. Il computer può abbassarla.</string>
     <string name="schedule_approval_wait">Un\'approvazione attende (minuti)</string>
     <string name="schedule_approval_wait_hint">Un comando che l\'esecuzione deve far approvare arriva al tuo telefono come scheda. Senza risposta entro allora, conta come negato.</string>
+    <string name="schedule_watch_command_hint">Facoltativo, sul computer. Eseguito nella cartella prima di ogni esecuzione; quando il suo output è uguale all\'ultima volta, l\'esecuzione si ferma lì. Un comando per cui la modalità chiederebbe viene rifiutato.</string>
+    <string name="schedule_watch_timeout">Il comando può durare (secondi)</string>
+    <string name="schedule_watch_timeout_hint">Poi viene fermato e l\'esecuzione fallisce.</string>
+    <string name="schedule_chat_drops_watch">Questa attività controlla un comando sul suo computer. Come attività di tipo Chat non lo fa più: viene eseguita ogni volta.</string>
     <string name="schedule_folder_model">Il modello abituale della cartella</string>
     <string name="schedule_folder_model_hint">Il modello abituale della cartella è quello che avete usato per ultimo in quella cartella su quel computer — il computer lo ricorda e ogni esecuzione glielo chiede — oppure il vostro modello predefinito dove non ce n\'è. Un modello scelto qui è quello dell\'esecuzione, qualunque sia quello della cartella. Un\'esecuzione non cambia mai il modello della cartella.</string>
     <string name="schedule_first_free_model">Il primo libero dei tuoi modelli per la pianificazione</string>

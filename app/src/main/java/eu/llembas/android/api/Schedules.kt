@@ -198,9 +198,19 @@ data class SchedulingModel(
 @Serializable
 data class SchedulingModels(val models: List<SchedulingModel> = emptyList(), val instance: List<String> = emptyList(), val mine: List<String> = emptyList())
 
-/** What a watching schedule looks at before each run: [kind] `url` and the address. */
+/**
+ * What a watching schedule looks at before each run: [kind] `url` and the address, or -- on a
+ * linked computer -- `command`, the [command] run in the schedule's folder and how many seconds
+ * it may take ([timeoutS]). [target] is either, as one string.
+ */
 @Serializable
-data class ScheduleWatch(val kind: String = "", val target: String = "", @SerialName("changed_at") val changedAt: String? = null)
+data class ScheduleWatch(
+    val kind: String = "",
+    val target: String = "",
+    val command: String = "",
+    @SerialName("timeout_s") val timeoutS: Int? = null,
+    @SerialName("changed_at") val changedAt: String? = null,
+)
 
 /** One run's look: whether the address [changed] since the last one, or why the look failed. */
 @Serializable
@@ -255,13 +265,18 @@ val ScheduleRun.computerAway: Boolean get() = error?.kind == "device_away"
 /**
  * What a save says about where a schedule runs, which is its type: nothing ([Leave]), on the
  * server ([Server]: Chat), or on a computer ([Computer]: Agentic) -- in a folder there, in a
- * mode, with an approval's wait in minutes (null: the server's default) and a model, where the
- * empty one is the folder's usual model.
+ * mode, with an approval's wait in minutes (null: the server's default).
  */
 sealed interface WhereToRun {
     data object Leave : WhereToRun
 
     data object Server : WhereToRun
 
-    data class Computer(val device: String, val cwd: String, val mode: String, val approvalWaitMinutes: Int?, val model: String) : WhereToRun
+    data class Computer(val device: String, val cwd: String, val mode: String, val approvalWaitMinutes: Int?) : WhereToRun
 }
+
+/**
+ * The command an Agentic schedule watches before each run, as a save says it: the [command]
+ * (empty: watch nothing) and how many seconds it may take (null: the server's own).
+ */
+data class WatchCommand(val command: String, val timeoutS: Int?)

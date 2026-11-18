@@ -7,7 +7,11 @@ import eu.llembas.android.api.DeviceList
 import eu.llembas.android.api.LembasJson
 import eu.llembas.android.api.ModelList
 import eu.llembas.android.api.StartModel
+import eu.llembas.android.ui.PICKER_ENTRIES
+import eu.llembas.android.ui.PICKER_WORDS
 import eu.llembas.android.ui.PickerState
+import eu.llembas.android.ui.asking
+import eu.llembas.android.ui.back
 import eu.llembas.android.ui.canChoose
 import eu.llembas.android.ui.chat.ChatState
 import eu.llembas.android.ui.chat.Draft
@@ -15,6 +19,7 @@ import eu.llembas.android.ui.chat.folderModel
 import eu.llembas.android.ui.chat.modelId
 import eu.llembas.android.ui.refusedHere
 import eu.llembas.android.ui.took
+import eu.llembas.android.ui.unanswered
 import eu.llembas.android.ui.up
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.KSerializer
@@ -119,6 +124,58 @@ class DirectoriesTest {
         assertEquals("It cannot be listed.", silent.error)
         // The next listing clears the sentence.
         assertNull(silent.took(places).error)
+    }
+
+    @Test
+    fun whatWasTypedWhileTheDeviceAnsweredStays() {
+        // Asked, then typed in before the answer came: the answer's path does not write over it.
+        val typing = PickerState(typed = "/home/user").asking().copy(typed = "/srv/garden", edited = true)
+        val answered = typing.took(project)
+        assertEquals("/srv/garden", answered.typed)
+        assertEquals(project.path, answered.listing?.path)
+        // The next question starts afresh: its answer is followed again.
+        assertEquals("/home/user/project", answered.asking().took(project).typed)
+    }
+
+    @Test
+    fun backClosesWhenTheDeviceWentAwayMidWalk() {
+        val inside = PickerState().took(project)
+        assertEquals("/home/user", inside.back)
+        // The parent could not be listed: "up" would ask it again and again, so Back closes.
+        val away = inside.asking().took(read("device_directories_not_linked", DeviceDirectory.serializer()))
+        assertTrue(away.failed)
+        assertNull(away.back)
+        assertNull(inside.asking().unanswered("Home cannot be reached.").back)
+        // A listing after it: the walk goes on.
+        assertEquals("/home/user", away.asking().took(project).back)
+        assertNull(PickerState().took(places).back)
+    }
+
+    @Test
+    fun aListingIsBoundedBeforeItIsDrawn() {
+        val entry = project.entries.first()
+        val long = "x".repeat(5_000)
+        val wild = project.copy(
+            reason = long,
+            entries = listOf(entry, entry, entry.copy(path = "")) + (1..1_000).map { entry.copy(path = "/home/user/project/d$it", name = long, reason = long) },
+        )
+        val shown = PickerState().took(wild).listing!!
+        // Each path once (the rows are keyed by it), none without one, and no more than the cap.
+        assertEquals(PICKER_ENTRIES, shown.entries.size)
+        assertEquals(shown.entries.size, shown.entries.map { it.path }.toSet().size)
+        assertTrue(shown.entries.none { it.path.isEmpty() })
+        // The device's words are cut to a length that leaves the controls on the screen.
+        assertTrue(shown.reason.length <= PICKER_WORDS + 1)
+        assertTrue(shown.entries.all { it.name.length <= PICKER_WORDS + 1 && it.reason.length <= PICKER_WORDS + 1 })
+        assertTrue(PickerState().took(DeviceDirectory(code = "refused", error = long)).error!!.length <= PICKER_WORDS + 1)
+    }
+
+    @Test
+    fun aListingThatCameWithASentenceShowsBoth() {
+        val partial = PickerState().took(project.copy(error = "Some directories could not be read."))
+        assertEquals("Some directories could not be read.", partial.error)
+        assertEquals(3, partial.listing?.entries?.size)
+        assertFalse(partial.failed)
     }
 
     @Test

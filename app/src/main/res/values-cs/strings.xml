@@ -592,6 +592,10 @@
     <string name="schedule_agent_mode_hint">Edit, pokud nezvolíte jinak; Auto spouští příkazy bez ptaní. Počítač ho může snížit.</string>
     <string name="schedule_approval_wait">Schválení čeká (minuty)</string>
     <string name="schedule_approval_wait_hint">Příkaz, který spuštění potřebuje schválit, přijde do telefonu jako karta. Pokud do té doby nebude zodpovězen, počítá se jako zamítnutý.</string>
+    <string name="schedule_watch_command_hint">Volitelné, na počítači. Spustí se ve složce před každým spuštěním; když je jeho výstup stejný jako minule, spuštění tam skončí. Příkaz, na který by se režim ptal, se odmítne.</string>
+    <string name="schedule_watch_timeout">Příkaz může trvat (sekundy)</string>
+    <string name="schedule_watch_timeout_hint">Pak se zastaví a spuštění selže.</string>
+    <string name="schedule_chat_drops_watch">Tato úloha sleduje příkaz na svém počítači. Jako úloha typu Chat už ne: spustí se pokaždé.</string>
     <string name="schedule_folder_model">Obvyklý model složky</string>
     <string name="schedule_folder_model_hint">Obvyklý model složky je ten, který jste v té složce na tom počítači použili naposledy — počítač si ho pamatuje a každé spuštění se ho na něj zeptá — nebo váš výchozí model, pokud žádný není. Model vybraný zde je modelem spuštění, ať je model složky jakýkoli. Spuštění nikdy nemění model složky.</string>
     <string name="schedule_first_free_model">První volný z vašich modelů pro plánování</string>

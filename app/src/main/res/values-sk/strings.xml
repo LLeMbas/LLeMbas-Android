@@ -592,6 +592,10 @@
     <string name="schedule_agent_mode_hint">Edit, ak nevyberiete inak; Auto spúšťa príkazy bez pýtania. Počítač ho môže znížiť.</string>
     <string name="schedule_approval_wait">Schválenie čaká (minúty)</string>
     <string name="schedule_approval_wait_hint">Príkaz, ktorý spustenie potrebuje schváliť, príde do telefónu ako karta. Ak do tej doby nebude zodpovedaný, počíta sa ako zamietnutý.</string>
+    <string name="schedule_watch_command_hint">Voliteľné, na počítači. Spustí sa v priečinku pred každým spustením; keď je jeho výstup rovnaký ako minule, spustenie sa tam skončí. Príkaz, na ktorý by sa režim pýtal, sa odmietne.</string>
+    <string name="schedule_watch_timeout">Príkaz môže trvať (sekundy)</string>
+    <string name="schedule_watch_timeout_hint">Potom sa zastaví a spustenie zlyhá.</string>
+    <string name="schedule_chat_drops_watch">Táto úloha sleduje príkaz na svojom počítači. Ako úloha typu Chat už nie: spustí sa zakaždým.</string>
     <string name="schedule_folder_model">Zvyčajný model priečinka</string>
     <string name="schedule_folder_model_hint">Zvyčajný model priečinka je ten, ktorý ste v tom priečinku na tom počítači použili naposledy — počítač si ho pamätá a každé spustenie sa ho naň opýta — alebo váš predvolený model, ak žiadny nie je. Model vybraný tu je modelom spustenia, nech je model priečinka akýkoľvek. Spustenie nikdy nemení model priečinka.</string>
     <string name="schedule_first_free_model">Prvý voľný z vašich modelov na plánovanie</string>

@@ -23,8 +23,10 @@ Needs LLeMbas 2.0.0-beta.14 for what is new here; with an older instance the app
 - **Scheduled tasks have two types: Chat and Agentic.** The form asks the type first. *Chat*
   runs on your instance, as tasks always have. *Agentic* runs on one of your computers, in one
   folder there, as an agent: you choose the computer, the folder (with the picker, or typed),
-  the mode, how long an approval waits, and the model -- *The folder's usual model* unless you
-  choose one of your scheduling models. Agentic can be chosen only while one of your computers
+  the mode (only those the computer allows), how long an approval waits, a command to watch
+  (the task then runs only when its output changed), and the model -- *The folder's usual
+  model* unless you choose one of your scheduling models. Editing a task says to the instance
+  only what you changed, so a task's words can be put right while its computer is not linked. Agentic can be chosen only while one of your computers
   accepts scheduled work, and says so otherwise. A task's page shows its type, computer, folder
   and model; each run says where it ran and when its model was the folder's usual one, your
   default or the conversation's own.
@@ -69,6 +71,8 @@ Needs LLeMbas 2.0.0-beta.14 for what is new here; with an older instance the app
   end in view.
 - **The assistant's sheet follows the same rule.** It pulled the answer back to its end at every
   word, also for somebody reading further up.
+- **A message written on another device no longer throws the chat to its end** while you read
+  further up: only a message sent from this phone does.
 
 ## [1.0.0-beta.10] — 2026-11-13
 

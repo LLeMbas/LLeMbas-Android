@@ -242,23 +242,24 @@ fun ChatContent(
     LaunchedEffect(rows) {
         val before = known[0]
         known[0] = rows
-        val change = transcriptChange(before, rows, restored = drawnBefore)
+        val change = transcriptChange(before, rows, restored = drawnBefore, sent = state.lastSent)
         if (rows.isNotEmpty()) drawnBefore = true
         if (change == TranscriptChange.Older) {
             // An older page above the very top: the row that was first stays first, so reading
             // goes on upwards from it. Anywhere else the list keeps its place by the rows' keys.
             val kept = keptRow(before.orEmpty(), rows)
-            if (kept != null && list.firstVisibleItemIndex == 0) list.scrollToItem(kept + if (state.more) 1 else 0)
+            if (kept != null && list.firstVisibleItemIndex == 0) yielding { list.scrollToItem(kept + if (state.more) 1 else 0) }
         } else if (movesToEnd(change, following)) {
             following = true
-            list.toEnd()
+            yielding { list.toEnd() }
         }
     }
     val growth = live?.let { it.shown.size * 100_000 + (it.tail.text.length + it.tail.thinking.length) } ?: 0
-    LaunchedEffect(growth) { if (growth > 0 && following) list.toEnd() }
+    LaunchedEffect(growth) { if (growth > 0 && following && !list.isScrollInProgress) yielding { list.toEnd() } }
     // The keyboard opening takes the list's foot away: a person at the end stays at the end.
     LaunchedEffect(list) {
-        snapshotFlow { list.layoutInfo.viewportSize.height }.drop(1).collect { if (following) list.toEnd() }
+        // A finger on the list ends a scroll of ours by cancelling it: this follower goes on.
+        snapshotFlow { list.layoutInfo.viewportSize.height }.drop(1).collect { if (following && !list.isScrollInProgress) yielding { list.toEnd() } }
     }
 
     CompositionLocalProvider(LocalCopy provides copy) {

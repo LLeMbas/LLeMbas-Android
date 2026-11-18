@@ -5,13 +5,30 @@ import android.app.Application
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.os.Bundle
+import eu.llembas.android.api.EventsHub
+import eu.llembas.android.api.Frame
+import eu.llembas.android.api.StreamClient
 import eu.llembas.android.auth.InstanceStore
 import eu.llembas.android.wake.AppVisibility
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.Flow
 
 /** The process: one store of instances, and the notification channels, made once. */
 class LembasApp : Application() {
     lateinit var instances: InstanceStore
         private set
+
+    /** The one connection to the person's events route, shared by all that watch it. */
+    val events = EventsHub(CoroutineScope(SupervisorJob() + Dispatchers.Default))
+
+    /** The events route of the instance in use, as its frames; null when not signed in. */
+    suspend fun eventFrames(): Flow<Frame>? {
+        val instance = instances.current() ?: return null
+        val api = instances.clientFor(instance)
+        return events.frames(instance.id) { StreamClient(api).watch { api.events() } }
+    }
 
     override fun onCreate() {
         super.onCreate()

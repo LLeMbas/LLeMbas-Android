@@ -80,7 +80,6 @@ import eu.llembas.android.api.Folder
 import eu.llembas.android.api.LembasJson
 import eu.llembas.android.api.ReportsFrame
 import eu.llembas.android.api.SearchHit
-import eu.llembas.android.api.StreamClient
 import eu.llembas.android.api.fit
 import eu.llembas.android.lembas
 import eu.llembas.android.ui.explain
@@ -152,6 +151,7 @@ class ChatsViewModel(app: Application) : AndroidViewModel(app) {
                     _state.value = ChatsState(error = getApplication<Application>().getString(said))
                     return@launch
                 }
+                val told = reportsTold
                 val page = api.chats()
                 // Folders are a side dish: the chats show without them if they cannot be read.
                 val folders = runCatching { api.folders() }.getOrDefault(_state.value.folders)
@@ -166,12 +166,15 @@ class ChatsViewModel(app: Application) : AndroidViewModel(app) {
                 } else {
                     _state.value.reports
                 }
+                // The events route may have said the count while this was being read: its
+                // word is the newer one, and a slow read does not write over it.
+                val newer = reportsTold != told
                 _state.value = ChatsState(
                     chats = page.chats,
                     more = page.more,
                     folders = folders,
-                    unreadReports = unread.getOrDefault(_state.value.unreadReports),
-                    reports = has,
+                    unreadReports = if (newer) _state.value.unreadReports else unread.getOrDefault(_state.value.unreadReports),
+                    reports = has || (newer && _state.value.reports),
                 )
             } catch (e: Exception) {
                 _state.update { it.copy(loading = false, error = getApplication<Application>().explain(e)) }
@@ -186,11 +189,14 @@ class ChatsViewModel(app: Application) : AndroidViewModel(app) {
      * badge is then what the drawer's own read said.
      */
     suspend fun watchReports() {
-        val api = runCatching { getApplication<Application>().lembas.instances.client() }.getOrNull() ?: return
+        val frames = runCatching { getApplication<Application>().lembas.eventFrames() }.getOrNull() ?: return
         try {
-            StreamClient(api).watch { api.events() }.collect { frame ->
+            frames.collect { frame ->
                 // An instance this app refuses shows its refusal and nothing else.
-                if (frame.event == "reports" && refused == null) _state.update { it.reported(frame.data) }
+                if (frame.event == "reports" && refused == null) {
+                    reportsTold++
+                    _state.update { it.reported(frame.data) }
+                }
             }
         } catch (e: CancellationException) {
             throw e
@@ -198,6 +204,9 @@ class ChatsViewModel(app: Application) : AndroidViewModel(app) {
             // Nothing to say: the count is read when the drawer opens, as before.
         }
     }
+
+    /** How many `reports` frames have come: a list read that began before the last one is older than it. */
+    private var reportsTold = 0
 
     fun more() {
         val last = _state.value.chats.lastOrNull() ?: return

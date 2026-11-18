@@ -408,6 +408,8 @@ class ApiClient(val base: String, private val token: String, val http: OkHttpCli
         notify: String? = null,
         notifyWhen: String = "",
         where: WhereToRun = WhereToRun.Leave,
+        model: String? = null,
+        watch: WatchCommand? = null,
     ): Schedule {
         val body = buildJsonObject {
             // The type (spec 3.9.0): Agentic is a schedule with a computer, Chat one without. Left
@@ -427,8 +429,24 @@ class ApiClient(val base: String, private val token: String, val http: OkHttpCli
                             where.approvalWaitMinutes?.let { put("approval_wait_minutes", it) }
                         },
                     )
-                    // Empty: the folder's usual model, asked of the computer as each run starts.
-                    put("model", where.model)
+                }
+            }
+            // The model, where the form says one: empty is the folder's usual model for an
+            // Agentic schedule, asked of the computer as each run starts.
+            model?.let { put("model", it) }
+            // The watched command, where the form says one: none at all is "watch nothing".
+            watch?.let { said ->
+                if (said.command.isBlank()) {
+                    put("watch", JsonNull)
+                } else {
+                    put(
+                        "watch",
+                        buildJsonObject {
+                            put("kind", "command")
+                            put("command", said.command)
+                            said.timeoutS?.let { put("timeout_s", it) }
+                        },
+                    )
                 }
             }
             put("title", compiled.title)
