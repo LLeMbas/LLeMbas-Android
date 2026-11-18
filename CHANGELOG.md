@@ -5,6 +5,8 @@ is in alpha and releases come off `main`.
 
 ## [Unreleased]
 
+## [1.0.0-beta.11] — 2026-11-18
+
 Needs LLeMbas 2.0.0-beta.14 for what is new here; with an older instance the app works as before.
 
 ### Added
