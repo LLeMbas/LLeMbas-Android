@@ -94,6 +94,7 @@ import eu.llembas.android.auth.Prefs
 import eu.llembas.android.lembas
 import eu.llembas.android.ui.DirectoryPicker
 import eu.llembas.android.ui.theme.LocalPalette
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -395,12 +396,18 @@ fun Composer(state: ChatState, actions: ChatActions, agent: Boolean, onTune: () 
                         scope.launch {
                             val wav = recorder.stop()
                             if (wav.isNotEmpty()) {
-                                runCatching { context.lembas.instances.client()?.transcribe(wav, media = state.mediaFor) }
-                                    .onSuccess { heard ->
-                                        val said = heard?.text
-                                        if (!said.isNullOrBlank()) text = (text + " " + said).trim()
-                                        heard?.fallback?.let { actions.mediaFellBack(MEDIA_DICTATION, context.getString(R.string.transcribed_by_fallback, it)) }
-                                    }
+                                // A transcription that was refused or never arrived is said: a field
+                                // that stays as it was, without a word, reads as "nothing was heard".
+                                try {
+                                    val heard = context.lembas.instances.client()?.transcribe(wav, media = state.mediaFor)
+                                    val said = heard?.text
+                                    if (!said.isNullOrBlank()) text = (text + " " + said).trim()
+                                    heard?.fallback?.let { actions.mediaFellBack(MEDIA_DICTATION, context.getString(R.string.transcribed_by_fallback, it)) }
+                                } catch (e: CancellationException) {
+                                    throw e
+                                } catch (e: Exception) {
+                                    actions.failed(e)
+                                }
                             }
                         }
                     } else if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {

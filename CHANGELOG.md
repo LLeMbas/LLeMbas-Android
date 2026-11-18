@@ -19,6 +19,14 @@ what the app adds and answers as before.
   assistant's sheet does not say it, because it may be open over the lock screen. Nothing new
   is sent while the phone is locked.
 
+### Fixed
+
+- **A dictation that fails says so.** When the instance refused a recording or could not be
+  reached, the chat's field simply stayed as it was. Now the chat says why.
+- **A refusal about speech is said in the instance's own words.** A dictation or a reading the
+  instance refused showed "The server answered 502." in the chat and in the assistant; the
+  instance's sentence is shown instead.
+
 ## [1.0.0-beta.11] — 2026-11-18
 
 Needs LLeMbas 2.0.0-beta.14 for what is new here; with an older instance the app works as before.

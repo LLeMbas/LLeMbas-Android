@@ -1,9 +1,11 @@
 package eu.llembas.android
 
 import eu.llembas.android.api.ApiClient
+import eu.llembas.android.api.ApiException
 import eu.llembas.android.api.Chat
 import eu.llembas.android.api.MediaFor
 import eu.llembas.android.api.ModelInfo
+import eu.llembas.android.api.refusal
 import eu.llembas.android.ui.chat.ChatState
 import eu.llembas.android.ui.chat.Draft
 import eu.llembas.android.ui.chat.MEDIA_DICTATION
@@ -18,6 +20,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Test
 
@@ -109,6 +112,31 @@ class MediaForTest {
         val request = server.takeRequest()
         assertEquals("/v1/audio/speech", request.path)
         assertTrue(request.body.readUtf8().contains("\"chat_model\":\"shire/pippin\""))
+    }
+
+    @Test
+    fun aRefusedTranscriptionSaysTheServersSentence() = runTest {
+        // `/v1` refuses in OpenAI's shape, not `/api/v2`'s `detail`.
+        server.enqueue(
+            MockResponse().setResponseCode(502)
+                .setBody("""{"error":{"message":"The speech model did not answer.","type":"upstream_error","code":502}}"""),
+        )
+        try {
+            client().transcribe(ByteArray(64), media = MediaFor.of("c1", null))
+            fail("a 502 is a refusal")
+        } catch (e: ApiException) {
+            assertEquals(502, e.status)
+            assertEquals("The speech model did not answer.", e.message)
+        }
+    }
+
+    @Test
+    fun aRefusalIsReadInBothShapes() {
+        assertEquals("No.", refusal("""{"detail":"No."}"""))
+        assertEquals("Too long.", refusal("""{"error":{"message":"Too long.","code":413}}"""))
+        assertNull(refusal("""{"error":"plain"}"""))
+        assertNull(refusal("<html>Bad gateway</html>"))
+        assertNull(refusal(""))
     }
 
     @Test

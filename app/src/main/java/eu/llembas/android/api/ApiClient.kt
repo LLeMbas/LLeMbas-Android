@@ -9,7 +9,6 @@ import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import kotlinx.serialization.serializer
 import okhttp3.Call
@@ -108,11 +107,18 @@ private fun agentsJson(agents: AgentsSetting) = buildJsonObject {
 
 internal fun detail(response: Response): String {
     val text = runCatching { response.body?.string().orEmpty() }.getOrDefault("")
-    val said = runCatching {
-        LembasJson.parseToJsonElement(text).let { it as JsonObject }["detail"]?.jsonPrimitive?.content
-    }.getOrNull()
-    return said ?: "The server answered ${response.code}."
+    return refusal(text) ?: "The server answered ${response.code}."
 }
+
+/**
+ * The server's own sentence in a refusal's body: `detail` on `/api/v2`, and OpenAI's shape
+ * (`error.message`) on `/v1`, where speech lives. Null when the body says neither.
+ */
+internal fun refusal(body: String): String? = runCatching {
+    val said = LembasJson.parseToJsonElement(body) as JsonObject
+    fun words(of: Any?): String? = (of as? JsonPrimitive)?.takeUnless { it is JsonNull }?.content?.ifBlank { null }
+    words(said["detail"]) ?: words((said["error"] as? JsonObject)?.get("message"))
+}.getOrNull()
 
 /**
  * Everything the app asks one instance, with its token. Every call is the server's

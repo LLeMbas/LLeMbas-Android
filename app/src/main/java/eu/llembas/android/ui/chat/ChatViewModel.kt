@@ -248,6 +248,9 @@ interface ChatActions {
     /** The instance's default answered a dictation or a reading ([kind]) for the chat's own: [sentence] says so, once. */
     fun mediaFellBack(kind: String, sentence: String) {}
 
+    /** Something the screen asked the instance itself (a dictation) failed: said as any failure is. */
+    fun failed(e: Throwable) {}
+
     /** A new agent chat with no computer linked: read the linked devices again. */
     fun recheckDevices() {}
 
@@ -565,6 +568,8 @@ class ChatViewModel(app: Application) :
         took(api.executePlan(chat.id))
         refresh()
     }
+
+    override fun failed(e: Throwable) = _state.update { it.copy(error = getApplication<Application>().explain(e)) }
 
     private val toldFallback = mutableSetOf<String>()
 
