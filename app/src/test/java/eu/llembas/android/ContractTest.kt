@@ -139,7 +139,7 @@ class ContractTest {
         val listing = read("files_listing", FileListing.serializer())
         assertEquals("/home/frodo", listing.path)
         assertEquals("/home", listing.parent)
-        assertEquals(listOf("recipes", "lembas.md"), listing.entries.map { it.name })
+        assertEquals(listOf("recipes", "lembas.md", "map.png"), listing.entries.map { it.name })
         assertTrue(listing.entries[0].isFolder)
         val file = listing.entries[1]
         assertFalse(file.isFolder)
