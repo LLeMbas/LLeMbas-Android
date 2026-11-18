@@ -118,7 +118,7 @@ class ScheduleTypesTest {
 
     @Test
     fun aChatSchedulesModelIsShownWhenItIsMadeAgentic() {
-        val chat = read("schedule", ScheduleEnvelope.serializer()).schedule.copy(model = "gpt-oss")
+        val chat = read("schedule", ScheduleEnvelope.serializer()).schedule.copy(model = "gpt-oss", modelRef = null)
         val form = EditState().read(chat).copy(loaded = true, agentic = true, device = "tok1", cwd = "/home/user/project")
         // Its own model is the one the form shows, and it is kept: nothing is said of it.
         assertEquals("gpt-oss", form.model)
