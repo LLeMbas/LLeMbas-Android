@@ -242,9 +242,11 @@ fun ColumnScope.AssistSheetContent(
     // it is not known yet.
     LaunchedEffect(scroll) {
         // Never against a finger: nothing is moved while a scroll is under way, and one of
-        // ours that a finger interrupts does not end this follower (`yielding`).
-        snapshotFlow { if (following && !scroll.isScrollInProgress) scroll.maxValue else -1 }
-            .collect { end -> if (end in 0 until Int.MAX_VALUE) yielding { scroll.scrollTo(end) } }
+        // ours that a finger interrupts does not end this follower (`yielding`). Whether a
+        // scroll is under way is asked here and not watched: our own scroll is one too, and
+        // watching it would have each scroll to the end start the next.
+        snapshotFlow { if (following) scroll.maxValue else -1 }
+            .collect { end -> if (end in 0 until Int.MAX_VALUE && !scroll.isScrollInProgress) yielding { scroll.scrollTo(end) } }
     }
 
     // The top: the handle and the bar. Both drag the sheet.
