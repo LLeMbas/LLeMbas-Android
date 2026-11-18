@@ -25,6 +25,7 @@ import eu.llembas.android.api.DeviceDirectory
 import eu.llembas.android.api.LembasJson
 import eu.llembas.android.api.LinkedDevice
 import eu.llembas.android.api.LiveReply
+import eu.llembas.android.api.MediaFor
 import eu.llembas.android.api.Mention
 import eu.llembas.android.api.Message
 import eu.llembas.android.api.MessagePage
@@ -146,6 +147,23 @@ val ChatState.folderModel: String?
 
 val ChatState.modelInfo: ModelInfo? get() = models.named(modelId)
 
+/**
+ * Which chat a dictation or a reply read aloud is for: this chat once it exists, else the model
+ * a new one would be on -- so the instance can serve it from that model's connection.
+ */
+val ChatState.mediaFor: MediaFor get() = MediaFor.of(chat?.id, modelId)
+
+/** The two things a chat asks the instance's speech for, each with its own one note of a fallback. */
+const val MEDIA_DICTATION = "dictation"
+const val MEDIA_SPEECH = "speech"
+
+/**
+ * Whether a fallback of [kind] is still to be said, given what was [told]: once per kind for as
+ * long as the chat is open. A connection's speech model that is down stays down for a while,
+ * and the same sentence after every dictation is noise.
+ */
+fun fallbackToSay(told: Set<String>, kind: String): Boolean = kind !in told
+
 /** The thinking level in force, by the model's levels; null for a model with no choice. */
 val ChatState.level: String?
     get() = modelInfo?.takeIf { it.levelControl != "none" }?.level(if (chat == null) draft.effort else chat.effort?.ifBlank { null })
@@ -226,6 +244,9 @@ interface ChatActions {
     fun executePlan() {}
     fun answer(card: Card, answer: CardAnswer) {}
     fun change(key: String, value: String?) {}
+
+    /** The instance's default answered a dictation or a reading ([kind]) for the chat's own: [sentence] says so, once. */
+    fun mediaFellBack(kind: String, sentence: String) {}
 
     /** A new agent chat with no computer linked: read the linked devices again. */
     fun recheckDevices() {}
@@ -543,6 +564,14 @@ class ChatViewModel(app: Application) :
     override fun executePlan() = control { api, chat ->
         took(api.executePlan(chat.id))
         refresh()
+    }
+
+    private val toldFallback = mutableSetOf<String>()
+
+    override fun mediaFellBack(kind: String, sentence: String) {
+        if (!fallbackToSay(toldFallback, kind)) return
+        toldFallback += kind
+        _state.update { it.copy(notice = sentence) }
     }
 
     override fun answer(card: Card, answer: CardAnswer) = control { api, chat ->

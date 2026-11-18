@@ -72,6 +72,8 @@
     <string name="retry">Try again</string>
     <string name="offline">The instance cannot be reached. Check the phone\'s connection, and that it can reach the instance\'s address.</string>
     <string name="dictate">Dictate</string>
+    <string name="transcribed_by_fallback">Transcribed by %1$s: this chat\'s own speech model did not answer.</string>
+    <string name="read_by_fallback">Read by %1$s: this chat\'s own speech model did not answer.</string>
     <string name="remove">Remove</string>
     <string name="more">More</string>
     <string name="back">Back</string>

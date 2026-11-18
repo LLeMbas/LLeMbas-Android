@@ -5,6 +5,20 @@ is in alpha and releases come off `main`.
 
 ## [Unreleased]
 
+For what is new here the instance must be newer than LLeMbas 2.0.0-beta.14; an older one ignores
+what the app adds and answers as before.
+
+### Added
+
+- **Dictation and Read aloud follow the chat's model.** An instance may now give a connection
+  speech models of its own, used for the chats whose model is on that connection. The app says
+  which chat a recording or a reading is for: the chat it is in, or -- before the chat exists --
+  the model chosen for it (in the assistant, the assistant's model). Dictation into another app
+  belongs to no chat and stays on the instance's default. When the chat's own speech model did
+  not answer and the default did, the chat says so once, quietly, naming what answered; the
+  assistant's sheet does not say it, because it may be open over the lock screen. Nothing new
+  is sent while the phone is locked.
+
 ## [1.0.0-beta.11] — 2026-11-18
 
 Needs LLeMbas 2.0.0-beta.14 for what is new here; with an older instance the app works as before.

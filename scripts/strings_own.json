@@ -395,7 +395,9 @@
     "wake_word_unavailable": "V tomto sestavení není. Sestavení pro F-Droid nemá modul pro budicí slovo, protože F-Droid sestavuje každou knihovnu ze zdrojů; sestavení z llembas.eu ho má.",
     "widget_description": "Ptejte se hlasem nebo textem, nebo pokračujte v poslední konverzaci s asistentem. Neukazuje nic z vašeho účtu.",
     "widget_hint": "Zeptejte se na cokoli",
-    "widget_speak": "Mluvit"
+    "widget_speak": "Mluvit",
+    "transcribed_by_fallback": "Přepsal %1$s: vlastní model řeči tohoto chatu neodpověděl.",
+    "read_by_fallback": "Přečetl %1$s: vlastní model řeči tohoto chatu neodpověděl."
   },
   "de": {
     "about_version": "LLeMbas für Android %1$s",
@@ -794,7 +796,9 @@
     "wake_word_unavailable": "Nicht in diesem Build. Der F-Droid-Build hat keine Aktivierungswort-Engine, weil F-Droid jede Bibliothek aus dem Quellcode baut; der Build von llembas.eu hat eine.",
     "widget_description": "Per Sprache oder Text fragen oder den letzten Assistenten-Chat fortsetzen. Zeigt nichts aus Ihrem Konto.",
     "widget_hint": "Frag mich alles",
-    "widget_speak": "Sprechen"
+    "widget_speak": "Sprechen",
+    "transcribed_by_fallback": "Transkribiert von %1$s: Das eigene Sprachmodell dieses Chats hat nicht geantwortet.",
+    "read_by_fallback": "Vorgelesen von %1$s: Das eigene Sprachmodell dieses Chats hat nicht geantwortet."
   },
   "es": {
     "about_version": "LLeMbas para Android %1$s",
@@ -1192,7 +1196,9 @@
     "wake_word_unavailable": "No en esta versión. La versión de F-Droid no tiene motor de palabra de activación, porque F-Droid compila cada biblioteca desde el código fuente; la de llembas.eu sí lo tiene.",
     "widget_description": "Pregunta por voz o por texto, o continúa el último chat del asistente. No muestra nada de tu cuenta.",
     "widget_hint": "Pregunta lo que quieras",
-    "widget_speak": "Hablar"
+    "widget_speak": "Hablar",
+    "transcribed_by_fallback": "Transcrito por %1$s: el modelo de voz propio de este chat no respondió.",
+    "read_by_fallback": "Leído por %1$s: el modelo de voz propio de este chat no respondió."
   },
   "fr": {
     "about_version": "LLeMbas pour Android %1$s",
@@ -1591,7 +1597,9 @@
     "wake_word_unavailable": "Pas dans cette version. La version F-Droid n’a pas de moteur de mot d’activation, car F-Droid compile chaque bibliothèque depuis les sources ; celle de llembas.eu en a un.",
     "widget_description": "Demandez à la voix ou par écrit, ou reprenez la dernière discussion de l’assistant. N’affiche rien de votre compte.",
     "widget_hint": "Posez une question",
-    "widget_speak": "Parler"
+    "widget_speak": "Parler",
+    "transcribed_by_fallback": "Transcrit par %1$s : le modèle vocal propre à cette discussion n'a pas répondu.",
+    "read_by_fallback": "Lu par %1$s : le modèle vocal propre à cette discussion n'a pas répondu."
   },
   "hu": {
     "about_version": "LLeMbas Androidra %1$s",
@@ -1990,7 +1998,9 @@
     "wake_word_unavailable": "Ebben a változatban nincs. Az F-Droid-változatban nincs ébresztőszó-motor, mert az F-Droid minden könyvtárat forrásból fordít; a llembas.eu-s változatban van.",
     "widget_description": "Kérdezz hanggal vagy szöveggel, vagy folytasd az asszisztens legutóbbi csevegését. A fiókodból semmit sem mutat.",
     "widget_hint": "Kérdezz bármit",
-    "widget_speak": "Beszéd"
+    "widget_speak": "Beszéd",
+    "transcribed_by_fallback": "Átírta: %1$s — a csevegés saját beszédmodellje nem válaszolt.",
+    "read_by_fallback": "Felolvasta: %1$s — a csevegés saját beszédmodellje nem válaszolt."
   },
   "it": {
     "about_version": "LLeMbas per Android %1$s",
@@ -2388,7 +2398,9 @@
     "wake_word_unavailable": "Non in questa build. La build F-Droid non ha un motore per la parola di attivazione, perché F-Droid compila ogni libreria dal sorgente; la build di llembas.eu ce l’ha.",
     "widget_description": "Chiedi a voce o per iscritto, o continua l’ultima chat dell’assistente. Non mostra nulla del tuo account.",
     "widget_hint": "Chiedi qualsiasi cosa",
-    "widget_speak": "Parla"
+    "widget_speak": "Parla",
+    "transcribed_by_fallback": "Trascritto da %1$s: il modello vocale proprio di questa chat non ha risposto.",
+    "read_by_fallback": "Letto da %1$s: il modello vocale proprio di questa chat non ha risposto."
   },
   "pl": {
     "about_version": "LLeMbas na Androida %1$s",
@@ -2786,7 +2798,9 @@
     "wake_word_unavailable": "Nie w tej wersji. Wersja z F-Droid nie ma silnika słowa aktywującego, bo F-Droid buduje każdą bibliotekę ze źródeł; wersja z llembas.eu go ma.",
     "widget_description": "Pytaj głosem lub tekstem albo kontynuuj ostatni czat asystenta. Nie pokazuje niczego z Twojego konta.",
     "widget_hint": "Zapytaj o cokolwiek",
-    "widget_speak": "Mów"
+    "widget_speak": "Mów",
+    "transcribed_by_fallback": "Transkrybował %1$s: własny model mowy tego czatu nie odpowiedział.",
+    "read_by_fallback": "Przeczytał %1$s: własny model mowy tego czatu nie odpowiedział."
   },
   "sk": {
     "about_version": "LLeMbas pre Android %1$s",
@@ -3184,6 +3198,8 @@
     "wake_word_unavailable": "V tomto zostavení nie je. Zostavenie pre F-Droid nemá modul pre budiace slovo, pretože F-Droid zostavuje každú knižnicu zo zdrojov; zostavenie z llembas.eu ho má.",
     "widget_description": "Pýtajte sa hlasom alebo textom, alebo pokračujte v poslednej konverzácii s asistentom. Neukazuje nič z vášho účtu.",
     "widget_hint": "Opýtajte sa na čokoľvek",
-    "widget_speak": "Hovoriť"
+    "widget_speak": "Hovoriť",
+    "transcribed_by_fallback": "Prepísal %1$s: vlastný model reči tohto chatu neodpovedal.",
+    "read_by_fallback": "Prečítal %1$s: vlastný model reči tohto chatu neodpovedal."
   }
 }

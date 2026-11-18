@@ -619,22 +619,28 @@ class ApiClient(val base: String, private val token: String, val http: OkHttpCli
     suspend fun forgetPush() = empty(authed("$v2/push").delete().build())
 
     // --- Voice (/v1, the `models` scope) -----------------------------------------------------
-    suspend fun transcribe(wav: ByteArray, language: String? = null): String {
+
+    /**
+     * Write a recording down. [media] says which chat it is for, so that the chat's model's
+     * connection may serve it with its own speech model (server 2.0.0-beta.15); a server before
+     * that reads only the fields it knows and answers from its one endpoint.
+     */
+    suspend fun transcribe(wav: ByteArray, language: String? = null, media: MediaFor = MediaFor.DEFAULT): Heard = withContext(Dispatchers.IO) {
         val body = MultipartBody.Builder().setType(MultipartBody.FORM)
             .addFormDataPart("file", "speech.wav", wav.toRequestBody("audio/wav".toMediaType()))
-            .apply { language?.let { addFormDataPart("language", it) } }
+            .apply { transcriptionFields(language, media).forEach { (name, value) -> addFormDataPart(name, value) } }
             .build()
-        return call(authed("$base/v1/audio/transcriptions").post(body).build(), Transcript.serializer()).text
+        http.newCall(authed("$base/v1/audio/transcriptions").post(body).build()).await().use {
+            if (!it.isSuccessful) throw ApiException(it.code, detail(it))
+            Heard(LembasJson.decodeFromString(Transcript.serializer(), it.body!!.string()).text, fallbackSource(it))
+        }
     }
 
-    suspend fun speech(text: String): ByteArray = withContext(Dispatchers.IO) {
-        val body = buildJsonObject {
-            put("input", text.take(20_000))
-            put("response_format", "mp3")
-        }
-        http.newCall(authed("$base/v1/audio/speech").post(body.toString().toRequestBody(JSON)).build()).await().use {
+    /** [text] as speech, for the chat [media] names (see [transcribe]). */
+    suspend fun speech(text: String, media: MediaFor = MediaFor.DEFAULT): Spoken = withContext(Dispatchers.IO) {
+        http.newCall(authed("$base/v1/audio/speech").post(speechBody(text, media).toString().toRequestBody(JSON)).build()).await().use {
             if (!it.isSuccessful) throw ApiException(it.code, detail(it))
-            it.body!!.bytes()
+            Spoken(it.body!!.bytes(), fallbackSource(it))
         }
     }
 
@@ -654,6 +660,33 @@ class ApiClient(val base: String, private val token: String, val http: OkHttpCli
 
         /** 1 MB, the server's own limit on a shown file, with room for a little more. */
         const val SHOWN_MAX_BYTES = 1_100_000L
+
+        /** The transcription's form fields beside the file: the language, and which chat. */
+        fun transcriptionFields(language: String?, media: MediaFor): List<Pair<String, String>> = buildList {
+            language?.let { add("language" to it) }
+            media.chatId?.let { add("chat_id" to it) }
+            media.chatModel?.let { add("chat_model" to it) }
+        }
+
+        /** The body of a speech request: the words, the format, and which chat. */
+        fun speechBody(text: String, media: MediaFor): JsonObject = buildJsonObject {
+            put("input", text.take(20_000))
+            put("response_format", "mp3")
+            media.chatId?.let { put("chat_id", it) }
+            media.chatModel?.let { put("chat_model", it) }
+        }
+
+        /**
+         * The source that answered in place of the chat's own (`X-Lembas-Fallback`), by its name
+         * (`X-Lembas-Source`, percent-encoded: a header is Latin-1); null when the one expected
+         * answered, and from a server that says neither.
+         */
+        fun fallbackSource(fallback: String?, source: String?): String? {
+            if (fallback.isNullOrBlank() || fallback == "0" || source.isNullOrBlank()) return null
+            return runCatching { java.net.URLDecoder.decode(source.replace("+", "%2B"), "UTF-8") }.getOrDefault(source).ifBlank { null }
+        }
+
+        private fun fallbackSource(response: Response): String? = fallbackSource(response.header("X-Lembas-Fallback"), response.header("X-Lembas-Source"))
 
         fun emptyBody(): RequestBody = ByteArray(0).toRequestBody(null)
 

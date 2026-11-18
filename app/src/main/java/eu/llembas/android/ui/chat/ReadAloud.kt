@@ -6,6 +6,7 @@ import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import eu.llembas.android.api.MediaFor
 import eu.llembas.android.assist.AssistController
 import eu.llembas.android.assist.Speaker
 import eu.llembas.android.lembas
@@ -23,7 +24,15 @@ import kotlinx.coroutines.launch
  * shows a button that can only fail.
  */
 @Stable
-class ReadAloud(private val context: Context, private val scope: CoroutineScope, private val onError: (String) -> Unit) {
+class ReadAloud(
+    private val context: Context,
+    private val scope: CoroutineScope,
+    /** Which chat is read from, asked at each reading: its connection may have a voice of its own. */
+    private val media: () -> MediaFor = { MediaFor.DEFAULT },
+    /** Another source read it than the chat's own: its name. */
+    private val onFallback: (String) -> Unit = {},
+    private val onError: (String) -> Unit,
+) {
     private val speaker = Speaker(context)
     private var job: Job? = null
 
@@ -45,7 +54,9 @@ class ReadAloud(private val context: Context, private val scope: CoroutineScope,
         job = scope.launch {
             try {
                 val api = context.lembas.instances.client() ?: return@launch
-                speaker.play(api.speech(AssistController.plain(markdown)))
+                val spoken = api.speech(AssistController.plain(markdown), media())
+                spoken.fallback?.let(onFallback)
+                speaker.play(spoken.audio)
                 speaker.playing.first { !it }
             } catch (e: CancellationException) {
                 throw e

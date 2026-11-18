@@ -16,6 +16,7 @@ import eu.llembas.android.api.ApiException
 import eu.llembas.android.api.Card
 import eu.llembas.android.api.CardAnswer
 import eu.llembas.android.api.LiveReply
+import eu.llembas.android.api.MediaFor
 import eu.llembas.android.api.ModelInfo
 import eu.llembas.android.api.Step
 import eu.llembas.android.api.StreamClient
@@ -335,7 +336,7 @@ class AssistController(
         scope.launch {
             try {
                 _state.update { it.copy(busy = true, error = null) }
-                val text = context.lembas.instances.client()?.transcribe(wav).orEmpty()
+                val text = context.lembas.instances.client()?.transcribe(wav, media = mediaFor())?.text.orEmpty()
                 _state.update { it.copy(busy = false) }
                 if (text.isNotBlank()) ask(text, spoken = true)
             } catch (e: CancellationException) {
@@ -454,7 +455,7 @@ class AssistController(
             val seconds = recorder.seconds
             if (seconds - sent < 0.5f || seconds > 60f || ear?.heardSomething != true || locked()) continue
             sent = seconds
-            val words = runCatching { api.transcribe(recorder.snapshot()) }.getOrNull()
+            val words = runCatching { api.transcribe(recorder.snapshot(), media = mediaFor()).text }.getOrNull()
             if (!words.isNullOrBlank() && _state.value.listening) _state.update { it.copy(heard = words) }
         }
     }
@@ -549,7 +550,7 @@ class AssistController(
             }
             try {
                 _state.update { it.copy(busy = true) }
-                val text = context.lembas.instances.client()?.transcribe(wav).orEmpty()
+                val text = context.lembas.instances.client()?.transcribe(wav, media = mediaFor())?.text.orEmpty()
                 _state.update { it.copy(busy = false, heard = "") }
                 if (text.isNotBlank()) askOrStop(text) else endConversation()
             } catch (e: Exception) {
@@ -779,13 +780,19 @@ class AssistController(
     /** Stop the voice -- and, in a conversation, the listening that would follow it. */
     override fun stopReading() = speaker.stop()
 
+    /**
+     * Which chat the sheet's speech is for: the chat it is in, else the model its next chat
+     * starts on. That a fallback answered is not said here: the sheet may be over the lock.
+     */
+    private fun mediaFor(): MediaFor = _state.value.let { MediaFor.of(it.chatId, it.modelId ?: newChatModel) }
+
     /** Read [words] aloud; true when they were heard to the end. */
     private suspend fun speak(words: String): Boolean {
         // Never aloud over the lock screen: an answer is the account's.
         if (words.isBlank() || locked()) return false
         return try {
             val api = context.lembas.instances.client() ?: return false
-            speaker.playToEnd(api.speech(words))
+            speaker.playToEnd(api.speech(words, mediaFor()).audio)
         } catch (e: Exception) {
             _state.update { it.copy(error = context.explain(e)) }
             false

@@ -395,8 +395,12 @@ fun Composer(state: ChatState, actions: ChatActions, agent: Boolean, onTune: () 
                         scope.launch {
                             val wav = recorder.stop()
                             if (wav.isNotEmpty()) {
-                                runCatching { context.lembas.instances.client()?.transcribe(wav) }
-                                    .onSuccess { heard -> if (!heard.isNullOrBlank()) text = (text + " " + heard).trim() }
+                                runCatching { context.lembas.instances.client()?.transcribe(wav, media = state.mediaFor) }
+                                    .onSuccess { heard ->
+                                        val said = heard?.text
+                                        if (!said.isNullOrBlank()) text = (text + " " + said).trim()
+                                        heard?.fallback?.let { actions.mediaFellBack(MEDIA_DICTATION, context.getString(R.string.transcribed_by_fallback, it)) }
+                                    }
                             }
                         }
                     } else if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {

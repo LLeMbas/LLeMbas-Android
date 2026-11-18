@@ -71,6 +71,8 @@
     <string name="retry">Skúsiť znova</string>
     <string name="offline">Inštancia nie je dostupná. Skontrolujte pripojenie telefónu a či sa dostane na adresu inštancie.</string>
     <string name="dictate">Diktovať</string>
+    <string name="transcribed_by_fallback">Prepísal %1$s: vlastný model reči tohto chatu neodpovedal.</string>
+    <string name="read_by_fallback">Prečítal %1$s: vlastný model reči tohto chatu neodpovedal.</string>
     <string name="remove">Odstrániť</string>
     <string name="more">Viac</string>
     <string name="back">Späť</string>

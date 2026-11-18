@@ -71,6 +71,8 @@
     <string name="retry">Réessayer</string>
     <string name="offline">L\'instance est injoignable. Vérifiez la connexion du téléphone et qu\'il atteint bien l\'adresse de l\'instance.</string>
     <string name="dictate">Dicter</string>
+    <string name="transcribed_by_fallback">Transcrit par %1$s : le modèle vocal propre à cette discussion n\'a pas répondu.</string>
+    <string name="read_by_fallback">Lu par %1$s : le modèle vocal propre à cette discussion n\'a pas répondu.</string>
     <string name="remove">Retirer</string>
     <string name="more">Plus</string>
     <string name="back">Retour</string>

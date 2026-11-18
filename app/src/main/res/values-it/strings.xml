@@ -71,6 +71,8 @@
     <string name="retry">Riprova</string>
     <string name="offline">L\'istanza non è raggiungibile. Controlla la connessione del telefono e che raggiunga l\'indirizzo dell\'istanza.</string>
     <string name="dictate">Detta</string>
+    <string name="transcribed_by_fallback">Trascritto da %1$s: il modello vocale proprio di questa chat non ha risposto.</string>
+    <string name="read_by_fallback">Letto da %1$s: il modello vocale proprio di questa chat non ha risposto.</string>
     <string name="remove">Rimuovi</string>
     <string name="more">Altro</string>
     <string name="back">Indietro</string>

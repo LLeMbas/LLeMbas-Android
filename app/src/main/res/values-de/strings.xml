@@ -71,6 +71,8 @@
     <string name="retry">Erneut versuchen</string>
     <string name="offline">Die Instanz ist nicht erreichbar. Prüfen Sie die Verbindung des Telefons und ob es die Adresse der Instanz erreicht.</string>
     <string name="dictate">Diktieren</string>
+    <string name="transcribed_by_fallback">Transkribiert von %1$s: Das eigene Sprachmodell dieses Chats hat nicht geantwortet.</string>
+    <string name="read_by_fallback">Vorgelesen von %1$s: Das eigene Sprachmodell dieses Chats hat nicht geantwortet.</string>
     <string name="remove">Entfernen</string>
     <string name="more">Mehr</string>
     <string name="back">Zurück</string>

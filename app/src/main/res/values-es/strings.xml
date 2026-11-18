@@ -71,6 +71,8 @@
     <string name="retry">Reintentar</string>
     <string name="offline">No se puede acceder a la instancia. Compruebe la conexión del teléfono y que llegue a la dirección de la instancia.</string>
     <string name="dictate">Dictar</string>
+    <string name="transcribed_by_fallback">Transcrito por %1$s: el modelo de voz propio de este chat no respondió.</string>
+    <string name="read_by_fallback">Leído por %1$s: el modelo de voz propio de este chat no respondió.</string>
     <string name="remove">Quitar</string>
     <string name="more">Más</string>
     <string name="back">Volver</string>

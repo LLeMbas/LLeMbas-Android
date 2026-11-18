@@ -71,6 +71,8 @@
     <string name="retry">Spróbuj ponownie</string>
     <string name="offline">Instancja jest nieosiągalna. Sprawdź połączenie telefonu i czy dociera on do adresu instancji.</string>
     <string name="dictate">Dyktuj</string>
+    <string name="transcribed_by_fallback">Transkrybował %1$s: własny model mowy tego czatu nie odpowiedział.</string>
+    <string name="read_by_fallback">Przeczytał %1$s: własny model mowy tego czatu nie odpowiedział.</string>
     <string name="remove">Usuń</string>
     <string name="more">Więcej</string>
     <string name="back">Wstecz</string>

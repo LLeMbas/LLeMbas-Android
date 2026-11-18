@@ -71,6 +71,8 @@
     <string name="retry">Újrapróbálás</string>
     <string name="offline">A példány nem érhető el. Ellenőrizze a telefon kapcsolatát, és hogy eléri-e a példány címét.</string>
     <string name="dictate">Diktálás</string>
+    <string name="transcribed_by_fallback">Átírta: %1$s — a csevegés saját beszédmodellje nem válaszolt.</string>
+    <string name="read_by_fallback">Felolvasta: %1$s — a csevegés saját beszédmodellje nem válaszolt.</string>
     <string name="remove">Eltávolítás</string>
     <string name="more">Továbbiak</string>
     <string name="back">Vissza</string>

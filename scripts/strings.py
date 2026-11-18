@@ -84,6 +84,10 @@ STRINGS: dict[str, str] = {
     "retry": "Try again",
     "offline": "The instance cannot be reached. Check the phone's connection, and that it can reach the instance's address.",
     "dictate": "Dictate",
+    # A connection's own speech model did not answer and the instance's default did (the
+    # server's sentences, `SERVER_ENGLISH`): a note in the chat, once.
+    "transcribed_by_fallback": "Transcribed by %1$s: this chat's own speech model did not answer.",
+    "read_by_fallback": "Read by %1$s: this chat's own speech model did not answer.",
     "remove": "Remove",
     "more": "More",
     "back": "Back",
@@ -643,6 +647,8 @@ STRINGS: dict[str, str] = {
 # taken from the server's catalogue and its named placeholders numbered in the order the
 # English names them -- so "%(steps)s steps, %(tools)s tools" becomes `%1$s`, `%2$s`.
 SERVER_ENGLISH: dict[str, str] = {
+    "transcribed_by_fallback": "Transcribed by %(source)s: this chat's own speech model did not answer.",
+    "read_by_fallback": "Read by %(source)s: this chat's own speech model did not answer.",
     # The progress texts: the server's catalogues key them by the spec's English, {{fields}} and all.
     "progress_queued_ahead": "Queued: {{ahead}} ahead",
     "progress_waiting_for_model": "Waiting for {{model}}: {{reason}}",

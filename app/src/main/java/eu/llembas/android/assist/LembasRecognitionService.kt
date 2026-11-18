@@ -11,6 +11,7 @@ import android.speech.RecognitionService
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import androidx.annotation.RequiresApi
+import eu.llembas.android.api.MediaFor
 import eu.llembas.android.lembas
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -200,7 +201,8 @@ class LembasRecognitionService : RecognitionService() {
                 return@launch
             }
             try {
-                val text = lembas.instances.client()?.transcribe(wav).orEmpty()
+                // Another app's dictation belongs to no chat: the instance's default writes it down.
+                val text = lembas.instances.client()?.transcribe(wav, media = MediaFor.DEFAULT)?.text.orEmpty()
                 if (text.isBlank()) {
                     listener.error(SpeechRecognizer.ERROR_NO_MATCH)
                 } else {

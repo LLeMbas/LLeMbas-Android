@@ -148,7 +148,15 @@ fun ChatScreen(
     // Read aloud on a reply, when the instance has a voice; it stops when the chat is left.
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val readAloud = remember { ReadAloud(context, scope) { said -> scope.launch { snackbar.showSnackbar(said) } } }
+    val readAloud = remember {
+        ReadAloud(
+            context,
+            scope,
+            media = { model.state.value.mediaFor },
+            onFallback = { source -> model.mediaFellBack(MEDIA_SPEECH, context.getString(R.string.read_by_fallback, source)) },
+            onError = { said -> scope.launch { snackbar.showSnackbar(said) } },
+        )
+    }
     LaunchedEffect(Unit) { readAloud.load() }
     DisposableEffect(Unit) { onDispose { readAloud.stop() } }
 

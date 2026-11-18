@@ -71,6 +71,8 @@
     <string name="retry">Zkusit znovu</string>
     <string name="offline">Instance není dostupná. Zkontrolujte připojení telefonu a to, zda se dostane na adresu instance.</string>
     <string name="dictate">Diktovat</string>
+    <string name="transcribed_by_fallback">Přepsal %1$s: vlastní model řeči tohoto chatu neodpověděl.</string>
+    <string name="read_by_fallback">Přečetl %1$s: vlastní model řeči tohoto chatu neodpověděl.</string>
     <string name="remove">Odebrat</string>
     <string name="more">Více</string>
     <string name="back">Zpět</string>

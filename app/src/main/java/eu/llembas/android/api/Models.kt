@@ -730,6 +730,31 @@ data class PushKey(val key: String = "", val registered: Boolean = false)
 @Serializable
 data class Transcript(val text: String = "")
 
+/**
+ * Which chat a recording or a reading is for: the chat's own id, or -- for a chat that does not
+ * exist yet -- the model it will be on. The instance serves it from that model's connection
+ * where the connection has speech models of its own; with neither ([DEFAULT]) from its default.
+ * Never both: a chat that exists says its model itself.
+ */
+data class MediaFor(val chatId: String? = null, val chatModel: String? = null) {
+    companion object {
+        /** No chat: another app's dictation. */
+        val DEFAULT = MediaFor()
+
+        fun of(chatId: String?, model: String?): MediaFor = when {
+            !chatId.isNullOrBlank() -> MediaFor(chatId = chatId)
+            !model.isNullOrBlank() -> MediaFor(chatModel = model)
+            else -> DEFAULT
+        }
+    }
+}
+
+/** A recording written down; [fallback] names the source that answered when the chat's own did not. */
+data class Heard(val text: String, val fallback: String? = null)
+
+/** Words as sound (mp3); [fallback] as [Heard]'s. */
+class Spoken(val audio: ByteArray, val fallback: String? = null)
+
 // --- The stream's frames -----------------------------------------------------------------
 @Serializable
 data class Tail(val thinking: String = "", val text: String = "", val label: String = "")
