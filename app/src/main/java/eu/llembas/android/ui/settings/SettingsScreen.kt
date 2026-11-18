@@ -256,7 +256,11 @@ fun SettingsScreen(onBack: () -> Unit, onAddInstance: () -> Unit) {
     val actions = remember {
         object : SettingsActions {
             override fun use(instance: Instance) {
-                scope.launch { store.use(instance.id) }
+                scope.launch {
+                    store.use(instance.id)
+                    // Copies of one instance's files are not kept around while another is in use.
+                    FileCache.clear(context)
+                }
             }
 
             override fun add() = onAddInstance()

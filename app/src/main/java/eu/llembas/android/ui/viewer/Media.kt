@@ -32,6 +32,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -233,6 +234,8 @@ fun PdfBody(path: String, name: String, size: Long, fallback: @Composable (Strin
 private fun PdfPagesList(pages: PdfPages) {
     val palette = LocalPalette.current
     val list = rememberLazyListState()
+    // Read through a derived state: the line is drawn again when the page changes, not at every pixel of a scroll.
+    val first by remember { derivedStateOf { list.firstVisibleItemIndex + 1 } }
     Column(Modifier.fillMaxSize().background(palette.bgSunken)) {
         BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
             val width = with(LocalDensity.current) { maxWidth.toPx() }.toInt().coerceIn(1, 1600)
@@ -257,7 +260,7 @@ private fun PdfPagesList(pages: PdfPages) {
             }
         }
         Text(
-            stringResource(R.string.viewer_page, (list.firstVisibleItemIndex + 1).toString(), pages.count.toString()),
+            stringResource(R.string.viewer_page, first.toString(), pages.count.toString()),
             style = MaterialTheme.typography.labelMedium,
             color = palette.inkMuted,
             modifier = Modifier.fillMaxWidth().background(palette.bg).padding(horizontal = 16.dp, vertical = 8.dp),
