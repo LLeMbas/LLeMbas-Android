@@ -7,6 +7,7 @@ import android.provider.OpenableColumns
 import androidx.core.content.FileProvider
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import eu.llembas.android.R
 import eu.llembas.android.api.Activity
 import eu.llembas.android.api.ActivityAgent
 import eu.llembas.android.api.ActivityFrame
