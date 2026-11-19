@@ -5,7 +5,7 @@ is in alpha and releases come off `main`.
 
 ## [Unreleased]
 
-For Files and generated media as described here the instance must be newer than
+For Files, generated media and MCP servers as described here the instance must be newer than
 LLeMbas 2.0.0-beta.16. On an older one Files lists and shows text as before, and says so where
 it cannot do more.
 
@@ -42,6 +42,9 @@ it cannot do more.
   says why in the instance's own words. Nothing of this is shown over the lock screen, and the
   app posts no notification about a file.
 - **Sound and video you attached can be played** from the message they are attached to.
+- **Settings › MCP servers.** The MCP servers your chats may be offered, how many tools each
+  has and how each is signed in to. One that waits for your sign-in has a button that opens the
+  instance's own sign-in page in the browser; the list is read again when you come back.
 - **A new folder from inside the folder picker**, when moving, copying or saving a share.
 - **A table can be shown as its text**, and as a table again.
 

@@ -58,6 +58,7 @@ import eu.llembas.android.ui.scheduled.ScheduleEditScreen
 import eu.llembas.android.ui.scheduled.ScheduleScreen
 import eu.llembas.android.ui.scheduled.ScheduledScreen
 import eu.llembas.android.ui.scheduled.SchedulingModelsScreen
+import eu.llembas.android.ui.settings.McpScreen
 import eu.llembas.android.ui.settings.SettingsScreen
 import eu.llembas.android.ui.signin.SignInScreen
 import eu.llembas.android.ui.theme.LembasTheme
@@ -320,6 +321,7 @@ class MainActivity : ComponentActivity() {
                 composable("files") { FilesScreen(onBack = { nav.popBackStack() }) }
                 // Files at a folder: where a generated file's "Open in Files" leads.
                 composable("files-at/{at}") { e -> FilesScreen(onBack = { nav.popBackStack() }, start = e.arguments?.getString("at")) }
+                composable("mcp") { McpScreen(onBack = { nav.popBackStack() }) }
                 composable("archived") {
                     ArchivedScreen(onBack = { nav.popBackStack() }, onOpen = { top("chat/$it") }, onRestored = { chats.load() })
                 }
@@ -388,7 +390,7 @@ class MainActivity : ComponentActivity() {
                     ScheduleEditScreen(e.arguments?.getString("id"), onBack = { nav.popBackStack() }, onSaved = { nav.popBackStack() })
                 }
                 composable("settings") {
-                    SettingsScreen(onBack = { nav.popBackStack() }, onAddInstance = { over("add") })
+                    SettingsScreen(onBack = { nav.popBackStack() }, onAddInstance = { over("add") }, onMcp = { over("mcp") })
                 }
                 // Signing in to one more instance makes it the one in use, which starts a
                 // fresh navigation for it (the `key` above).

@@ -411,7 +411,17 @@
     "widget_hint": "Zeptejte se na cokoli",
     "widget_speak": "Mluvit",
     "media_model": "3D model",
-    "job_expired": "Vypršelo"
+    "job_expired": "Vypršelo",
+    "mcp_intro": "Servery, jejichž nástroje mohou být nabídnuty ve vašich chatech. Některé se používají s vaším vlastním účtem u nich: jejich nástroje jsou nabízeny, dokud jste přihlášeni.",
+    "mcp_none": "Na této instanci vám nejsou nabízeny žádné servery MCP.",
+    "mcp_ready": "Připraveno",
+    "mcp_signed_in": "Přihlášeno",
+    "mcp_signed_out": "Nepřihlášeno",
+    "mcp_needs_signin": "Je potřeba nové přihlášení",
+    "mcp_tools": "Nástroje: %1$s",
+    "mcp_account": "Přihlášeno jako %1$s",
+    "mcp_until": "Přihlášeno do %1$s",
+    "mcp_browser_note": "Přihlášení probíhá v prohlížeči, přímo na instanci. Pokud prohlížeč není k instanci přihlášen, nejprve si to vyžádá. Potom se vraťte sem."
   },
   "de": {
     "about_version": "LLeMbas für Android %1$s",
@@ -826,7 +836,17 @@
     "widget_hint": "Frag mich alles",
     "widget_speak": "Sprechen",
     "media_model": "3D-Modell",
-    "job_expired": "Abgelaufen"
+    "job_expired": "Abgelaufen",
+    "mcp_intro": "Die Server, deren Werkzeuge in den eigenen Chats angeboten werden können. Manche werden mit einem eigenen Konto dort genutzt: Deren Werkzeuge werden angeboten, solange die Anmeldung besteht.",
+    "mcp_none": "Auf dieser Instanz werden keine MCP-Server angeboten.",
+    "mcp_ready": "Bereit",
+    "mcp_signed_in": "Angemeldet",
+    "mcp_signed_out": "Nicht angemeldet",
+    "mcp_needs_signin": "Neue Anmeldung nötig",
+    "mcp_tools": "Werkzeuge: %1$s",
+    "mcp_account": "Angemeldet als %1$s",
+    "mcp_until": "Angemeldet bis %1$s",
+    "mcp_browser_note": "Die Anmeldung geschieht im Browser, auf der Instanz selbst. Ist der Browser dort nicht angemeldet, wird zuerst danach gefragt. Danach hierher zurückkehren."
   },
   "es": {
     "about_version": "LLeMbas para Android %1$s",
@@ -1240,7 +1260,17 @@
     "widget_hint": "Pregunta lo que quieras",
     "widget_speak": "Hablar",
     "media_model": "Modelo 3D",
-    "job_expired": "Caducado"
+    "job_expired": "Caducado",
+    "mcp_intro": "Los servidores cuyas herramientas pueden ofrecerse en sus chats. Algunos se usan con una cuenta propia en ellos: sus herramientas se ofrecen mientras la sesión esté iniciada.",
+    "mcp_none": "En esta instancia no se le ofrece ningún servidor MCP.",
+    "mcp_ready": "Listo",
+    "mcp_signed_in": "Sesión iniciada",
+    "mcp_signed_out": "Sin sesión iniciada",
+    "mcp_needs_signin": "Hace falta iniciar sesión de nuevo",
+    "mcp_tools": "Herramientas: %1$s",
+    "mcp_account": "Sesión iniciada como %1$s",
+    "mcp_until": "Sesión iniciada hasta %1$s",
+    "mcp_browser_note": "El inicio de sesión se hace en el navegador, en la propia instancia. Si el navegador no tiene la sesión iniciada en la instancia, primero la pide. Después, vuelva aquí."
   },
   "fr": {
     "about_version": "LLeMbas pour Android %1$s",
@@ -1655,7 +1685,17 @@
     "widget_hint": "Posez une question",
     "widget_speak": "Parler",
     "media_model": "Modèle 3D",
-    "job_expired": "Expiré"
+    "job_expired": "Expiré",
+    "mcp_intro": "Les serveurs dont les outils peuvent être proposés dans vos discussions. Certains s’utilisent avec un compte à vous chez eux : leurs outils sont proposés tant que vous y êtes connecté.",
+    "mcp_none": "Aucun serveur MCP ne vous est proposé sur cette instance.",
+    "mcp_ready": "Prêt",
+    "mcp_signed_in": "Connecté",
+    "mcp_signed_out": "Non connecté",
+    "mcp_needs_signin": "Nouvelle connexion nécessaire",
+    "mcp_tools": "Outils : %1$s",
+    "mcp_account": "Connecté en tant que %1$s",
+    "mcp_until": "Connecté jusqu’au %1$s",
+    "mcp_browser_note": "La connexion se fait dans le navigateur, sur l’instance elle-même. Si le navigateur n’y est pas connecté, il le demande d’abord. Revenez ensuite ici."
   },
   "hu": {
     "about_version": "LLeMbas Androidra %1$s",
@@ -2070,7 +2110,17 @@
     "widget_hint": "Kérdezz bármit",
     "widget_speak": "Beszéd",
     "media_model": "3D-modell",
-    "job_expired": "Lejárt"
+    "job_expired": "Lejárt",
+    "mcp_intro": "Azok a szerverek, amelyek eszközei felkínálhatók a csevegéseiben. Némelyik az ottani saját fiókjával használható: az eszközeik addig érhetők el, amíg be van jelentkezve.",
+    "mcp_none": "Ezen a példányon nincs Önnek felkínált MCP-szerver.",
+    "mcp_ready": "Kész",
+    "mcp_signed_in": "Bejelentkezve",
+    "mcp_signed_out": "Nincs bejelentkezve",
+    "mcp_needs_signin": "Új bejelentkezés szükséges",
+    "mcp_tools": "Eszközök: %1$s",
+    "mcp_account": "Bejelentkezve mint %1$s",
+    "mcp_until": "Bejelentkezve eddig: %1$s",
+    "mcp_browser_note": "A bejelentkezés a böngészőben történik, magán a példányon. Ha a böngésző nincs bejelentkezve a példányba, előbb azt kéri. Utána térjen vissza ide."
   },
   "it": {
     "about_version": "LLeMbas per Android %1$s",
@@ -2484,7 +2534,17 @@
     "widget_hint": "Chiedi qualsiasi cosa",
     "widget_speak": "Parla",
     "media_model": "Modello 3D",
-    "job_expired": "Scaduto"
+    "job_expired": "Scaduto",
+    "mcp_intro": "I server i cui strumenti possono essere offerti nelle tue chat. Alcuni si usano con un tuo account presso di loro: i loro strumenti sono offerti finché hai effettuato l’accesso.",
+    "mcp_none": "Su questa istanza non ti è offerto alcun server MCP.",
+    "mcp_ready": "Pronto",
+    "mcp_signed_in": "Accesso effettuato",
+    "mcp_signed_out": "Accesso non effettuato",
+    "mcp_needs_signin": "Serve un nuovo accesso",
+    "mcp_tools": "Strumenti: %1$s",
+    "mcp_account": "Accesso effettuato come %1$s",
+    "mcp_until": "Accesso valido fino a %1$s",
+    "mcp_browser_note": "L’accesso avviene nel browser, sull’istanza stessa. Se il browser non ha effettuato l’accesso all’istanza, prima lo chiede. Poi torna qui."
   },
   "pl": {
     "about_version": "LLeMbas na Androida %1$s",
@@ -2898,7 +2958,17 @@
     "widget_hint": "Zapytaj o cokolwiek",
     "widget_speak": "Mów",
     "media_model": "Model 3D",
-    "job_expired": "Wygasło"
+    "job_expired": "Wygasło",
+    "mcp_intro": "Serwery, których narzędzia mogą być oferowane w Twoich czatach. Niektóre działają z Twoim własnym kontem u nich: ich narzędzia są oferowane, dopóki trwa zalogowanie.",
+    "mcp_none": "Na tej instancji nie są oferowane żadne serwery MCP.",
+    "mcp_ready": "Gotowy",
+    "mcp_signed_in": "Zalogowano",
+    "mcp_signed_out": "Nie zalogowano",
+    "mcp_needs_signin": "Wymaga ponownego zalogowania",
+    "mcp_tools": "Narzędzia: %1$s",
+    "mcp_account": "Zalogowano jako %1$s",
+    "mcp_until": "Zalogowano do %1$s",
+    "mcp_browser_note": "Logowanie odbywa się w przeglądarce, na samej instancji. Jeśli przeglądarka nie jest zalogowana do instancji, najpierw o to poprosi. Potem wróć tutaj."
   },
   "sk": {
     "about_version": "LLeMbas pre Android %1$s",
@@ -3312,6 +3382,16 @@
     "widget_hint": "Opýtajte sa na čokoľvek",
     "widget_speak": "Hovoriť",
     "media_model": "3D model",
-    "job_expired": "Vypršalo"
+    "job_expired": "Vypršalo",
+    "mcp_intro": "Servery, ktorých nástroje môžu byť ponúknuté vo vašich chatoch. Niektoré sa používajú s vaším vlastným účtom u nich: ich nástroje sú ponúkané, kým ste prihlásení.",
+    "mcp_none": "Na tejto inštancii vám nie sú ponúkané žiadne servery MCP.",
+    "mcp_ready": "Pripravené",
+    "mcp_signed_in": "Prihlásené",
+    "mcp_signed_out": "Neprihlásené",
+    "mcp_needs_signin": "Je potrebné nové prihlásenie",
+    "mcp_tools": "Nástroje: %1$s",
+    "mcp_account": "Prihlásené ako %1$s",
+    "mcp_until": "Prihlásené do %1$s",
+    "mcp_browser_note": "Prihlásenie prebieha v prehliadači, priamo na inštancii. Ak prehliadač nie je do inštancie prihlásený, najprv si to vyžiada. Potom sa vráťte sem."
   }
 }

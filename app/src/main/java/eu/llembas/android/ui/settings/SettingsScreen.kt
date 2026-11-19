@@ -36,6 +36,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.ErrorOutline
+import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.Forum
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Hearing
@@ -135,6 +136,9 @@ import kotlinx.coroutines.launch
 interface SettingsActions {
     fun use(instance: Instance) {}
     fun add() {}
+
+    /** The instance's MCP servers and their sign-ins. */
+    fun mcpServers() {}
     fun signOut(instance: Instance) {}
     fun theme(value: String) {}
     fun language(value: String) {}
@@ -207,7 +211,7 @@ data class SettingsState(
 )
 
 @Composable
-fun SettingsScreen(onBack: () -> Unit, onAddInstance: () -> Unit) {
+fun SettingsScreen(onBack: () -> Unit, onAddInstance: () -> Unit, onMcp: () -> Unit = {}) {
     val context = LocalContext.current
     val store = context.lembas.instances
     val scope = rememberCoroutineScope()
@@ -264,6 +268,8 @@ fun SettingsScreen(onBack: () -> Unit, onAddInstance: () -> Unit) {
             }
 
             override fun add() = onAddInstance()
+
+            override fun mcpServers() = onMcp()
 
             override fun signOut(instance: Instance) {
                 scope.launch {
@@ -550,6 +556,9 @@ fun SettingsContent(state: SettingsState, actions: SettingsActions, onBack: () -
                     if (state.instances.isNotEmpty()) Rule()
                     SettingRow(Icons.Filled.Add, stringResource(R.string.add_instance), onClick = actions::add)
                     state.active?.let { current ->
+                        Rule()
+                        // The MCP servers of the instance in use, and which of them wait for a sign-in.
+                        SettingRow(Icons.Filled.Extension, stringResource(R.string.mcp_title), onClick = actions::mcpServers)
                         Rule()
                         SettingRow(Icons.AutoMirrored.Filled.Logout, stringResource(R.string.sign_out), tint = palette.danger, onClick = {
                             actions.signOut(current)

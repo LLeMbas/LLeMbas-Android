@@ -10,6 +10,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import eu.llembas.android.api.GeneratedMedia
+import eu.llembas.android.api.McpAuth
+import eu.llembas.android.api.McpServer
 import eu.llembas.android.api.MediaJob
 import eu.llembas.android.api.Message
 import eu.llembas.android.api.Step
@@ -21,13 +23,15 @@ import eu.llembas.android.ui.chat.JobCard
 import eu.llembas.android.ui.chat.JobSeen
 import eu.llembas.android.ui.chat.MediaActions
 import eu.llembas.android.ui.chat.MediaCard
+import eu.llembas.android.ui.settings.McpContent
+import eu.llembas.android.ui.settings.McpState
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
-/** Generated media's cards, and a chat that holds them, each from made-up state. */
+/** Generated media's cards, a chat that holds them, and Settings › MCP servers, each from made-up state. */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [35], qualifiers = "xhdpi")
@@ -113,5 +117,29 @@ class MediaShots {
         )
         shoot("61-chat-media") { ChatContent(state, object : ChatActions {}, agent = false, media = actions) }
         shoot("61-chat-media", Phone.Small, fontScale = 1.5f) { ChatContent(state, object : ChatActions {}, agent = false, media = actions) }
+    }
+
+    @Test
+    fun mcpServers() {
+        val servers = listOf(
+            McpServer(id = "mcp1", name = "Tracker", tools = 4, auth = McpAuth(kind = "secret", state = "ready")),
+            McpServer(id = "mcp2", name = "Mail", tools = 7, auth = McpAuth(kind = "oauth", state = "signed_in", account = "frodo@example.org", renews = true)),
+            McpServer(
+                id = "mcp3",
+                name = "Notes of the long expedition",
+                tools = 3,
+                auth = McpAuth(kind = "oauth", state = "signed_out", signinUrl = "https://lembas.example.org/settings/mcp/mcp3/sign-in"),
+            ),
+            McpServer(id = "mcp4", name = "Wiki", tools = 2, auth = McpAuth(kind = "oauth", state = "needs_signin", shared = true)),
+            McpServer(
+                id = "mcp5",
+                name = "Calendar",
+                tools = 5,
+                auth = McpAuth(kind = "oauth", state = "signed_in", account = "frodo", expiresAt = "2026-03-10T08:00:00+00:00"),
+            ),
+        )
+        shoot("62-mcp", Phone.Scroll) { McpContent(McpState(servers, loading = false)) }
+        shoot("62-mcp", Phone.SmallScroll, fontScale = 1.5f) { McpContent(McpState(servers, loading = false)) }
+        shoot("62-mcp-none") { McpContent(McpState(loading = false)) }
     }
 }
