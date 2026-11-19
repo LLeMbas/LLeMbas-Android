@@ -22,6 +22,7 @@ import eu.llembas.android.api.CardAnswer
 import eu.llembas.android.api.Chat
 import eu.llembas.android.api.ChatDetail
 import eu.llembas.android.api.DeviceDirectory
+import eu.llembas.android.api.GeneratedMedia
 import eu.llembas.android.api.LembasJson
 import eu.llembas.android.api.LinkedDevice
 import eu.llembas.android.api.LiveReply
@@ -35,10 +36,13 @@ import eu.llembas.android.api.StartModel
 import eu.llembas.android.api.StreamClient
 import eu.llembas.android.api.SubagentTree
 import eu.llembas.android.api.Turn
+import eu.llembas.android.api.Whereabouts
 import eu.llembas.android.api.named
 import eu.llembas.android.api.serving
+import eu.llembas.android.api.whereabouts
 import eu.llembas.android.lembas
 import eu.llembas.android.ui.explain
+import eu.llembas.android.ui.files.noSuchRoute
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -735,6 +739,32 @@ class ChatViewModel(app: Application) :
                 return
             }
             if (round == 0) delay(WAKE_PAUSE_MS)
+        }
+    }
+
+    /**
+     * "Open in Files" for a generated file: the instance is asked where the file is now, by its
+     * id, and [open] gets that directory. One in the trash, or gone, is said; an instance that
+     * cannot say where a node is opens the folder the file was written to, as before.
+     */
+    fun whereIs(media: GeneratedMedia, open: (String) -> Unit) {
+        viewModelScope.launch {
+            val app = getApplication<Application>()
+            try {
+                val node = if (media.nodeId.isBlank()) null else api().fileNode(media.nodeId)
+                when (val where = whereabouts(node, media.path)) {
+                    is Whereabouts.Folder -> open(where.path)
+                    Whereabouts.Trashed -> _state.update { it.copy(error = app.getString(R.string.media_in_trash)) }
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                when {
+                    noSuchRoute(e) -> open(media.folder)
+                    e is ApiException && e.status == 404 -> _state.update { it.copy(error = app.getString(R.string.media_gone)) }
+                    else -> fail(e)
+                }
+            }
         }
     }
 

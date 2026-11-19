@@ -14,6 +14,7 @@ import eu.llembas.android.api.ApiClient
 import eu.llembas.android.api.ApiException
 import eu.llembas.android.api.FileKinds
 import eu.llembas.android.api.FileListing
+import eu.llembas.android.share.SharedSource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType
@@ -29,33 +30,54 @@ import java.util.UUID
  * The copies of the account's files this phone holds for a moment, all in the app's private
  * cache and nowhere else: [viewing] for what a viewer needs as a file (a PDF's pages, a
  * picture's pixels), deleted when the viewer closes; [shared] for what another app is handed
- * through the FileProvider (Open with, Share), which cannot be deleted the moment it is handed
- * over -- the other app is still reading it -- so it goes when Files is left, when the app next
- * starts, and at sign-out. No storage permission is involved: what the person keeps, they save
- * through the system's own "Save to" page.
+ * through the FileProvider (Open with, Share). A shared copy cannot be deleted the moment it is
+ * handed over, nor when the screen that made it closes or the app starts again: the other app
+ * may still be reading it (a mail being written). So it goes by its age alone, [SHARED_KEPT_MS]
+ * after it was written -- looked at when the app starts, when a screen with transfers closes and
+ * before a new copy is made -- and all of them go at sign-out and on a switch of instance. No
+ * storage permission is involved: what the person keeps, they save through the system's own
+ * "Save to" page.
  */
 object FileCache {
     private const val VIEWING = "viewing"
     private const val SHARED = "shared"
 
+    /** How long a copy another app was handed is kept: an hour. */
+    const val SHARED_KEPT_MS = 60 * 60 * 1000L
+
     private fun dir(context: Context, name: String): File = File(context.cacheDir, name).apply { mkdirs() }
 
     /** A new, empty place for one viewer's copy. */
-    fun viewing(context: Context, name: String): File = File(dir(context, VIEWING), UUID.randomUUID().toString() + "-" + FileKinds.safeName(name).takeLast(40))
+    fun viewing(context: Context, name: String): File = File(dir(context, VIEWING), UUID.randomUUID().toString() + "-" + FileKinds.safeName(name, 80))
 
     /** A new place for a copy another app will read, under its own name in a folder of its own. */
     fun shared(context: Context, name: String): File =
         File(File(dir(context, SHARED), UUID.randomUUID().toString()).apply { mkdirs() }, FileKinds.safeName(name))
 
-    /** Every copy, gone: at sign-out, when the app starts, and when Files is left. */
+    /** Every copy, gone: at sign-out and on a switch of instance. */
     fun clear(context: Context) {
         for (name in listOf(VIEWING, SHARED)) runCatching { File(context.cacheDir, name).deleteRecursively() }
     }
 
-    /** The shared copies older than [olderThanMs]: before a new one is made, so they do not pile up. */
-    fun sweepShared(context: Context, olderThanMs: Long = 30 * 60 * 1000L) {
-        val limit = System.currentTimeMillis() - olderThanMs
-        File(context.cacheDir, SHARED).listFiles()?.forEach { if (it.lastModified() < limit) runCatching { it.deleteRecursively() } }
+    /** When the process starts: no viewer is open, so their copies go; the shared ones by their age. */
+    fun atStart(context: Context) {
+        runCatching { File(context.cacheDir, VIEWING).deleteRecursively() }
+        sweepShared(context)
+    }
+
+    /** The shared copies older than [olderThanMs], and no other. */
+    fun sweepShared(context: Context, olderThanMs: Long = SHARED_KEPT_MS) = sweep(File(context.cacheDir, SHARED), System.currentTimeMillis(), olderThanMs)
+
+    /**
+     * Deletes what is directly in [dir] and was last written more than [olderThanMs] before
+     * [now]. A copy's folder is as old as the newest thing in it: a long download's folder was
+     * made when it began.
+     */
+    fun sweep(dir: File, now: Long, olderThanMs: Long) {
+        dir.listFiles()?.forEach { entry ->
+            val written = maxOf(entry.lastModified(), entry.listFiles()?.maxOfOrNull { it.lastModified() } ?: 0L)
+            if (now - written > olderThanMs) runCatching { entry.deleteRecursively() }
+        }
     }
 
     /** The address another app is given for a [shared] copy: the app's FileProvider, read-only, for that one grant. */
@@ -124,9 +146,12 @@ class StreamBody(
     }
 }
 
-/** Upload one file of the phone into [dir], streamed from its content address. */
-suspend fun ApiClient.uploadFrom(resolver: ContentResolver, file: LocalFile, dir: String, progress: (Long) -> Unit = {}): FileListing =
-    uploadFile(dir, file.name, StreamBody(file.mime.toMediaTypeOrNull(), file.size, progress) { resolver.openInputStream(file.uri) })
+/**
+ * Upload one file of the phone into [dir], streamed from its content address -- opened through
+ * [SharedSource], so an address that leads to this app's own files is refused whoever named it.
+ */
+suspend fun ApiClient.uploadFrom(context: Context, file: LocalFile, dir: String, progress: (Long) -> Unit = {}): FileListing =
+    uploadFile(dir, file.name, StreamBody(file.mime.toMediaTypeOrNull(), file.size, progress) { SharedSource.open(context, file.uri) })
 
 /**
  * Download what [request] answers into the document [to] the person chose. A download that

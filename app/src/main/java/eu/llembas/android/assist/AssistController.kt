@@ -71,6 +71,8 @@ data class AssistUiState(
     val connection: Connection = Connection.Checking,
     val models: List<ModelInfo> = emptyList(),
     val modelId: String? = null,
+    /** [modelId] is a continued chat's own `model_ref`: looked up as a ref alone, never as an id. */
+    val modelIsRef: Boolean = false,
     val listening: Boolean = false,
     /** The words heard so far, while listening and while the last of them is written down. */
     val heard: String = "",
@@ -115,7 +117,7 @@ data class AssistUiState(
     val held: Boolean get() = waiting.isNotBlank() || waitingRecording
 
     val screenAvailable: Boolean get() = screenText || screenshot != null
-    val modelInfo: ModelInfo? get() = models.named(modelId)
+    val modelInfo: ModelInfo? get() = models.named(modelId, modelIsRef)
     val empty: Boolean get() = turns.isEmpty()
 }
 
@@ -215,7 +217,7 @@ class AssistController(
             context.lembas.instances.prefs.map { it.assistantModel }.distinctUntilChanged().drop(1).collect { chosen ->
                 ready()
                 newChatModel = assistantModelFor(chosen, accountDefault, _state.value.models) ?: chosen.ifBlank { null }
-                _state.update { if (it.chatId == null) it.copy(modelId = newChatModel) else it }
+                _state.update { if (it.chatId == null) it.copy(modelId = newChatModel, modelIsRef = false) else it }
             }
         }
     }
@@ -715,7 +717,16 @@ class AssistController(
                 val question = detail.messages.lastOrNull { it.isUser }
                 val answer = detail.messages.lastOrNull { !it.isUser }
                 val turns = if (question != null) listOf(AssistTurn(question.text.orEmpty(), earlier = answer?.steps.orEmpty())) else emptyList()
-                _state.update { it.copy(chatId = last.chatId, turns = turns, modelId = detail.chat.modelKey ?: it.modelId, last = null) }
+                val own = detail.chat.modelKey
+                _state.update {
+                    it.copy(
+                        chatId = last.chatId,
+                        turns = turns,
+                        modelId = own ?: it.modelId,
+                        modelIsRef = if (own != null) !detail.chat.modelRef.isNullOrBlank() else it.modelIsRef,
+                        last = null,
+                    )
+                }
             } catch (e: Exception) {
                 // A chat deleted since is simply not offered again.
                 if (e is ApiException && e.status == 404) {
@@ -749,13 +760,24 @@ class AssistController(
         following?.cancel()
         speaker.stop()
         // And on the assistant's own model again, not the one of the chat that was continued.
-        _state.update { it.copy(chatId = null, turns = emptyList(), error = null, busy = false, conversation = false, modelId = newChatModel ?: it.modelId) }
+        _state.update {
+            it.copy(
+                chatId = null,
+                turns = emptyList(),
+                error = null,
+                busy = false,
+                conversation = false,
+                modelId = newChatModel ?: it.modelId,
+                modelIsRef =
+                newChatModel == null && it.modelIsRef,
+            )
+        }
     }
 
     /** The model: for the chat this sheet is in, changed at once; for a new one, kept for next time. */
     override fun pickModel(id: String) {
         newChatModel = id
-        _state.update { it.copy(modelId = id) }
+        _state.update { it.copy(modelId = id, modelIsRef = false) }
         scope.launch {
             context.lembas.instances.savePrefs { it.copy(assistantModel = id) }
             val chat = _state.value.chatId ?: return@launch

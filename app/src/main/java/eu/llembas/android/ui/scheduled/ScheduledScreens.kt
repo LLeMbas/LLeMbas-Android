@@ -888,6 +888,8 @@ data class EditState(
     val wait: String = "",
     /** An Agentic schedule's model; empty: the folder's usual model. */
     val model: String = "",
+    /** [model] is the schedule's own `model_ref` as read: looked up as a ref alone ([modelInfo]). A pick is not. */
+    val modelIsRef: Boolean = false,
     /** The models scheduled work may run on (`GET /schedules/models`): never an interactive-only one. */
     val models: List<SchedulingModel> = emptyList(),
     /** The person changed the type or one of its fields themselves. */
@@ -977,6 +979,9 @@ fun watchToSend(state: EditState, editing: Boolean): WatchCommand? = when {
     else -> null
 }
 
+/** The form's model among the models offered: by its ref alone where the schedule itself said one. */
+val EditState.modelInfo: SchedulingModel? get() = models.named(model, modelIsRef)
+
 /** A schedule as the form holds where it runs; what the person changed meanwhile stays changed. */
 fun EditState.read(s: Schedule): EditState {
     val on = s.runsOn
@@ -999,6 +1004,7 @@ fun EditState.read(s: Schedule): EditState {
         // A Chat schedule's own model too: made Agentic, it is shown as the model it keeps.
         // By its connection where the server says it: the form then ticks the right one of two with one id.
         model = if (whereTouched) model else s.modelKey.orEmpty(),
+        modelIsRef = if (whereTouched) modelIsRef else !s.modelRef.isNullOrBlank(),
         watchCommand = if (whereTouched) watchCommand else watch.command,
         watchTimeout = if (whereTouched) watchTimeout else watch.timeoutS?.toString().orEmpty(),
     )
@@ -1393,7 +1399,7 @@ private fun OnComputer(state: EditState, onWhere: ((EditState) -> EditState) -> 
             ) {
                 Column(Modifier.weight(1f)) {
                     Text(
-                        state.models.named(state.model)?.titleAmong(state.models)
+                        state.modelInfo?.titleAmong(state.models)
                             ?: state.model.ifBlank { stringResource(R.string.schedule_folder_model) },
                         style = MaterialTheme.typography.bodyLarge,
                     )
@@ -1422,18 +1428,21 @@ private fun OnComputer(state: EditState, onWhere: ((EditState) -> EditState) -> 
             title = { Text(stringResource(R.string.model)) },
             text = {
                 Column(Modifier.verticalScroll(rememberScrollState())) {
-                    val pick: (String) -> Unit = { id ->
-                        onWhere { it.copy(model = id) }
+                    // A row of the list is picked by its key; the schedule's own model stays the ref it was read as.
+                    val pick: (String, Boolean) -> Unit = { id, isRef ->
+                        onWhere { it.copy(model = id, modelIsRef = isRef) }
                         choosingModel = false
                     }
-                    ChoiceRow(selected = state.model.isBlank(), title = stringResource(R.string.schedule_folder_model), line = null, onClick = { pick("") })
+                    ChoiceRow(selected = state.model.isBlank(), title = stringResource(R.string.schedule_folder_model), line = null, onClick = {
+                        pick("", false)
+                    })
                     // The schedule's own model stays offered where the instance no longer lists it: the server says why on Save.
-                    val own = state.model.takeIf { m -> m.isNotBlank() && state.models.named(m) == null }
-                    own?.let { ChoiceRow(selected = true, title = it, line = null, onClick = { pick(it) }) }
-                    // By ref: a schedule read from the instance names its model by id, which still finds it.
-                    val chosen = state.models.named(state.model)?.key
+                    val own = state.model.takeIf { m -> m.isNotBlank() && state.modelInfo == null }
+                    own?.let { ChoiceRow(selected = true, title = it, line = null, onClick = { pick(it, state.modelIsRef) }) }
+                    // A schedule that says its connection ticks that row or none; one that says only an id, the first with it.
+                    val chosen = state.modelInfo?.key
                     state.models.distinctBy { it.key }.forEach { m ->
-                        ChoiceRow(selected = chosen == m.key, title = m.titleAmong(state.models), line = null, onClick = { pick(m.key) })
+                        ChoiceRow(selected = chosen == m.key, title = m.titleAmong(state.models), line = null, onClick = { pick(m.key, false) })
                     }
                 }
             },

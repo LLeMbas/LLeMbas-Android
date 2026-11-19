@@ -396,6 +396,12 @@
     <string name="files_not_shown">Diese Datei konnte hier nicht gezeigt werden. Sie lässt sich weiterhin herunterladen.</string>
     <string name="files_svg_source">Das ist der Quelltext des Bildes. Öffne es mit einer anderen App, um das Bild zu sehen.</string>
     <string name="archive_note">Der Inhalt dieser Art von Archiv kann hier nicht aufgelistet werden.</string>
+    <string name="archive_entries">%1$s Einträge. Hier wird nichts entpackt.</string>
+    <string name="archive_cut">Nur die ersten %1$s Einträge sind aufgelistet.</string>
+    <string name="archive_unreadable">Dieses Archiv konnte nicht gelesen werden.</string>
+    <string name="files_waiting">Wartet, bis die App geöffnet und das Telefon entsperrt ist.</string>
+    <string name="share_refused">Etwas vom Geteilten kann von hier nicht gesendet werden und wurde ausgelassen.</string>
+    <string name="media_in_trash">Diese Datei liegt im Papierkorb.</string>
     <string name="table_cut">Nur die ersten Zeilen und Spalten sind als Tabelle gesetzt. Der Text enthält alles.</string>
     <string name="table_as_text">Als Text zeigen</string>
     <string name="table_as_table">Als Tabelle zeigen</string>

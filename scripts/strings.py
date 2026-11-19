@@ -422,6 +422,13 @@ STRINGS: dict[str, str] = {
     "files_not_shown": "This file could not be shown here. It can still be downloaded.",
     "files_svg_source": "This is the picture's source. Open it with another app to see the picture.",
     "archive_note": "What is inside this kind of archive cannot be listed here.",
+    "archive_entries": "%1$s entries. Nothing is unpacked here.",
+    "archive_cut": "Only the first %1$s entries are listed.",
+    "archive_unreadable": "This archive could not be read.",
+    # Nothing new is sent from behind the lock; a share's addresses are not believed
+    "files_waiting": "Waiting until the app is open and the phone is unlocked.",
+    "share_refused": "Something that was shared cannot be sent from here and was left out.",
+    "media_in_trash": "That file is in the trash.",
     "table_cut": "Only the first rows and columns are laid out. The text has all of it.",
     "table_as_text": "Show as text",
     "table_as_table": "Show as a table",
@@ -775,4 +782,6 @@ SERVER_ENGLISH: dict[str, str] = {
     "trash_remove_confirm": "Remove “%(name)s” for good? This cannot be undone.",
     "notebook_more": "%(n)s more cells are not shown.",
     "viewer_page": "Page %(page)s of %(pages)s",
+    "archive_entries": "%(n)s entries. Nothing is unpacked here.",
+    "archive_cut": "Only the first %(n)s entries are listed.",
 }

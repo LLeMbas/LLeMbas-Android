@@ -217,6 +217,10 @@ fun List<SchedulingModel>.named(name: String?): SchedulingModel? {
     return firstOrNull { it.ref == name } ?: firstOrNull { it.id == name }
 }
 
+/** The same when it is known that the server said the name as a `model_ref` ([isRef]): then by ref alone, never by an id that looks like it. */
+fun List<SchedulingModel>.named(name: String?, isRef: Boolean): SchedulingModel? =
+    if (isRef) firstOrNull { !name.isNullOrBlank() && it.ref == name } else named(name)
+
 /**
  * What a schedule's or a run's model is called among [this] list: [said] (the id or the name
  * the server gave), and its connection where the server says which one ([ref]) and another

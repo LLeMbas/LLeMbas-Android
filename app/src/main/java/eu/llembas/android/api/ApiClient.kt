@@ -1,7 +1,10 @@
 package eu.llembas.android.api
 
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.KSerializer
@@ -606,6 +609,13 @@ class ApiClient(val base: String, private val token: String, val http: OkHttpCli
         return call(authed(url.toString()).get().build(), FileContent.serializer())
     }
 
+    /**
+     * Where the file with node id [id] is now, after any rename or move: `GET /api/v2/files/node`.
+     * A file the person may not read and an id that names nothing are the same 404; an instance
+     * from before this route answers a 404 or a 405 of its own ([eu.llembas.android.ui.files.noSuchRoute]).
+     */
+    suspend fun fileNode(id: String): FileNode = call(authed(filesUrl("/node", "id" to id)).get().build(), FileNode.serializer())
+
     // --- The file manager's writes, the trash, versions and bytes ---------------------------------
     // Each write answers the listing of the directory it changed; a refusal is the tree's own
     // sentence (400), a path that cannot be read a 404, and both come back as an ApiException.
@@ -677,6 +687,19 @@ class ApiClient(val base: String, private val token: String, val http: OkHttpCli
         }
         val request = authed("$v2/files/content").put(body.toString().toRequestBody(JSON)).build()
         return withContext(Dispatchers.IO) { http.newCall(request).await().use { response -> saved(response) } }
+    }
+
+    /**
+     * A new, empty text file called [name] in the directory [dir]; its path. Never over what
+     * is there: `create` has the instance refuse a taken name ([FileExists], its sentence), and
+     * because an instance from before `create` ignores the word and would empty the file, the
+     * directory is read first and a name it holds is refused here, with nothing sent.
+     */
+    suspend fun newFile(dir: String, name: String): String {
+        val path = FileKinds.child(dir, name)
+        if (files(dir).entries.any { it.name == name.trim() || it.path == path }) throw FileExists("")
+        saveFile(path, "", create = true)
+        return path
     }
 
     /** A save's answer: the file as it is now, or what refused it. */
@@ -759,26 +782,47 @@ class ApiClient(val base: String, private val token: String, val http: OkHttpCli
      */
     suspend fun download(request: Request, out: OutputStream, most: Long = Long.MAX_VALUE, progress: (done: Long, total: Long) -> Unit = { _, _ -> }): Long =
         withContext(Dispatchers.IO) {
-            http.newCall(request).await().use { response ->
-                if (!response.isSuccessful) throw ApiException(response.code, detail(response))
-                val body = response.body ?: throw ApiException(response.code, "")
-                val total = body.contentLength()
-                if (total > most) throw ApiException(413, "")
-                val buffer = ByteArray(64 * 1024)
-                var done = 0L
-                body.byteStream().use { stream ->
-                    while (true) {
-                        ensureActive()
-                        val n = stream.read(buffer)
-                        if (n < 0) break
-                        done += n
-                        if (done > most) throw ApiException(413, "")
-                        out.write(buffer, 0, n)
-                        progress(done, total)
-                    }
+            val call = http.newCall(request)
+            val finished = java.util.concurrent.atomic.AtomicBoolean(false)
+            // A read that waits for the server does not hear that the transfer was given up:
+            // the call is cancelled from beside it, which ends the read at once.
+            val watch = launch(start = CoroutineStart.UNDISPATCHED) {
+                try {
+                    awaitCancellation()
+                } finally {
+                    if (!finished.get()) call.cancel()
                 }
-                out.flush()
-                done
+            }
+            try {
+                call.await().use { response ->
+                    if (!response.isSuccessful) throw ApiException(response.code, detail(response))
+                    val body = response.body ?: throw ApiException(response.code, "")
+                    val total = body.contentLength()
+                    if (total > most) throw ApiException(413, "")
+                    val buffer = ByteArray(64 * 1024)
+                    var done = 0L
+                    body.byteStream().use { stream ->
+                        while (true) {
+                            ensureActive()
+                            val n = stream.read(buffer)
+                            if (n < 0) break
+                            done += n
+                            if (done > most) throw ApiException(413, "")
+                            out.write(buffer, 0, n)
+                            progress(done, total)
+                        }
+                    }
+                    out.flush()
+                    done
+                }
+            } catch (e: IOException) {
+                // The read a cancelled call ends with is the cancelling, not a failure of the network.
+                ensureActive()
+                throw e
+            } finally {
+                // Ended by itself: the watcher is let go, and leaves the finished call alone.
+                finished.set(true)
+                watch.cancel()
             }
         }
 

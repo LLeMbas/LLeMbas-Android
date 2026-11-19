@@ -421,7 +421,10 @@
     "mcp_tools": "Nástroje: %1$s",
     "mcp_account": "Přihlášeno jako %1$s",
     "mcp_until": "Přihlášeno do %1$s",
-    "mcp_browser_note": "Přihlášení probíhá v prohlížeči, přímo na instanci. Pokud prohlížeč není k instanci přihlášen, nejprve si to vyžádá. Potom se vraťte sem."
+    "mcp_browser_note": "Přihlášení probíhá v prohlížeči, přímo na instanci. Pokud prohlížeč není k instanci přihlášen, nejprve si to vyžádá. Potom se vraťte sem.",
+    "files_waiting": "Čeká se, až bude aplikace otevřená a telefon odemčený.",
+    "share_refused": "Něco ze sdíleného odsud odeslat nelze a bylo vynecháno.",
+    "media_in_trash": "Tento soubor je v koši."
   },
   "de": {
     "about_version": "LLeMbas für Android %1$s",
@@ -846,7 +849,10 @@
     "mcp_tools": "Werkzeuge: %1$s",
     "mcp_account": "Angemeldet als %1$s",
     "mcp_until": "Angemeldet bis %1$s",
-    "mcp_browser_note": "Die Anmeldung geschieht im Browser, auf der Instanz selbst. Ist der Browser dort nicht angemeldet, wird zuerst danach gefragt. Danach hierher zurückkehren."
+    "mcp_browser_note": "Die Anmeldung geschieht im Browser, auf der Instanz selbst. Ist der Browser dort nicht angemeldet, wird zuerst danach gefragt. Danach hierher zurückkehren.",
+    "files_waiting": "Wartet, bis die App geöffnet und das Telefon entsperrt ist.",
+    "share_refused": "Etwas vom Geteilten kann von hier nicht gesendet werden und wurde ausgelassen.",
+    "media_in_trash": "Diese Datei liegt im Papierkorb."
   },
   "es": {
     "about_version": "LLeMbas para Android %1$s",
@@ -1270,7 +1276,10 @@
     "mcp_tools": "Herramientas: %1$s",
     "mcp_account": "Sesión iniciada como %1$s",
     "mcp_until": "Sesión iniciada hasta %1$s",
-    "mcp_browser_note": "El inicio de sesión se hace en el navegador, en la propia instancia. Si el navegador no tiene la sesión iniciada en la instancia, primero la pide. Después, vuelva aquí."
+    "mcp_browser_note": "El inicio de sesión se hace en el navegador, en la propia instancia. Si el navegador no tiene la sesión iniciada en la instancia, primero la pide. Después, vuelva aquí.",
+    "files_waiting": "Esperando a que la aplicación esté abierta y el teléfono desbloqueado.",
+    "share_refused": "Algo de lo compartido no se puede enviar desde aquí y se ha omitido.",
+    "media_in_trash": "Ese archivo está en la papelera."
   },
   "fr": {
     "about_version": "LLeMbas pour Android %1$s",
@@ -1695,7 +1704,10 @@
     "mcp_tools": "Outils : %1$s",
     "mcp_account": "Connecté en tant que %1$s",
     "mcp_until": "Connecté jusqu’au %1$s",
-    "mcp_browser_note": "La connexion se fait dans le navigateur, sur l’instance elle-même. Si le navigateur n’y est pas connecté, il le demande d’abord. Revenez ensuite ici."
+    "mcp_browser_note": "La connexion se fait dans le navigateur, sur l’instance elle-même. Si le navigateur n’y est pas connecté, il le demande d’abord. Revenez ensuite ici.",
+    "files_waiting": "En attente que l'application soit ouverte et le téléphone déverrouillé.",
+    "share_refused": "Un élément partagé ne peut pas être envoyé d'ici et a été laissé de côté.",
+    "media_in_trash": "Ce fichier est dans la corbeille."
   },
   "hu": {
     "about_version": "LLeMbas Androidra %1$s",
@@ -2120,7 +2132,10 @@
     "mcp_tools": "Eszközök: %1$s",
     "mcp_account": "Bejelentkezve mint %1$s",
     "mcp_until": "Bejelentkezve eddig: %1$s",
-    "mcp_browser_note": "A bejelentkezés a böngészőben történik, magán a példányon. Ha a böngésző nincs bejelentkezve a példányba, előbb azt kéri. Utána térjen vissza ide."
+    "mcp_browser_note": "A bejelentkezés a böngészőben történik, magán a példányon. Ha a böngésző nincs bejelentkezve a példányba, előbb azt kéri. Utána térjen vissza ide.",
+    "files_waiting": "Várakozás, amíg az alkalmazás meg van nyitva és a telefon fel van oldva.",
+    "share_refused": "A megosztottak közül valami innen nem küldhető el, ezért kimaradt.",
+    "media_in_trash": "Ez a fájl a lomtárban van."
   },
   "it": {
     "about_version": "LLeMbas per Android %1$s",
@@ -2544,7 +2559,10 @@
     "mcp_tools": "Strumenti: %1$s",
     "mcp_account": "Accesso effettuato come %1$s",
     "mcp_until": "Accesso valido fino a %1$s",
-    "mcp_browser_note": "L’accesso avviene nel browser, sull’istanza stessa. Se il browser non ha effettuato l’accesso all’istanza, prima lo chiede. Poi torna qui."
+    "mcp_browser_note": "L’accesso avviene nel browser, sull’istanza stessa. Se il browser non ha effettuato l’accesso all’istanza, prima lo chiede. Poi torna qui.",
+    "files_waiting": "In attesa che l'app sia aperta e il telefono sbloccato.",
+    "share_refused": "Qualcosa di ciò che è stato condiviso non può essere inviato da qui ed è stato escluso.",
+    "media_in_trash": "Questo file è nel cestino."
   },
   "pl": {
     "about_version": "LLeMbas na Androida %1$s",
@@ -2968,7 +2986,10 @@
     "mcp_tools": "Narzędzia: %1$s",
     "mcp_account": "Zalogowano jako %1$s",
     "mcp_until": "Zalogowano do %1$s",
-    "mcp_browser_note": "Logowanie odbywa się w przeglądarce, na samej instancji. Jeśli przeglądarka nie jest zalogowana do instancji, najpierw o to poprosi. Potem wróć tutaj."
+    "mcp_browser_note": "Logowanie odbywa się w przeglądarce, na samej instancji. Jeśli przeglądarka nie jest zalogowana do instancji, najpierw o to poprosi. Potem wróć tutaj.",
+    "files_waiting": "Oczekiwanie, aż aplikacja będzie otwarta, a telefon odblokowany.",
+    "share_refused": "Czegoś z udostępnionych rzeczy nie można stąd wysłać i zostało pominięte.",
+    "media_in_trash": "Ten plik jest w koszu."
   },
   "sk": {
     "about_version": "LLeMbas pre Android %1$s",
@@ -3392,6 +3413,9 @@
     "mcp_tools": "Nástroje: %1$s",
     "mcp_account": "Prihlásené ako %1$s",
     "mcp_until": "Prihlásené do %1$s",
-    "mcp_browser_note": "Prihlásenie prebieha v prehliadači, priamo na inštancii. Ak prehliadač nie je do inštancie prihlásený, najprv si to vyžiada. Potom sa vráťte sem."
+    "mcp_browser_note": "Prihlásenie prebieha v prehliadači, priamo na inštancii. Ak prehliadač nie je do inštancie prihlásený, najprv si to vyžiada. Potom sa vráťte sem.",
+    "files_waiting": "Čaká sa, kým bude aplikácia otvorená a telefón odomknutý.",
+    "share_refused": "Niečo zo zdieľaného sa odtiaľto nedá odoslať a bolo vynechané.",
+    "media_in_trash": "Tento súbor je v koši."
   }
 }

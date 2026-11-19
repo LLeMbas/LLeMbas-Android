@@ -1,5 +1,6 @@
 package eu.llembas.android.share
 
+import android.text.format.Formatter
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -44,6 +45,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -53,8 +55,16 @@ import eu.llembas.android.R
 import eu.llembas.android.assist.LastAssist
 import eu.llembas.android.ui.theme.LocalPalette
 
-/** One shared file, as the sheet names it. */
-data class SharedFile(val name: String, val image: Boolean)
+/** One shared file, as the sheet names it: what its provider calls it and how large it says it is ([size] -1: it does not say). */
+data class SharedFile(val name: String, val image: Boolean, val size: Long = -1)
+
+/** How far a "Save to Files" got: [done] of its queue are in [folder]. Another folder starts at the first again. */
+data class Kept(val folder: String = "", val done: Int = 0) {
+    fun into(folder: String): Kept = if (folder == this.folder) this else Kept(folder, 0)
+}
+
+/** A shared address that is not taken: not `content:`, this app's own provider, or one that opens onto this app's own files. */
+class SharedRefused : java.io.IOException("")
 
 /** What was shared, where it may go, and how sending it went. */
 data class ShareState(
@@ -67,6 +77,12 @@ data class ShareState(
     val error: String? = null,
     /** Where "Save to Files" would put it: the person's own folder until they choose another; null while it is not known. */
     val folder: String? = null,
+    /** Something that came in was left out: its address named what another app may not have sent on ([SharedSource]). */
+    val refused: Boolean = false,
+    /** The files are still being asked what they are called. */
+    val reading: Boolean = false,
+    /** The next request waits for the phone to be unlocked and the sheet to be in front. */
+    val waiting: Boolean = false,
 )
 
 /** What the share sheet can do; nothing by default, for the screenshot tests. */
@@ -76,6 +92,9 @@ interface ShareActions {
 
     /** Keep what was shared as files in [ShareState.folder], asking no model anything. */
     fun saveToFiles() {}
+
+    /** "Save to Files" was chosen as where it goes: the instance may now be asked where the person's files open. */
+    fun toFiles() {}
 
     /** Choose another folder to save into. */
     fun chooseFolder() {}
@@ -152,8 +171,19 @@ fun ColumnScope.ShareSheetContent(state: ShareState, actions: ShareActions, hand
                 )
                 Spacer(Modifier.width(12.dp))
                 Text(file.name, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                if (file.size >= 0) {
+                    // The name gives; the size is short and stays whole.
+                    Spacer(Modifier.width(12.dp))
+                    Text(
+                        Formatter.formatShortFileSize(LocalContext.current, file.size),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = palette.inkMuted,
+                        maxLines = 1,
+                    )
+                }
             }
         }
+        if (state.refused) Text(stringResource(R.string.share_refused), style = MaterialTheme.typography.bodyMedium, color = palette.inkMuted)
 
         // What to do with it.
         TextField(
@@ -199,6 +229,7 @@ fun ColumnScope.ShareSheetContent(state: ShareState, actions: ShareActions, hand
                 }
                 Destination(Icons.Filled.Folder, stringResource(R.string.share_to_files), state.folder, selected = toFiles, enabled = !state.sending) {
                     toFiles = true
+                    actions.toFiles()
                 }
             }
         }
@@ -207,6 +238,7 @@ fun ColumnScope.ShareSheetContent(state: ShareState, actions: ShareActions, hand
                 Text(stringResource(R.string.files_choose_folder))
             }
         }
+        if (state.waiting) Text(stringResource(R.string.files_waiting), style = MaterialTheme.typography.bodyMedium, color = palette.inkMuted)
         state.error?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = palette.danger) }
     }
 
@@ -219,7 +251,7 @@ fun ColumnScope.ShareSheetContent(state: ShareState, actions: ShareActions, hand
         Spacer(Modifier.width(8.dp))
         Button(
             onClick = { if (toFiles) actions.saveToFiles() else actions.send(ask, toLast && last != null) },
-            enabled = !state.sending && (state.text.isNotBlank() || state.files.isNotEmpty()) && (!toFiles || state.folder != null),
+            enabled = !state.sending && !state.reading && (state.text.isNotBlank() || state.files.isNotEmpty()) && (!toFiles || state.folder != null),
             colors = ButtonDefaults.buttonColors(containerColor = palette.accent, contentColor = palette.accentInk),
             modifier = Modifier.heightIn(min = 48.dp),
         ) {

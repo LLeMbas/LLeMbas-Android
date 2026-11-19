@@ -409,13 +409,29 @@ private fun Shown(path: String, file: FileContent, actions: FileActions, tableAs
         }
 
         FileView.Notebook -> {
-            val notebook = remember(file.sha, file.text) { if (withheld == null) parseNotebook(file.text) else null }
-            if (notebook != null) NotebookBody(notebook) else details(withheld?.message?.ifBlank { null })
+            // Up to a megabyte of JSON: read off the main thread, not while the page is being drawn.
+            val notebook by produceState<Fetched<Notebook>>(Fetched.Loading(), file.sha, file.text) {
+                val parsed = if (withheld == null) withContext(Dispatchers.Default) { parseNotebook(file.text) } else null
+                value = if (parsed != null) Fetched.Ready(parsed) else Fetched.Failed(withheld?.message?.ifBlank { null })
+            }
+            when (val now = notebook) {
+                is Fetched.Loading -> Progress(now)
+                is Fetched.Failed -> details(now.message)
+                is Fetched.Ready -> NotebookBody(now.value)
+            }
         }
 
-        FileView.Details -> details(
-            stringResource(if (file.fileKind == "archive") R.string.archive_note else R.string.files_no_viewer),
-        )
+        FileView.Details -> {
+            val archive = file.archive
+            when {
+                // An instance that lists what the archive holds: the names, as text, and nothing unpacked.
+                archive != null && archive.problem == null -> ArchiveBody(archive, actions)
+
+                archive != null -> details(archive.message.ifBlank { stringResource(R.string.archive_unreadable) })
+
+                else -> details(stringResource(if (file.fileKind == "archive") R.string.archive_note else R.string.files_no_viewer))
+            }
+        }
     }
 }
 

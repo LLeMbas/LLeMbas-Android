@@ -48,6 +48,7 @@ import eu.llembas.android.ui.chat.PhoneCardContent
 import eu.llembas.android.ui.chat.PhoneCardState
 import eu.llembas.android.ui.chat.TuneContent
 import eu.llembas.android.ui.chat.modelId
+import eu.llembas.android.ui.chat.modelInfo
 import eu.llembas.android.ui.home.ArchivedActions
 import eu.llembas.android.ui.home.ArchivedContent
 import eu.llembas.android.ui.home.ChatsState
@@ -179,7 +180,7 @@ class ScreenShots {
 
     @Test
     fun modelPicker() = shoot("06-model-picker") {
-        SheetOver { ModelPickerContent(Fakes.models, Fakes.transcript.modelId, onPick = {}) }
+        SheetOver { ModelPickerContent(Fakes.models, Fakes.transcript.modelInfo?.key, onPick = {}) }
     }
 
     @Test

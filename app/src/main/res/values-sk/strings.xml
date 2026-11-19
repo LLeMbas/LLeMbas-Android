@@ -396,6 +396,12 @@
     <string name="files_not_shown">Tento súbor sa tu nepodarilo zobraziť. Stále sa dá stiahnuť.</string>
     <string name="files_svg_source">Toto je zdroj obrázka. Ak chcete vidieť obrázok, otvorte ho v inej aplikácii.</string>
     <string name="archive_note">Obsah tohto druhu archívu sa tu nedá vypísať.</string>
+    <string name="archive_entries">Položiek: %1$s. Nič sa tu nerozbaľuje.</string>
+    <string name="archive_cut">Vypísaných je len prvých %1$s položiek.</string>
+    <string name="archive_unreadable">Tento archív sa nepodarilo prečítať.</string>
+    <string name="files_waiting">Čaká sa, kým bude aplikácia otvorená a telefón odomknutý.</string>
+    <string name="share_refused">Niečo zo zdieľaného sa odtiaľto nedá odoslať a bolo vynechané.</string>
+    <string name="media_in_trash">Tento súbor je v koši.</string>
     <string name="table_cut">Do tabuľky sú rozložené len prvé riadky a stĺpce. Text obsahuje všetko.</string>
     <string name="table_as_text">Zobraziť ako text</string>
     <string name="table_as_table">Zobraziť ako tabuľku</string>

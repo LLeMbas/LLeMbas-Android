@@ -21,21 +21,27 @@ it cannot do more.
   the file again without losing the others, or saved to the phone as it was.
 - **Download, Open with and Share.** A file is saved where you choose in the phone's own
   "Save to" page; several files or a folder come as one zip. Open with and Share hand another
-  app a copy from the app's private storage, which is deleted again. The app asks for no
-  storage permission.
+  app a copy from the app's private storage, which is deleted an hour later, and at once when
+  you sign out or switch instance. The app asks for no storage permission.
 - **Text files can be edited.** Markdown, code, plain text, a page's source and a table's text,
   up to the instance's 1 MB. If the file changed on the instance while you were writing, nothing
   is written over: you choose Reload or Save anyway. Leaving with unsaved text asks first.
 - **A viewer for each kind of file.** Pictures, with zoom and pan; PDFs, page by page; sound and
-  video, streamed, with seeking; CSV and TSV as a grid; notebooks as their cells' text. For
-  archives, 3D models and anything else: what it is, with Download, Open with and Share. An
-  HTML page and an SVG are shown as their source -- the app draws nothing a file could script.
+  video, streamed, with seeking; CSV and TSV as a grid; notebooks as their cells' text; an
+  archive as the list of what is inside it, with nothing unpacked. For 3D models and anything
+  else: what it is, with Download, Open with and Share. A PDF is shown up to 100 MB and 2000
+  pages. An HTML page and an SVG are shown as their source -- the app draws nothing a file
+  could script.
 - **"Save to Files" in the share sheet.** Something shared from another app can be kept in a
-  folder of your files instead of being sent into a chat; shared text is kept as a note.
+  folder of your files instead of being sent into a chat; shared text is kept as a note. If a
+  file is refused, Save again goes on from that file and does not send the earlier ones twice.
+- **The share sheet says what came in.** Each shared file is listed with its name and size
+  before anything is sent, and the instance is asked nothing until you choose what to do.
 - **What a model makes is shown in the chat.** A picture, a video, a piece of music or a 3D
   model the instance made has a card in the reply: the picture drawn, video and music with
-  Play, a 3D model as what it is. Each card leads to the file in Files, saves it where you
-  choose, shares it, or opens it with another app.
+  Play, a 3D model as what it is. Each card leads to the file in Files -- where it is now, also
+  after it was renamed or moved -- saves it where you choose, shares it, or opens it with
+  another app.
 - **A long generation shows how it stands.** A video or a track takes minutes. Its card says
   what is being made, whether it is waiting or running and for how long, and has Cancel. When
   it is ready the card becomes the player and the chat says so; when it was not made, the card
@@ -53,6 +59,12 @@ it cannot do more.
 - **A new file is never written over another.** The instance now makes a new file only where
   nothing has that name, and says what is there otherwise.
 - **Only models you can chat with are offered** in the model lists and for the assistant.
+- **Nothing new is sent while the phone is locked.** Uploads, downloads and the copies for
+  Share and Open with go one request at a time: when the phone locks or the app is left, the
+  one under way finishes and the rest wait, and go on by themselves when the app is open on an
+  unlocked phone again. The progress dialog says when it is waiting.
+- **The share sheet takes files only from other apps.** A share that names something of
+  LLeMbas's own storage is left out, and the sheet says so.
 
 ### Fixed
 
@@ -61,7 +73,8 @@ it cannot do more.
   shown as being on the first: the title, the tick in the model list, the picture, the thinking
   control. The instance now says which connection each is on, and the app shows that one. The
   line under a reply and a scheduled task's model name the connection where two share a name.
-  An instance that does not say it yet is shown as before.
+  An instance that does not say it yet is shown as before. A chat or a scheduled task whose
+  connection is no longer offered shows no model rather than another connection's.
 
 ## [1.0.0-beta.12] — 2026-11-18
 

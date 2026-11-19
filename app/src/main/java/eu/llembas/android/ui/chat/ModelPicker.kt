@@ -28,7 +28,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import eu.llembas.android.R
 import eu.llembas.android.api.ModelInfo
-import eu.llembas.android.api.named
 import eu.llembas.android.api.titleAmong
 import eu.llembas.android.ui.ModelAvatar
 import eu.llembas.android.ui.theme.LocalPalette
@@ -101,8 +100,9 @@ fun ModelPickerContent(models: List<ModelInfo>, current: String?, onPick: (Strin
             modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
         )
         LazyColumn(Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
-            // By its ref: two connections may serve one id, and a row is its own key.
-            val inUse = models.named(current)?.key
+            // [current] is the key of the row in use, looked up by the caller, who knows how the name
+            // was said: a chat's `model_ref` that is not in the list ticks no row, never one with that id.
+            val inUse = current
             items(models.distinctBy { it.key }, key = { it.key }) { m ->
                 val chosen = m.key == inUse
                 Row(

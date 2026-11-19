@@ -28,6 +28,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
+import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.FilledIconButton
@@ -64,6 +65,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import eu.llembas.android.R
+import eu.llembas.android.api.ArchiveListing
 import eu.llembas.android.api.Notebook
 import eu.llembas.android.api.Table
 import eu.llembas.android.ui.theme.LocalPalette
@@ -106,6 +108,67 @@ fun DetailsBody(name: String, type: String, size: Long, note: String?, actions: 
         OutlinedButton(onClick = actions::download, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text(stringResource(R.string.download)) }
         OutlinedButton(onClick = actions::openWith, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text(stringResource(R.string.files_open_with)) }
         OutlinedButton(onClick = actions::share, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text(stringResource(R.string.report_share)) }
+    }
+}
+
+/**
+ * What an archive holds, as the instance lists it: every name is the archive's own text and is
+ * drawn as text; nothing is unpacked, here or there. How many, the names with their sizes (a
+ * name wraps, its size keeps its width), a line when there are more than are listed, and the
+ * three ways out.
+ */
+@Composable
+fun ArchiveBody(archive: ArchiveListing, actions: FileActions) {
+    val palette = LocalPalette.current
+    val context = LocalContext.current
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)) {
+        item {
+            Text(
+                stringResource(R.string.archive_entries, (archive.total ?: archive.entries.size).toString()),
+                style = MaterialTheme.typography.bodyMedium,
+                color = palette.inkMuted,
+                modifier = Modifier.padding(bottom = 8.dp),
+            )
+        }
+        itemsIndexed(archive.entries) { _, entry ->
+            Row(Modifier.fillMaxWidth().heightIn(min = 40.dp).padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    if (entry.dir) Icons.Filled.Folder else Icons.AutoMirrored.Filled.InsertDriveFile,
+                    contentDescription = null,
+                    tint = palette.inkFaint,
+                    modifier = Modifier.size(20.dp),
+                )
+                Spacer(Modifier.width(12.dp))
+                Text(entry.name, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                entry.size?.takeIf { !entry.dir }?.let {
+                    Spacer(Modifier.width(12.dp))
+                    Text(Formatter.formatShortFileSize(context, it), style = MaterialTheme.typography.bodySmall, color = palette.inkMuted, maxLines = 1)
+                }
+            }
+        }
+        if (archive.truncated) {
+            item {
+                Text(
+                    stringResource(R.string.archive_cut, archive.entries.size.toString()),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = palette.inkMuted,
+                    modifier = Modifier.padding(vertical = 8.dp),
+                )
+            }
+        }
+        item {
+            Column(Modifier.fillMaxWidth().padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedButton(onClick = actions::download, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+                    Text(stringResource(R.string.download))
+                }
+                OutlinedButton(onClick = actions::openWith, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+                    Text(stringResource(R.string.files_open_with))
+                }
+                OutlinedButton(onClick = actions::share, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+                    Text(stringResource(R.string.report_share))
+                }
+            }
+        }
     }
 }
 

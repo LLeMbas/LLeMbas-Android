@@ -189,6 +189,15 @@ fun List<ModelInfo>.named(name: String?): ModelInfo? {
 }
 
 /**
+ * The model a kept name means when it is known how the name was said. A name the server said as
+ * a `model_ref` ([isRef]) is looked up as a ref and nothing else: an id may itself hold a slash
+ * (a model of an aggregator, `openai/gpt`), so a ref whose model has left the list could
+ * otherwise "find" another connection's model that happens to be called that. A name of
+ * unknown kind -- a setting, a pick -- goes through [named].
+ */
+fun List<ModelInfo>.named(name: String?, isRef: Boolean): ModelInfo? = if (isRef) firstOrNull { !name.isNullOrBlank() && it.ref == name } else named(name)
+
+/**
  * The model a chat, a reply or a schedule is on, in a list. The server says the id (`model`) and,
  * where it knows it, which connection serves it (`model_ref`). With a [ref] the model is the one
  * with that ref and no other: one that is not in the list is no model here, never "the first
@@ -631,6 +640,8 @@ data class FileContent(
     val sha: String = "",
     val text: String = "",
     val withheld: Withheld? = null,
+    /** What is inside an archive, as far as the instance lists it; null for every other kind and from a server that does not say. */
+    val archive: ArchiveListing? = null,
 ) {
     /** The kind the viewer draws, by the `show` card's rule: anything unknown is plain text. */
     val viewKind: String get() = if (kind in ShowCard.VIEW_KINDS) kind else "text"

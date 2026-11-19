@@ -109,11 +109,94 @@ object FileKinds {
     /** The last name of a path. */
     fun name(path: String): String = path.trimEnd('/').substringAfterLast('/').ifBlank { path }
 
-    /** A name another app may be given: no separators, no control characters, never empty. */
-    fun safeName(name: String): String {
-        val kept = name.map { if (it == '/' || it == '\\' || it.isISOControl()) '_' else it }.joinToString("")
-        return kept.trim().trim('.').ifBlank { "file" }.takeLast(120)
+    /**
+     * A name another app or a file system may be given: no separators, no control characters,
+     * never empty, and at most [most] bytes as UTF-8 -- a file system counts a name in bytes
+     * (255 of them), and a name in another script is three bytes a letter. A longer name loses
+     * the end of its stem and keeps its extension, which is what says how to open it.
+     */
+    fun safeName(name: String, most: Int = NAME_MAX_BYTES): String {
+        val kept = name.map { if (it == '/' || it == '\\' || it.isISOControl()) '_' else it }.joinToString("").trim().trim('.').ifBlank { "file" }
+        if (utf8(kept) <= most) return kept
+        val dot = kept.lastIndexOf('.')
+        // An extension is short; a last dot far from the end is a sentence's, and the name is cut as a whole.
+        val ext = if (dot > 0 && utf8(kept.substring(dot)) <= minOf(EXTENSION_MAX_BYTES, most / 2)) kept.substring(dot) else ""
+        val stem = kept.substring(0, kept.length - ext.length)
+        val room = most - utf8(ext)
+        val cut = StringBuilder()
+        var used = 0
+        var i = 0
+        while (i < stem.length) {
+            // By code point: half of a pair is not a character.
+            val point = stem.codePointAt(i)
+            val bytes = utf8(String(Character.toChars(point)))
+            if (used + bytes > room) break
+            cut.appendCodePoint(point)
+            used += bytes
+            i += Character.charCount(point)
+        }
+        return cut.toString().trimEnd().trimEnd('.').ifBlank { "file" } + ext
     }
+
+    private fun utf8(text: String): Int = text.toByteArray(Charsets.UTF_8).size
+
+    /** The longest name [safeName] gives, in bytes. */
+    const val NAME_MAX_BYTES = 200
+    private const val EXTENSION_MAX_BYTES = 24
+}
+
+/** One thing an archive holds: its [name] is the archive's own text (a path inside it), [size] null for a folder and where the archive does not say. */
+@Serializable
+data class ArchiveEntry(val name: String = "", val size: Long? = null, val dir: Boolean = false)
+
+/**
+ * What is inside an archive, listed by the instance and never unpacked: at most 2000 [entries];
+ * [total] how many it holds where it says; [truncated] when there are more than are listed.
+ * [problem] is null, or why there is no listing (`unreadable`, `unsupported`, `busy`), with the
+ * instance's sentence for it in [message].
+ */
+@Serializable
+data class ArchiveListing(
+    val entries: List<ArchiveEntry> = emptyList(),
+    val total: Int? = null,
+    val truncated: Boolean = false,
+    val problem: String? = null,
+    val message: String = "",
+)
+
+/**
+ * Where a file known by its id is now (`GET /files/node?id=`): [parent] is the directory to
+ * list, [path] the file. [trashed]: it is in the trash, and [path] is where it lay.
+ */
+@Serializable
+data class FileNode(
+    val id: String = "",
+    val path: String = "",
+    val name: String = "",
+    val parent: String = "",
+    val kind: String = "",
+    @SerialName("file_kind") val fileKind: String? = null,
+    val trashed: Boolean = false,
+)
+
+/** Where "Open in Files" leads for a file a chat names by its id. */
+sealed interface Whereabouts {
+    /** The directory to open: where the file is now. */
+    data class Folder(val path: String) : Whereabouts
+
+    /** It is in the trash: no directory holds it. */
+    data object Trashed : Whereabouts
+}
+
+/**
+ * Where to go for a file last known at [written], from what the instance says of its node
+ * ([node]; null from an instance that cannot say): the directory it is in now -- it may have
+ * been renamed or moved -- else the one it was written to.
+ */
+fun whereabouts(node: FileNode?, written: String): Whereabouts = when {
+    node == null -> Whereabouts.Folder(FileKinds.parent(written))
+    node.trashed -> Whereabouts.Trashed
+    else -> Whereabouts.Folder(node.parent.ifBlank { FileKinds.parent(node.path.ifBlank { written }) })
 }
 
 /** A table's first rows and columns; [cut] when the file has more than is laid out. */

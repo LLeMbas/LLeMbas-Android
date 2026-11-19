@@ -396,6 +396,12 @@
     <string name="files_not_shown">Ezt a fájlt itt nem sikerült megjeleníteni. Továbbra is letölthető.</string>
     <string name="files_svg_source">Ez a kép forrása. A kép megtekintéséhez nyissa meg egy másik alkalmazással.</string>
     <string name="archive_note">Az ilyen fajta archívum tartalma itt nem listázható.</string>
+    <string name="archive_entries">%1$s bejegyzés. Itt semmi sincs kicsomagolva.</string>
+    <string name="archive_cut">Csak az első %1$s bejegyzés szerepel a listában.</string>
+    <string name="archive_unreadable">Ezt az archívumot nem sikerült beolvasni.</string>
+    <string name="files_waiting">Várakozás, amíg az alkalmazás meg van nyitva és a telefon fel van oldva.</string>
+    <string name="share_refused">A megosztottak közül valami innen nem küldhető el, ezért kimaradt.</string>
+    <string name="media_in_trash">Ez a fájl a lomtárban van.</string>
     <string name="table_cut">Csak az első sorok és oszlopok kerültek táblázatba. A szöveg mindent tartalmaz.</string>
     <string name="table_as_text">Megjelenítés szövegként</string>
     <string name="table_as_table">Megjelenítés táblázatként</string>

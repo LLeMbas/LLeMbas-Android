@@ -396,6 +396,12 @@
     <string name="files_not_shown">Este archivo no se pudo mostrar aquí. Aún se puede descargar.</string>
     <string name="files_svg_source">Este es el código fuente de la imagen. Ábrela con otra aplicación para ver la imagen.</string>
     <string name="archive_note">El contenido de este tipo de archivo comprimido no se puede listar aquí.</string>
+    <string name="archive_entries">%1$s entradas. Aquí no se descomprime nada.</string>
+    <string name="archive_cut">Solo se listan las primeras %1$s entradas.</string>
+    <string name="archive_unreadable">No se pudo leer este archivo comprimido.</string>
+    <string name="files_waiting">Esperando a que la aplicación esté abierta y el teléfono desbloqueado.</string>
+    <string name="share_refused">Algo de lo compartido no se puede enviar desde aquí y se ha omitido.</string>
+    <string name="media_in_trash">Ese archivo está en la papelera.</string>
     <string name="table_cut">Solo las primeras filas y columnas se disponen como tabla. El texto lo contiene todo.</string>
     <string name="table_as_text">Mostrar como texto</string>
     <string name="table_as_table">Mostrar como tabla</string>

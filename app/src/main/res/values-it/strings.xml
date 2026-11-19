@@ -396,6 +396,12 @@
     <string name="files_not_shown">Non è stato possibile mostrare qui questo file. Si può comunque scaricare.</string>
     <string name="files_svg_source">Questo è il sorgente dell’immagine. Aprila con un’altra app per vedere l’immagine.</string>
     <string name="archive_note">Il contenuto di questo tipo di archivio non può essere elencato qui.</string>
+    <string name="archive_entries">%1$s voci. Qui non viene estratto nulla.</string>
+    <string name="archive_cut">Sono elencate solo le prime %1$s voci.</string>
+    <string name="archive_unreadable">Non è stato possibile leggere questo archivio.</string>
+    <string name="files_waiting">In attesa che l\'app sia aperta e il telefono sbloccato.</string>
+    <string name="share_refused">Qualcosa di ciò che è stato condiviso non può essere inviato da qui ed è stato escluso.</string>
+    <string name="media_in_trash">Questo file è nel cestino.</string>
     <string name="table_cut">Solo le prime righe e colonne sono disposte in tabella. Il testo contiene tutto.</string>
     <string name="table_as_text">Mostra come testo</string>
     <string name="table_as_table">Mostra come tabella</string>

@@ -2,9 +2,15 @@ package eu.llembas.android
 
 import android.app.Activity
 import android.app.Application
+import android.app.KeyguardManager
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.os.Bundle
+import androidx.core.content.ContextCompat
 import eu.llembas.android.api.EventsHub
 import eu.llembas.android.api.Frame
 import eu.llembas.android.api.StreamClient
@@ -30,22 +36,50 @@ class LembasApp : Application() {
         return events.frames(instance.id) { StreamClient(api).watch { api.events() } }
     }
 
+    /** Whether a new request with the account's files may start: the app in front, the phone unlocked. */
+    val gate = InstanceGate { getSystemService(KeyguardManager::class.java)?.isKeyguardLocked == true }
+
     override fun onCreate() {
         super.onCreate()
         instances = InstanceStore(this)
-        // Copies of the account's files a viewer or another app was handed, left by a process that was killed.
-        eu.llembas.android.ui.files.FileCache.clear(this)
+        // Copies of the account's files left by a process that was killed. A viewer's own are
+        // nobody's now; one another app was handed may still be read there (a mail being
+        // written), so those go by their age only.
+        eu.llembas.android.ui.files.FileCache.atStart(this)
+        // The gate hears the lock from the screen going off and the unlock; the activities below say the rest.
+        ContextCompat.registerReceiver(
+            this,
+            object : BroadcastReceiver() {
+                override fun onReceive(context: Context, intent: Intent) {
+                    gate.look()
+                }
+            },
+            IntentFilter().apply {
+                addAction(Intent.ACTION_USER_PRESENT)
+                addAction(Intent.ACTION_SCREEN_OFF)
+                addAction(Intent.ACTION_SCREEN_ON)
+            },
+            ContextCompat.RECEIVER_NOT_EXPORTED,
+        )
         // Whether the app is on screen: the wake word may open the assistant's sheet as an
         // activity only then (Android blocks one started from the background, silently).
         registerActivityLifecycleCallbacks(
             object : ActivityLifecycleCallbacks {
-                override fun onActivityStarted(activity: Activity) = AppVisibility.activityStarted()
+                override fun onActivityStarted(activity: Activity) {
+                    AppVisibility.activityStarted()
+                    gate.activityStarted()
+                }
 
-                override fun onActivityStopped(activity: Activity) = AppVisibility.activityStopped()
+                override fun onActivityStopped(activity: Activity) {
+                    AppVisibility.activityStopped()
+                    gate.activityStopped()
+                }
 
                 override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) = Unit
 
-                override fun onActivityResumed(activity: Activity) = Unit
+                override fun onActivityResumed(activity: Activity) {
+                    gate.look()
+                }
 
                 override fun onActivityPaused(activity: Activity) = Unit
 

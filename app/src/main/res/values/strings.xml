@@ -398,6 +398,12 @@
     <string name="files_not_shown">This file could not be shown here. It can still be downloaded.</string>
     <string name="files_svg_source">This is the picture\'s source. Open it with another app to see the picture.</string>
     <string name="archive_note">What is inside this kind of archive cannot be listed here.</string>
+    <string name="archive_entries">%1$s entries. Nothing is unpacked here.</string>
+    <string name="archive_cut">Only the first %1$s entries are listed.</string>
+    <string name="archive_unreadable">This archive could not be read.</string>
+    <string name="files_waiting">Waiting until the app is open and the phone is unlocked.</string>
+    <string name="share_refused">Something that was shared cannot be sent from here and was left out.</string>
+    <string name="media_in_trash">That file is in the trash.</string>
     <string name="table_cut">Only the first rows and columns are laid out. The text has all of it.</string>
     <string name="table_as_text">Show as text</string>
     <string name="table_as_table">Show as a table</string>

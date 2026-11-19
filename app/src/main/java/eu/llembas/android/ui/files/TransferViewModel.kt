@@ -36,6 +36,7 @@ import eu.llembas.android.api.FileEntry
 import eu.llembas.android.api.FileKinds
 import eu.llembas.android.api.Raw
 import eu.llembas.android.lembas
+import eu.llembas.android.share.SharedRefused
 import eu.llembas.android.ui.explain
 import eu.llembas.android.ui.theme.LocalPalette
 import kotlinx.coroutines.CancellationException
@@ -45,8 +46,12 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-/** Something on its way to or from the instance: what it is, and how far ([total] -1: not known). */
-data class Transfer(val text: String, val done: Long = 0, val total: Long = -1)
+/**
+ * Something on its way to or from the instance: what it is, and how far ([total] -1: not known).
+ * [waiting]: its next request has not started, because the app is not in front or the phone is
+ * locked ([eu.llembas.android.InstanceGate]); it goes on by itself.
+ */
+data class Transfer(val text: String, val done: Long = 0, val total: Long = -1, val waiting: Boolean = false)
 
 /** A transfer under way, what it ended in, and the other app to open once a copy is ready. */
 data class TransferState(val running: Transfer? = null, val error: String? = null, val notice: String? = null, val launch: Intent? = null)
@@ -54,6 +59,7 @@ data class TransferState(val running: Transfer? = null, val error: String? = nul
 /** A failure of the file manager in words: an instance without these routes says so, the rest as everywhere. */
 fun Context.filesSay(e: Throwable): String = when {
     noSuchRoute(e) -> getString(R.string.viewer_unavailable)
+    e is SharedRefused -> getString(R.string.share_refused)
     e is ApiException && e.message.isNullOrBlank() -> getString(R.string.files_not_shown)
     else -> explain(e)
 }
@@ -61,8 +67,9 @@ fun Context.filesSay(e: Throwable): String = when {
 /**
  * Files leaving the instance for the phone: a download into a document the person chose, and a
  * copy in the private cache for another app (Open with, Share). One at a time, with its
- * progress, and it can be given up. It outlives a turn of the phone; the copies do not outlive
- * the screen ([onCleared]).
+ * progress, and it can be given up. It outlives a turn of the phone. Each request asks the gate
+ * first ([turn]): none starts while the phone is locked or the app is not in front, and the one
+ * under way then is let finish.
  */
 class TransferViewModel(app: Application) : AndroidViewModel(app) {
     private val _state = MutableStateFlow(TransferState())
@@ -72,12 +79,14 @@ class TransferViewModel(app: Application) : AndroidViewModel(app) {
 
     /** One file's bytes, or with [zip] several files and folders as one zip, into the document [to]. */
     fun download(paths: List<String>, zip: Boolean, to: Uri) = start { api, progress ->
+        turn()
         api.downloadTo(app, if (zip) api.zipFiles(paths) else api.rawFile(paths.first()), to, progress)
         _state.update { it.copy(notice = app.getString(R.string.files_downloaded)) }
     }
 
     /** One thing's bytes -- a version of a file, a generated file by its id, an attachment -- into the document [to]. */
     fun download(what: Raw, to: Uri) = start { api, progress ->
+        turn()
         api.downloadTo(app, api.raw(what), to, progress)
         _state.update { it.copy(notice = app.getString(R.string.files_downloaded)) }
     }
@@ -86,6 +95,7 @@ class TransferViewModel(app: Application) : AndroidViewModel(app) {
 
     fun openWith(what: Raw, name: String, mime: String) = start { api, progress ->
         FileCache.sweepShared(app)
+        turn()
         val copy = api.copyInto(api.raw(what), FileCache.shared(app, name), progress = progress)
         _state.update { it.copy(launch = Handover.view(app, copy, mime)) }
     }
@@ -93,6 +103,7 @@ class TransferViewModel(app: Application) : AndroidViewModel(app) {
     /** One thing that is not named by a path (a generated file by its id), shared as itself. */
     fun share(what: Raw, name: String, mime: String) = start { api, progress ->
         FileCache.sweepShared(app)
+        turn()
         val copy = api.copyInto(api.raw(what), FileCache.shared(app, name), progress = progress)
         _state.update { it.copy(launch = Handover.share(app, listOf(copy), mime.ifBlank { "*/*" })) }
     }
@@ -103,8 +114,12 @@ class TransferViewModel(app: Application) : AndroidViewModel(app) {
         FileCache.sweepShared(app)
         val plain = entries.none { it.isFolder } && entries.size <= SHARE_MOST
         val copies = if (plain) {
-            entries.map { api.copyInto(api.rawFile(it.path), FileCache.shared(app, it.name), progress = progress) }
+            entries.map {
+                turn()
+                api.copyInto(api.rawFile(it.path), FileCache.shared(app, it.name), progress = progress)
+            }
         } else {
+            turn()
             listOf(api.copyInto(api.zipFiles(entries.map { it.path }), FileCache.shared(app, zipName(entries.map { it.path })), progress = progress))
         }
         val mime = if (plain) entries.map { it.mime }.distinct().singleOrNull()?.ifBlank { null } ?: "*/*" else "application/zip"
@@ -120,6 +135,9 @@ class TransferViewModel(app: Application) : AndroidViewModel(app) {
     fun cancel() {
         job?.cancel()
     }
+
+    /** The gate, before a request: while it is shut the dialog says the transfer is waiting. */
+    private suspend fun turn() = app.lembas.gate.pass { waiting -> _state.update { it.copy(running = it.running?.copy(waiting = waiting)) } }
 
     private fun start(block: suspend (ApiClient, (Long, Long) -> Unit) -> Unit) {
         if (job?.isActive == true) return
@@ -138,8 +156,9 @@ class TransferViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** The copies another app was handed stay while it may be reading them: only the old ones go. */
     override fun onCleared() {
-        FileCache.clear(app)
+        FileCache.sweepShared(app)
     }
 
     companion object {
@@ -211,6 +230,7 @@ fun TransferDialog(transfer: Transfer, onCancel: () -> Unit) {
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(transfer.text, style = MaterialTheme.typography.bodyLarge)
+                if (transfer.waiting) Text(stringResource(R.string.files_waiting), style = MaterialTheme.typography.bodyMedium, color = palette.inkMuted)
                 if (transfer.total > 0) {
                     LinearProgressIndicator(progress = { (transfer.done.toFloat() / transfer.total).coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth())
                 } else {

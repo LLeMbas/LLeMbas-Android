@@ -528,7 +528,7 @@ object Fakes {
     )
 
     val shareFiles = ShareState(
-        files = listOf(SharedFile("map-of-the-road.jpg", image = true), SharedFile("provisions.pdf", image = false)),
+        files = listOf(SharedFile("map-of-the-road.jpg", image = true, size = 2_400_000), SharedFile("provisions.pdf", image = false, size = 184_000)),
         last = LastAssist("c1", "Packing for the road", 0),
         error = "Home cannot be reached.",
     )

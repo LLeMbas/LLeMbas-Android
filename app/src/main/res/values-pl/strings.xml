@@ -396,6 +396,12 @@
     <string name="files_not_shown">Nie udało się tu pokazać tego pliku. Nadal można go pobrać.</string>
     <string name="files_svg_source">To jest źródło obrazu. Otwórz je w innej aplikacji, aby zobaczyć obraz.</string>
     <string name="archive_note">Zawartości tego rodzaju archiwum nie można tu wypisać.</string>
+    <string name="archive_entries">Pozycji: %1$s. Nic nie jest tu rozpakowywane.</string>
+    <string name="archive_cut">Wypisano tylko pierwszych %1$s pozycji.</string>
+    <string name="archive_unreadable">Nie udało się odczytać tego archiwum.</string>
+    <string name="files_waiting">Oczekiwanie, aż aplikacja będzie otwarta, a telefon odblokowany.</string>
+    <string name="share_refused">Czegoś z udostępnionych rzeczy nie można stąd wysłać i zostało pominięte.</string>
+    <string name="media_in_trash">Ten plik jest w koszu.</string>
     <string name="table_cut">W tabeli ułożono tylko pierwsze wiersze i kolumny. Tekst zawiera wszystko.</string>
     <string name="table_as_text">Pokaż jako tekst</string>
     <string name="table_as_table">Pokaż jako tabelę</string>

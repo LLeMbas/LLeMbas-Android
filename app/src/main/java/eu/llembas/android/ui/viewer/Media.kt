@@ -85,7 +85,10 @@ import java.io.IOException
 
 /** The most a picture's file may weigh to be decoded on the phone, and a PDF's to be copied for its pages. */
 const val IMAGE_MAX_BYTES = 64L * 1024 * 1024
-const val PDF_MAX_BYTES = 256L * 1024 * 1024
+const val PDF_MAX_BYTES = 100L * 1024 * 1024
+
+/** The most pages of a PDF that are laid out; a longer one is read to there and downloaded for the rest. */
+const val PDF_MAX_PAGES = 2000
 
 /** How a viewer's bytes came: on their way ([done] of [total], -1 unknown), there, or not shown. */
 sealed interface Fetched<out T> {
@@ -129,6 +132,7 @@ fun ImageBody(path: String, name: String, size: Long, fallback: @Composable (Str
         val copy = FileCache.viewing(context, name)
         value = try {
             val api = context.lembas.instances.client() ?: throw IOException(context.getString(R.string.assist_signed_out))
+            context.lembas.gate.pass()
             api.copyInto(api.rawFile(path), copy, IMAGE_MAX_BYTES, stepped { done, total -> value = Fetched.Loading(done, total) })
             val bitmap = withContext(Dispatchers.Default) { decodeCapped(copy) }
             if (bitmap == null) Fetched.Failed(null) else Fetched.Ready(bitmap.asImageBitmap())
@@ -155,7 +159,12 @@ internal fun Progress(now: Fetched.Loading) {
     }
 }
 
-/** A PDF's pages, drawn by the platform's own renderer from a copy in the private cache. One page is open at a time. */
+/**
+ * A PDF's pages, drawn by the platform's own renderer from a copy in the private cache. One page
+ * is open at a time, and at most [PDF_MAX_PAGES] are offered. The renderer cannot be stopped in
+ * the middle of a page, and closing it waits for the page being drawn: so [close] is never
+ * called on the main thread -- [closeLater] is.
+ */
 class PdfPages(private val copy: File) {
     private val descriptor = ParcelFileDescriptor.open(copy, ParcelFileDescriptor.MODE_READ_ONLY)
     private val renderer = try {
@@ -164,38 +173,53 @@ class PdfPages(private val copy: File) {
         descriptor.close()
         throw e
     }
+
+    /** Set before the lock is asked for: a page not yet begun is not begun any more. */
+    @Volatile
+    private var closing = false
     private var closed = false
-    val count: Int = renderer.pageCount
+    val count: Int = renderer.pageCount.coerceAtMost(PDF_MAX_PAGES)
 
     /** Page [index] as pixels [width] wide; null once closed or when it cannot be drawn. */
-    @Synchronized
     fun page(index: Int, width: Int): ImageBitmap? {
-        if (closed || index !in 0 until count || width <= 0) return null
-        return runCatching {
-            renderer.openPage(index).use { page ->
-                var w = width
-                var h = (page.height.toLong() * w / page.width.coerceAtLeast(1)).toInt().coerceAtLeast(1)
-                // A page of an odd shape (a long receipt) is drawn smaller rather than as a huge bitmap.
-                while (w.toLong() * h > PAGE_MAX_PIXELS) {
-                    w /= 2
-                    h /= 2
+        if (closing || index !in 0 until count || width <= 0) return null
+        return synchronized(this) {
+            if (closed || closing) return@synchronized null
+            runCatching {
+                renderer.openPage(index).use { page ->
+                    var w = width
+                    var h = (page.height.toLong() * w / page.width.coerceAtLeast(1)).toInt().coerceAtLeast(1)
+                    // A page of an odd shape (a long receipt) is drawn smaller rather than as a huge bitmap.
+                    while (w.toLong() * h > PAGE_MAX_PIXELS) {
+                        w /= 2
+                        h /= 2
+                    }
+                    val bitmap = Bitmap.createBitmap(w.coerceAtLeast(1), h.coerceAtLeast(1), Bitmap.Config.ARGB_8888)
+                    // The paper: a PDF draws on transparent, and print is read on white in either theme.
+                    bitmap.eraseColor(PAPER)
+                    page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                    bitmap.asImageBitmap()
                 }
-                val bitmap = Bitmap.createBitmap(w.coerceAtLeast(1), h.coerceAtLeast(1), Bitmap.Config.ARGB_8888)
-                // The paper: a PDF draws on transparent, and print is read on white in either theme.
-                bitmap.eraseColor(PAPER)
-                page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
-                bitmap.asImageBitmap()
-            }
-        }.getOrNull()
+            }.getOrNull()
+        }
     }
 
-    @Synchronized
+    /** Lets go of the renderer, the descriptor and the copy, after the page being drawn. Blocks for that long. */
     fun close() {
-        if (closed) return
-        closed = true
-        runCatching { renderer.close() }
-        runCatching { descriptor.close() }
-        copy.delete()
+        closing = true
+        synchronized(this) {
+            if (closed) return
+            closed = true
+            runCatching { renderer.close() }
+            runCatching { descriptor.close() }
+            copy.delete()
+        }
+    }
+
+    /** [close] from the main thread: no page is begun from now on, and the rest happens on a thread of its own. */
+    fun closeLater() {
+        closing = true
+        Thread({ close() }, "pdf-close").start()
     }
 
     private companion object {
@@ -210,7 +234,8 @@ fun PdfBody(path: String, name: String, size: Long, fallback: @Composable (Strin
     val context = LocalContext.current
     var pages by remember(path) { mutableStateOf<Fetched<PdfPages>>(Fetched.Loading()) }
     DisposableEffect(path) {
-        onDispose { (pages as? Fetched.Ready)?.value?.close() }
+        // Back during a slow page must not wait for it: the closing is not done on this thread.
+        onDispose { (pages as? Fetched.Ready)?.value?.closeLater() }
     }
     LaunchedEffect(path) {
         if (size > PDF_MAX_BYTES) {
@@ -218,14 +243,20 @@ fun PdfBody(path: String, name: String, size: Long, fallback: @Composable (Strin
             return@LaunchedEffect
         }
         val copy = FileCache.viewing(context, name)
+        // Held here too: a viewer closed while the renderer is being made never sees it in `pages`.
+        var made: PdfPages? = null
         pages = try {
             val api = context.lembas.instances.client() ?: throw ApiException(401, context.getString(R.string.assist_signed_out))
+            context.lembas.gate.pass()
             api.copyInto(api.rawFile(path), copy, PDF_MAX_BYTES, stepped { done, total -> pages = Fetched.Loading(done, total) })
-            Fetched.Ready(withContext(Dispatchers.IO) { PdfPages(copy) })
+            withContext(Dispatchers.IO) { made = PdfPages(copy) }
+            Fetched.Ready(checkNotNull(made))
         } catch (e: CancellationException) {
+            made?.closeLater()
             copy.delete()
             throw e
         } catch (e: Exception) {
+            made?.closeLater()
             copy.delete()
             // A password, or not a PDF after all: the renderer's own words are for a developer.
             Fetched.Failed(if (e is ApiException || unreachable(e)) viewerSays(context, e) else null)
@@ -334,6 +365,8 @@ fun MediaBody(what: Raw, size: Long, video: Boolean, fallback: @Composable (Stri
                 )
                 if (what is Raw.Attached) {
                     val local = FileCache.viewing(context, "attachment").also { copy = it }
+                    // A copy is a request with the account's file in it: not while the phone is locked.
+                    context.lembas.gate.pass()
                     api.copyInto(api.raw(what), local, ATTACHED_MAX_BYTES)
                     made.setDataSource(local.path)
                 } else {
@@ -463,6 +496,7 @@ fun PlayerDialog(playing: Playing, onClose: () -> Unit, gone: String) {
         }
         value = try {
             val api = context.lembas.instances.client() ?: throw ApiException(401, context.getString(R.string.assist_signed_out))
+            context.lembas.gate.pass()
             withContext(Dispatchers.IO) { api.rawBytes(playing.what, 0, 0) }
             Probed.There
         } catch (e: CancellationException) {

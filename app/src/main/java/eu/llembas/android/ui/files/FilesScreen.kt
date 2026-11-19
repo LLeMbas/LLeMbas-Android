@@ -219,6 +219,8 @@ class FilesViewModel(app: Application) : AndroidViewModel(app) {
         loading = viewModelScope.launch {
             _state.update { it.copy(loading = true, error = null) }
             try {
+                // Also read again after an upload that ended behind the lock: not before the app is in front.
+                app.lembas.gate.pass()
                 val listing = api().files(path)
                 _state.update { it.listed(listing) }
             } catch (e: CancellationException) {
@@ -272,13 +274,13 @@ class FilesViewModel(app: Application) : AndroidViewModel(app) {
     /**
      * A new, empty text file, and [then] its path, to open it for writing. The instance makes it
      * only where nothing is called that (`create`): otherwise nothing is written and its own
-     * sentence says what is there.
+     * sentence says what is there. An instance from before `create` would write over what is
+     * there, so the directory is read first and a name it holds is refused here
+     * ([ApiClient.newFile]).
      */
     fun newFile(name: String, then: (String) -> Unit) = write { api ->
-        val path = FileKinds.child(_state.value.path, name)
         try {
-            api.saveFile(path, "", create = true)
-            then(path)
+            then(api.newFile(_state.value.path, name))
         } catch (e: FileExists) {
             _state.update { it.copy(said = e.message?.ifBlank { null } ?: app.getString(R.string.files_taken, name)) }
         }
@@ -321,7 +323,9 @@ class FilesViewModel(app: Application) : AndroidViewModel(app) {
                     _state.update { it.copy(upload = Transfer(words, 0, file.size)) }
                     var last = 0L
                     try {
-                        api.uploadFrom(app.contentResolver, file, dir) { bytes ->
+                        // The file under way when the phone locks goes through; the next waits for the app in front, unlocked.
+                        app.lembas.gate.pass { waiting -> _state.update { it.copy(upload = it.upload?.copy(waiting = waiting)) } }
+                        api.uploadFrom(app, file, dir) { bytes ->
                             if (bytes - last >= 256 * 1024) {
                                 last = bytes
                                 _state.update { it.copy(upload = it.upload?.copy(done = bytes)) }

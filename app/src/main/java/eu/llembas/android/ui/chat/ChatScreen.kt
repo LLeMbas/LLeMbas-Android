@@ -177,7 +177,8 @@ fun ChatScreen(
                 playing = Playing(Raw.Attached(attachment.id), attachment.name, attachment.size, video = attachment.kind == "video")
             }
 
-            override fun openInFiles(media: GeneratedMedia) = onFiles(media.folder)
+            // Where the file is now, by its id: it may have been renamed or moved since it was made.
+            override fun openInFiles(media: GeneratedMedia) = model.whereIs(media, onFiles)
 
             override fun download(media: GeneratedMedia) = saveTo(media.raw, media.title, media.mime)
 
@@ -485,7 +486,7 @@ fun ChatContent(
 
     if (picking) {
         ModalBottomSheet(onDismissRequest = { picking = false }, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
-            ModelPickerContent(state.models, state.modelId, onPick = { id ->
+            ModelPickerContent(state.models, state.modelInfo?.key, onPick = { id ->
                 picking = false
                 if (chat == null) actions.updateDraft { it.copy(model = id) } else actions.change("model", id)
             })
