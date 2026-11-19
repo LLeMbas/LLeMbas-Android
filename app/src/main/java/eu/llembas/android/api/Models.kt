@@ -127,7 +127,16 @@ data class ModelInfo(
     val provider: String = "",
     /** The connection's name, for telling two models with one [id] apart. */
     val connection: String = "",
+    /**
+     * What the model is for (server 2.0.0-beta.17): `chat`, or a word for something a chat cannot
+     * start on (`embedding`, and later `image`, `video`, …). A server that does not say it offers
+     * only models to chat with.
+     */
+    val capability: String = CHAT,
 ) {
+    /** Whether a chat can be on it: the one capability this app's pickers offer. An unknown word is not one. */
+    val forChat: Boolean get() = capability == CHAT
+
     /** What this model is chosen, kept and sent by: its [ref], or its [id] from a server without refs. */
     val key: String get() = ref.ifBlank { id }
 
@@ -162,8 +171,12 @@ data class ModelInfo(
 
     companion object {
         val CONTROLS = setOf("none", "switch", "slider")
+        const val CHAT = "chat"
     }
 }
+
+/** The models a chat can be on, of a list: what every model picker and the assistant's model setting offer. */
+fun List<ModelInfo>.forChat(): List<ModelInfo> = filter { it.forChat }
 
 /**
  * The model a name means, in a list: by its `ref`, else the first with that `id` -- which is
@@ -212,7 +225,10 @@ data class ModelList(
     @SerialName("agent_subagents") val agentSubagents: AgentSubagents? = null,
     /** With `kind=agent`, a device and a directory (spec 3.9.0): the model a new agent chat there starts on. */
     val start: StartModel? = null,
-)
+) {
+    /** The same answer with only the models a chat can be on. */
+    fun forChat(): ModelList = if (models.all { it.forChat }) this else copy(models = models.forChat())
+}
 
 /**
  * A new agent chat's Subagents fact (`/models?kind=agent&device=`): [offered] where the instance
@@ -510,6 +526,10 @@ data class ToolCall(
     val show: ShowCard? = null,
     /** `image_generate`'s picture: the server's own attachment, by id, and its size. */
     val image: GeneratedImage? = null,
+    /** The file the call made (a picture, video, music, a 3D model), which is in the person's Files. */
+    val media: GeneratedMedia? = null,
+    /** A generation that takes minutes: the job the call started, as it was when the call returned. */
+    @SerialName("media_job") val mediaJob: MediaJobRef? = null,
     val block: ToolBlock = ToolBlock(),
 )
 

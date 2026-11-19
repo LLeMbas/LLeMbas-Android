@@ -155,15 +155,19 @@ class ApiClient(val base: String, private val token: String, val http: OkHttpCli
 
     suspend fun models(chatId: String? = null): List<ModelInfo> = modelList(chatId).models
 
-    /** The models with the instance's subagent cap; with [chatId], whether each is offered subagents on that chat. */
-    suspend fun modelList(chatId: String? = null): ModelList = get(if (chatId != null) "/models?chat=$chatId" else "/models")
+    /**
+     * The models with the instance's subagent cap; with [chatId], whether each is offered subagents
+     * on that chat. Only models a chat can be on (`capability` `chat`): this list is what every
+     * picker and the assistant's model setting are filled from.
+     */
+    suspend fun modelList(chatId: String? = null): ModelList = get<ModelList>(if (chatId != null) "/models?chat=$chatId" else "/models").forChat()
 
     /** The models for a new agent chat on [deviceId], with whether it may have subagents (`agent_subagents`). */
-    suspend fun agentModelList(deviceId: String?, directory: String? = null): ModelList = get(
+    suspend fun agentModelList(deviceId: String?, directory: String? = null): ModelList = get<ModelList>(
         "/models?kind=agent" + deviceId?.let { "&device=" + segment(it) }.orEmpty() +
             // With a directory (spec 3.9.0) the answer carries `start`: the model a chat there starts on.
             directory?.takeIf { deviceId != null && it.isNotBlank() }?.let { "&directory=" + segment(it.trim()) }.orEmpty(),
-    )
+    ).forChat()
 
     suspend fun folders(): List<Folder> = get<FolderList>("/folders").folders
 
@@ -659,26 +663,35 @@ class ApiClient(val base: String, private val token: String, val http: OkHttpCli
      * Save a text file. [base] is the `sha` the file had when it was opened: when it holds
      * something else by now the server writes nothing and this throws [SaveConflict] with its
      * sentence, unless [force]. Without a [base] nothing is compared, and a path with no file
-     * makes one.
+     * makes one. With [create] the file must be new: where something is already at the path the
+     * server writes nothing (409, `exists`) and this throws [FileExists] with its sentence -- an
+     * older server knows no `create` and writes as before.
      */
-    suspend fun saveFile(path: String, text: String, base: String? = null, force: Boolean = false): FileContent = withContext(Dispatchers.IO) {
+    suspend fun saveFile(path: String, text: String, base: String? = null, force: Boolean = false, create: Boolean = false): FileContent {
         val body = buildJsonObject {
             put("path", path)
             put("text", text)
             base?.takeIf { it.isNotBlank() }?.let { put("base", it) }
             if (force) put("force", true)
+            if (create) put("create", true)
         }
-        http.newCall(authed("$v2/files/content").put(body.toString().toRequestBody(JSON)).build()).await().use { response ->
-            val said = runCatching { response.body?.string().orEmpty() }.getOrDefault("")
-            if (response.code == 409) {
-                val conflict = runCatching { LembasJson.parseToJsonElement(said) as? JsonObject }.getOrNull() ?: JsonObject(emptyMap())
-                if ((conflict["conflict"] as? JsonPrimitive)?.content == "true") {
-                    throw SaveConflict(refusal(said).orEmpty(), (conflict["sha"] as? JsonPrimitive)?.takeUnless { it is JsonNull }?.content.orEmpty())
-                }
+        val request = authed("$v2/files/content").put(body.toString().toRequestBody(JSON)).build()
+        return withContext(Dispatchers.IO) { http.newCall(request).await().use { response -> saved(response) } }
+    }
+
+    /** A save's answer: the file as it is now, or what refused it. */
+    private fun saved(response: Response): FileContent {
+        val said = runCatching { response.body?.string().orEmpty() }.getOrDefault("")
+        if (response.code == 409) {
+            val conflict = runCatching { LembasJson.parseToJsonElement(said) as? JsonObject }.getOrNull() ?: JsonObject(emptyMap())
+            if ((conflict["conflict"] as? JsonPrimitive)?.content == "true") {
+                throw SaveConflict(refusal(said).orEmpty(), (conflict["sha"] as? JsonPrimitive)?.takeUnless { it is JsonNull }?.content.orEmpty())
             }
-            if (!response.isSuccessful) throw ApiException(response.code, refusal(said) ?: "The server answered ${response.code}.")
-            LembasJson.decodeFromString(FileContent.serializer(), said)
+            // A new file whose name is taken: nothing was written, and the sentence says what is there.
+            if ((conflict["exists"] as? JsonPrimitive)?.content == "true") throw FileExists(refusal(said).orEmpty())
         }
+        if (!response.isSuccessful) throw ApiException(response.code, refusal(said) ?: "The server answered ${response.code}.")
+        return LembasJson.decodeFromString(FileContent.serializer(), said)
     }
 
     suspend fun trash(): TrashList = get("/files/trash")
@@ -714,12 +727,19 @@ class ApiClient(val base: String, private val token: String, val http: OkHttpCli
      * The request for a file's bytes (`/files/raw`), or for [range] of them. The token goes in
      * the Authorization header, as on every call: the address names the path and nothing else.
      */
-    fun rawFile(path: String, range: LongRange? = null, inline: Boolean = false): Request = authed(
-        filesUrl(
-            "/raw",
-            "path" to path,
-            "inline" to if (inline) "1" else null,
-        ),
+    fun rawFile(path: String, range: LongRange? = null, inline: Boolean = false): Request = raw(Raw.Path(path), range, inline)
+
+    /**
+     * The request for [what]'s bytes, or for [range] of them: a file of the tree by its path (one
+     * [Raw.Path.version] of it, where named), a file by its node id wherever it is now, or a chat's
+     * attachment. Always with the token in the header and never in the address.
+     */
+    fun raw(what: Raw, range: LongRange? = null, inline: Boolean = false): Request = authed(
+        when (what) {
+            is Raw.Path -> filesUrl("/raw", "path" to what.path, "version" to what.version?.ifBlank { null }, "inline" to if (inline) "1" else null)
+            is Raw.Node -> filesUrl("/raw", "node" to what.id, "inline" to if (inline) "1" else null)
+            is Raw.Attached -> "$v2/attachments/${segment(what.id)}"
+        },
     )
         .header("Accept", "*/*")
         .apply { range?.let { header("Range", "bytes=${it.first}-${it.last}") } }
@@ -767,7 +787,10 @@ class ApiClient(val base: String, private val token: String, val http: OkHttpCli
      * blocking, on whatever thread asks (never the main one). A server that answers the whole
      * file to a range that does not start at 0 is refused rather than read from the wrong place.
      */
-    fun rawBytes(path: String, from: Long, to: Long): ByteArray = http.newCall(rawFile(path, from..to)).execute().use { response ->
+    fun rawBytes(path: String, from: Long, to: Long): ByteArray = rawBytes(Raw.Path(path), from, to)
+
+    /** The same for any [Raw]: a file by its node id is read a piece at a time as one by its path is. */
+    fun rawBytes(what: Raw, from: Long, to: Long): ByteArray = http.newCall(raw(what, from..to)).execute().use { response ->
         if (!response.isSuccessful) throw ApiException(response.code, detail(response))
         if (response.code != 206 && from > 0) throw ApiException(416, "")
         val want = to - from + 1
@@ -786,6 +809,21 @@ class ApiClient(val base: String, private val token: String, val http: OkHttpCli
         .apply { if (show.line > 0) addQueryParameter("line", show.line.toString()) }
         .build()
         .toString()
+
+    // --- Generated media's jobs, and the MCP servers ----------------------------------------------
+
+    /** A chat's long generations, newest first (at most 50); with [active] only those under way. */
+    suspend fun mediaJobs(chatId: String, active: Boolean = false): List<MediaJob> =
+        get<MediaJobList>("/media/jobs?chat_id=${segment(chatId)}" + if (active) "&active=true" else "").jobs
+
+    /** One job as it stands; somebody else's, or one that is gone, is a 404 in the server's words. */
+    suspend fun mediaJob(id: String): MediaJob = get("/media/jobs/${segment(id)}")
+
+    /** Stop a job: the job as it is after. One that has ended stays what it was, so this is safe to repeat. */
+    suspend fun cancelMediaJob(id: String): MediaJob = call(authed("$v2/media/jobs/${segment(id)}").delete().build(), MediaJob.serializer())
+
+    /** The MCP servers whose tools this person's chats may be offered, and how each is signed in to. */
+    suspend fun mcpServers(): List<McpServer> = get<McpServerList>("/mcp").servers
 
     // --- Push --------------------------------------------------------------------------------
     suspend fun pushKey(): PushKey = get("/push")
