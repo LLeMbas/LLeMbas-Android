@@ -3,7 +3,7 @@
 What changed in each release of LLeMbas for Android. Versions follow SemVer; until 1.0.0 the app
 is in alpha and releases come off `main`.
 
-## [Unreleased]
+## [1.0.0-beta.13] — 2026-11-19
 
 For Files, generated media and MCP servers as described here the instance must be newer than
 LLeMbas 2.0.0-beta.16. On an older one Files lists and shows text as before, and says so where
