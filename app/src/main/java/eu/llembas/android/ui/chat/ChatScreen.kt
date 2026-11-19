@@ -94,14 +94,24 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import eu.llembas.android.R
+import eu.llembas.android.api.Attachment
 import eu.llembas.android.api.Drawn
+import eu.llembas.android.api.GeneratedMedia
+import eu.llembas.android.api.MediaJob
+import eu.llembas.android.api.MediaView
 import eu.llembas.android.api.Message
+import eu.llembas.android.api.Raw
 import eu.llembas.android.api.ShowCard
 import eu.llembas.android.api.drawn
 import eu.llembas.android.ui.ModelAvatar
 import eu.llembas.android.ui.ProgressStatus
+import eu.llembas.android.ui.files.TransferHost
+import eu.llembas.android.ui.files.TransferViewModel
+import eu.llembas.android.ui.files.rememberSaver
 import eu.llembas.android.ui.theme.LocalPalette
 import eu.llembas.android.ui.viewer.FileViewer
+import eu.llembas.android.ui.viewer.PlayerDialog
+import eu.llembas.android.ui.viewer.Playing
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 
@@ -121,6 +131,8 @@ fun ChatScreen(
     onKind: ((agent: Boolean) -> Unit)? = null,
     /** Entered from a report (its Reply): the bar says "Report: title" and has Back, to the report, where the menu is. */
     report: String? = null,
+    /** Open the person's Files at a folder: where a generated file's "Open in Files" leads. */
+    onFiles: (String) -> Unit = {},
     model: ChatViewModel = viewModel(key = chatId ?: if (agent) "new-agent" else "new"),
 ) {
     val state by model.state.collectAsStateWithLifecycle()
@@ -138,10 +150,42 @@ fun ChatScreen(
     LaunchedEffect(state.chat?.id) {
         if (state.chat?.id != null) lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) { model.watchActivity() }
     }
+    // The chat's long generations (a video, a track), read again every few seconds while the
+    // screen is in front and not otherwise. An agent chat runs on a computer and makes none.
+    LaunchedEffect(state.chat?.id) {
+        if (state.chat?.id != null && !isAgent) lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) { model.watchMedia() }
+    }
     LaunchedEffect(state.error, state.notice) {
         (state.error ?: state.notice)?.let {
             snackbar.showSnackbar(it)
             model.clearError()
+        }
+    }
+
+    // What a generated file's card does: the player over the chat, the folder in Files, and the
+    // ways a file leaves the app. Its own transfers, as each screen that hands files out has.
+    val transfers: TransferViewModel = viewModel(key = "chat-transfers")
+    val saveTo = rememberSaver(transfers)
+    var playing by remember { mutableStateOf<Playing?>(null) }
+    val media = remember(model, transfers) {
+        object : MediaActions {
+            override fun play(media: GeneratedMedia) {
+                playing = Playing(media.raw, media.title, media.size, video = media.view == MediaView.Video)
+            }
+
+            override fun play(attachment: Attachment) {
+                playing = Playing(Raw.Attached(attachment.id), attachment.name, attachment.size, video = attachment.kind == "video")
+            }
+
+            override fun openInFiles(media: GeneratedMedia) = onFiles(media.folder)
+
+            override fun download(media: GeneratedMedia) = saveTo(media.raw, media.title, media.mime)
+
+            override fun share(media: GeneratedMedia) = transfers.share(media.raw, media.title, media.mime)
+
+            override fun openWith(media: GeneratedMedia) = transfers.openWith(media.raw, media.title, media.mime)
+
+            override fun cancel(job: MediaJob) = model.cancelJob(job)
         }
     }
 
@@ -173,6 +217,7 @@ fun ChatScreen(
             onShow = { showing = it },
             onKind = onKind,
             report = report,
+            media = media,
         )
     }
 
@@ -183,6 +228,8 @@ fun ChatScreen(
     showing?.let { file ->
         state.chat?.id?.let { id -> FileViewer(id, file, onClose = { showing = null }) }
     }
+    playing?.let { PlayerDialog(it, onClose = { playing = null }, gone = stringResource(R.string.media_gone)) }
+    TransferHost(transfers)
 }
 
 /** What the bar says of a chat entered from a report: "Report: title", or "Report" when the title is not known. */
@@ -206,10 +253,13 @@ fun ChatContent(
     onShow: (ShowCard) -> Unit = {},
     onKind: ((agent: Boolean) -> Unit)? = null,
     report: String? = null,
+    /** What the cards of generated media do; null draws none of them (a picture stays a picture). */
+    media: MediaActions? = null,
 ) {
     val palette = LocalPalette.current
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val chatMedia = remember(state.mediaJobs, media) { media?.let { ChatMedia(state.mediaJobs, it) } }
     // A chat opens at its end, where the conversation is, not at its first message.
     val list = rememberLazyListState(initialFirstVisibleItemIndex = maxOf(0, state.messages.size - 1 + if (state.more) 1 else 0))
     var menu by remember { mutableStateOf(false) }
@@ -270,7 +320,7 @@ fun ChatContent(
         snapshotFlow { list.layoutInfo.viewportSize.height }.drop(1).collect { if (following && !list.isScrollInProgress) yielding { list.toEnd() } }
     }
 
-    CompositionLocalProvider(LocalCopy provides copy) {
+    CompositionLocalProvider(LocalCopy provides copy, LocalChatMedia provides chatMedia) {
         Scaffold(
             containerColor = palette.bg,
             snackbarHost = { SnackbarHost(snackbar) },

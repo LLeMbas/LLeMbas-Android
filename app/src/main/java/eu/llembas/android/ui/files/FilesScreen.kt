@@ -83,8 +83,10 @@ import eu.llembas.android.api.ApiClient
 import eu.llembas.android.api.ApiException
 import eu.llembas.android.api.BatchAnswer
 import eu.llembas.android.api.FileEntry
+import eu.llembas.android.api.FileExists
 import eu.llembas.android.api.FileKinds
 import eu.llembas.android.api.FileListing
+import eu.llembas.android.api.Raw
 import eu.llembas.android.lembas
 import eu.llembas.android.ui.explain
 import eu.llembas.android.ui.theme.LocalPalette
@@ -138,9 +140,6 @@ data class FilesState(
             selected = if (same) selected intersect there else emptySet(),
         )
     }
-
-    /** Whether something here is already called [name]: a new file is never written over one. */
-    fun taken(name: String): Boolean = entries.any { it.name == name.trim() }
 }
 
 /** What a batch ended in: the server's sentences for what it refused, and the word for what it did. */
@@ -270,19 +269,20 @@ class FilesViewModel(app: Application) : AndroidViewModel(app) {
         null
     }
 
-    /** A new, empty text file -- never over one that is there -- and [then] its path, to open it for writing. */
-    fun newFile(name: String, then: (String) -> Unit) {
-        val now = _state.value
-        if (now.taken(name)) {
-            _state.update { it.copy(said = app.getString(R.string.files_taken, name)) }
-            return
-        }
-        write { api ->
-            val path = FileKinds.child(now.path, name)
-            api.saveFile(path, "")
+    /**
+     * A new, empty text file, and [then] its path, to open it for writing. The instance makes it
+     * only where nothing is called that (`create`): otherwise nothing is written and its own
+     * sentence says what is there.
+     */
+    fun newFile(name: String, then: (String) -> Unit) = write { api ->
+        val path = FileKinds.child(_state.value.path, name)
+        try {
+            api.saveFile(path, "", create = true)
             then(path)
-            null
+        } catch (e: FileExists) {
+            _state.update { it.copy(said = e.message?.ifBlank { null } ?: app.getString(R.string.files_taken, name)) }
         }
+        null
     }
 
     fun rename(entry: FileEntry, name: String) = write { api ->
@@ -352,14 +352,16 @@ class FilesViewModel(app: Application) : AndroidViewModel(app) {
 }
 
 @Composable
-fun FilesScreen(onBack: () -> Unit, model: FilesViewModel = viewModel(), transfers: TransferViewModel = viewModel()) {
+fun FilesScreen(onBack: () -> Unit, start: String? = null, model: FilesViewModel = viewModel(), transfers: TransferViewModel = viewModel()) {
     val state by model.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var viewing by rememberSaveable { mutableStateOf<String?>(null) }
     var writing by rememberSaveable { mutableStateOf(false) }
     var asked by remember { mutableStateOf<Ask?>(null) }
     var saving by remember { mutableStateOf<List<FileEntry>>(emptyList()) }
-    LaunchedEffect(Unit) { if (state.entries.isEmpty() && state.error == null) model.open(state.path) }
+    // Opened at a folder ([start]: where a generated file is) the first time; after that, where the person walked to.
+    LaunchedEffect(Unit) { if (state.entries.isEmpty() && state.error == null) model.open(start?.ifBlank { null } ?: state.path) }
+    val saveVersion = rememberSaver(transfers)
     LaunchedEffect(state.notice) {
         state.notice?.let {
             Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
@@ -520,6 +522,7 @@ fun FilesScreen(onBack: () -> Unit, model: FilesViewModel = viewModel(), transfe
 
         is Ask.Versions -> VersionsDialog(
             now.entry.path,
+            onDownload = { version -> saveVersion(Raw.Path(now.entry.path, version.id), now.entry.name, now.entry.mime) },
             onClose = { asked = null },
             onRestored = {
                 asked = null

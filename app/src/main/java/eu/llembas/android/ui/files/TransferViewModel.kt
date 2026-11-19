@@ -7,6 +7,7 @@ import android.content.Intent
 import android.net.Uri
 import android.text.format.Formatter
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -18,6 +19,9 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -30,6 +34,7 @@ import eu.llembas.android.api.ApiClient
 import eu.llembas.android.api.ApiException
 import eu.llembas.android.api.FileEntry
 import eu.llembas.android.api.FileKinds
+import eu.llembas.android.api.Raw
 import eu.llembas.android.lembas
 import eu.llembas.android.ui.explain
 import eu.llembas.android.ui.theme.LocalPalette
@@ -71,10 +76,25 @@ class TransferViewModel(app: Application) : AndroidViewModel(app) {
         _state.update { it.copy(notice = app.getString(R.string.files_downloaded)) }
     }
 
-    fun openWith(path: String, name: String, mime: String) = start { api, progress ->
+    /** One thing's bytes -- a version of a file, a generated file by its id, an attachment -- into the document [to]. */
+    fun download(what: Raw, to: Uri) = start { api, progress ->
+        api.downloadTo(app, api.raw(what), to, progress)
+        _state.update { it.copy(notice = app.getString(R.string.files_downloaded)) }
+    }
+
+    fun openWith(path: String, name: String, mime: String) = openWith(Raw.Path(path), name, mime)
+
+    fun openWith(what: Raw, name: String, mime: String) = start { api, progress ->
         FileCache.sweepShared(app)
-        val copy = api.copyInto(api.rawFile(path), FileCache.shared(app, name), progress = progress)
+        val copy = api.copyInto(api.raw(what), FileCache.shared(app, name), progress = progress)
         _state.update { it.copy(launch = Handover.view(app, copy, mime)) }
+    }
+
+    /** One thing that is not named by a path (a generated file by its id), shared as itself. */
+    fun share(what: Raw, name: String, mime: String) = start { api, progress ->
+        FileCache.sweepShared(app)
+        val copy = api.copyInto(api.raw(what), FileCache.shared(app, name), progress = progress)
+        _state.update { it.copy(launch = Handover.share(app, listOf(copy), mime.ifBlank { "*/*" })) }
     }
 
     /** A few files go as themselves; many, or any folder, as one zip the instance makes. */
@@ -132,6 +152,24 @@ class TransferViewModel(app: Application) : AndroidViewModel(app) {
             val folder = paths.firstOrNull()?.let { FileKinds.name(FileKinds.parent(it)) }?.takeIf { it != "/" }
             return (one ?: folder ?: "files").removeSuffix(".zip") + ".zip"
         }
+    }
+}
+
+/**
+ * "Save to" for one thing: the system's page for where it goes, and then the download into the
+ * document chosen there. What is to be saved is kept while that page is open.
+ */
+@Composable
+fun rememberSaver(transfers: TransferViewModel): (what: Raw, name: String, mime: String) -> Unit {
+    var pending by remember { mutableStateOf<Raw?>(null) }
+    val page = rememberLauncherForActivityResult(CreateFile()) { to ->
+        val what = pending
+        pending = null
+        if (to != null && what != null) transfers.download(what, to)
+    }
+    return { what, name, mime ->
+        pending = what
+        page.launch(CreateFile.Ask(FileKinds.safeName(name), mime))
     }
 }
 

@@ -54,6 +54,7 @@ import eu.llembas.android.api.FileEntry
 import eu.llembas.android.api.FileKinds
 import eu.llembas.android.api.FileView
 import eu.llembas.android.api.Notebook
+import eu.llembas.android.api.Raw
 import eu.llembas.android.api.SaveConflict
 import eu.llembas.android.api.Table
 import eu.llembas.android.api.parseNotebook
@@ -68,6 +69,7 @@ import eu.llembas.android.ui.files.TransferViewModel
 import eu.llembas.android.ui.files.VersionsDialog
 import eu.llembas.android.ui.files.filesSay
 import eu.llembas.android.ui.files.noSuchRoute
+import eu.llembas.android.ui.files.rememberSaver
 import eu.llembas.android.ui.theme.LocalPalette
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -148,6 +150,9 @@ fun TreeFileViewer(path: String, onClose: () -> Unit, startEditing: Boolean = fa
     var conflict by remember { mutableStateOf<String?>(null) }
     var said by remember { mutableStateOf<String?>(null) }
     var wantsEdit by remember(path) { mutableStateOf(startEditing) }
+    // A table can be read as the text it is, as well as laid out.
+    var tableAsText by remember(path) { mutableStateOf(false) }
+    val saveVersion = rememberSaver(transfers)
     val name = FileKinds.name(path)
 
     LaunchedEffect(path, reads) {
@@ -255,6 +260,9 @@ fun TreeFileViewer(path: String, onClose: () -> Unit, startEditing: Boolean = fa
                                     }
                                     val text = file.text.takeIf { file.withheld == null && it.isNotEmpty() }
                                     if (text != null) MenuEntry(R.string.viewer_copy, then { copy(context, name, text) })
+                                    if (text != null && FileKinds.viewer(file.fileKind) == FileView.Table) {
+                                        MenuEntry(if (tableAsText) R.string.table_as_table else R.string.table_as_text, then { tableAsText = !tableAsText })
+                                    }
                                     if (file.fileKind != null) {
                                         MenuEntry(R.string.download, then { actions.download() })
                                         MenuEntry(R.string.files_open_with, then { actions.openWith() })
@@ -275,7 +283,7 @@ fun TreeFileViewer(path: String, onClose: () -> Unit, startEditing: Boolean = fa
                     when (val now = opened) {
                         Opened.Loading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
                         is Opened.Failed -> Text(now.message, color = palette.inkMuted, modifier = Modifier.align(Alignment.Center).padding(32.dp))
-                        is Opened.Ready -> if (draft != null) EditorBody(draft, edit::type, enabled = !saving) else Shown(path, now.file, actions)
+                        is Opened.Ready -> if (draft != null) EditorBody(draft, edit::type, enabled = !saving) else Shown(path, now.file, actions, tableAsText)
                     }
                 }
             }
@@ -328,6 +336,7 @@ fun TreeFileViewer(path: String, onClose: () -> Unit, startEditing: Boolean = fa
     if (versions) {
         VersionsDialog(
             path,
+            onDownload = { version -> saveVersion(Raw.Path(path, version.id), name, file?.mime.orEmpty()) },
             onClose = { versions = false },
             onRestored = {
                 versions = false
@@ -344,7 +353,7 @@ private fun MenuEntry(label: Int, onClick: () -> Unit) = DropdownMenuItem(text =
 
 /** A file that was read, by its kind. What cannot be drawn falls back to the details page, saying why. */
 @Composable
-private fun Shown(path: String, file: FileContent, actions: FileActions) {
+private fun Shown(path: String, file: FileContent, actions: FileActions, tableAsText: Boolean = false) {
     val context = LocalContext.current
     val name = file.name.ifBlank { FileKinds.name(path) }
     val type = listOf(file.fileKind.orEmpty(), file.mime).filter { it.isNotBlank() }.joinToString(" · ")
@@ -369,11 +378,13 @@ private fun Shown(path: String, file: FileContent, actions: FileActions) {
 
         FileView.Pdf -> PdfBody(path, name, file.size, details)
 
-        FileView.Audio -> MediaBody(path, file.size, video = false, fallback = details)
+        FileView.Audio -> MediaBody(Raw.Path(path), file.size, video = false, fallback = details)
 
-        FileView.Video -> MediaBody(path, file.size, video = true, fallback = details)
+        FileView.Video -> MediaBody(Raw.Path(path), file.size, video = true, fallback = details)
 
-        FileView.Table -> {
+        FileView.Table -> if (tableAsText && withheld == null) {
+            FileBody("text", "", 0, file.text)
+        } else {
             val table by produceState<Fetched<Table>>(Fetched.Loading(), path, file.sha) {
                 value = try {
                     // Up to 1 MB the server sent the text; of a longer table the first megabyte is asked for.

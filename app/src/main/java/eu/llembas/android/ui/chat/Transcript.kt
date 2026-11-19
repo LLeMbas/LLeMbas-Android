@@ -13,6 +13,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -41,6 +42,8 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.Movie
+import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.SelectAll
@@ -593,9 +596,20 @@ private fun ToolsChip(step: Step, onShow: ((ShowCard) -> Unit)?) {
         }
     }
     shows.forEach { call -> ToolCallBlock(call, onShow = onShow) }
-    // A picture the instance made stays in view, like a `show` card: it is the answer.
-    step.calls.mapNotNull { call -> call.image?.takeIf { it.id.isNotBlank() && call.status != "error" && call.error.isNullOrEmpty() } }
-        .forEach { GeneratedPicture(it) }
+    // What the instance made stays in view, like a `show` card: it is the answer. A picture as
+    // before; in a chat's own screen also the file's card (a player, the ways to the file) and
+    // the card of a generation still under way. Elsewhere -- the assistant's sheet, which may be
+    // over the lock screen -- only the picture, as before.
+    val media = LocalChatMedia.current
+    step.calls.filter { it.status != "error" && it.error.isNullOrEmpty() }.forEach { call ->
+        val image = call.image?.takeIf { it.id.isNotBlank() }
+        if (media == null) {
+            image?.let { GeneratedPicture(it) }
+        } else {
+            if (call.media == null) image?.let { GeneratedPicture(it) }
+            CallMedia(call.media, image, call.mediaJob?.takeIf { it.id.isNotBlank() }?.let { media.job(it) }, media)
+        }
+    }
 }
 
 @Composable
@@ -646,7 +660,17 @@ private object Thumbnails {
 fun AttachmentTile(attachment: Attachment, side: Dp, modifier: Modifier = Modifier) {
     val palette = LocalPalette.current
     val context = LocalContext.current
-    Box(modifier.size(side).clip(Block).background(palette.surfaceRaised).border(1.dp, palette.border, Block), contentAlignment = Alignment.Center) {
+    // Sound and video the person attached are played, where a chat's screen has a player.
+    val play = LocalChatMedia.current?.actions?.takeIf { attachment.kind == "audio" || attachment.kind == "video" }
+    Box(
+        modifier
+            .size(side)
+            .clip(Block)
+            .background(palette.surfaceRaised)
+            .border(1.dp, palette.border, Block)
+            .then(if (play != null) Modifier.clickable(onClickLabel = stringResource(R.string.play)) { play.play(attachment) } else Modifier),
+        contentAlignment = Alignment.Center,
+    ) {
         if (attachment.image) {
             var image by remember(attachment.id) { mutableStateOf(Thumbnails.cached(attachment.id)) }
             val still = LocalInspectionMode.current
@@ -659,7 +683,15 @@ fun AttachmentTile(attachment: Attachment, side: Dp, modifier: Modifier = Modifi
             }
         } else {
             Column(Modifier.padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Icon(Icons.Filled.Description, contentDescription = null, tint = palette.inkMuted)
+                Icon(
+                    when (attachment.kind) {
+                        "audio" -> Icons.Filled.MusicNote
+                        "video" -> Icons.Filled.Movie
+                        else -> Icons.Filled.Description
+                    },
+                    contentDescription = null,
+                    tint = if (play != null) palette.accent else palette.inkMuted,
+                )
                 Spacer(Modifier.height(4.dp))
                 Text(
                     attachment.name,

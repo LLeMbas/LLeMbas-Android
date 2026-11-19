@@ -37,6 +37,12 @@ data class GeneratedMedia(
 
     /** What to call it: its name, else the last name of its path. */
     val title: String get() = name.ifBlank { FileKinds.name(path) }
+
+    /** Where its bytes are asked for: by its id, which outlives a rename or a move; by its path from a result without one. */
+    val raw: Raw get() = if (nodeId.isNotBlank()) Raw.Node(nodeId) else Raw.Path(path)
+
+    /** The folder of the person's Files it was written to. */
+    val folder: String get() = FileKinds.parent(path)
 }
 
 /** What a generated file's card is: a picture drawn, a player, or (a 3D model, anything unknown) the file's details. */

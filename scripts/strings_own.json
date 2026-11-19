@@ -409,7 +409,9 @@
     "wake_word_unavailable": "V tomto sestavení není. Sestavení pro F-Droid nemá modul pro budicí slovo, protože F-Droid sestavuje každou knihovnu ze zdrojů; sestavení z llembas.eu ho má.",
     "widget_description": "Ptejte se hlasem nebo textem, nebo pokračujte v poslední konverzaci s asistentem. Neukazuje nic z vašeho účtu.",
     "widget_hint": "Zeptejte se na cokoli",
-    "widget_speak": "Mluvit"
+    "widget_speak": "Mluvit",
+    "media_model": "3D model",
+    "job_expired": "Vypršelo"
   },
   "de": {
     "about_version": "LLeMbas für Android %1$s",
@@ -822,7 +824,9 @@
     "wake_word_unavailable": "Nicht in diesem Build. Der F-Droid-Build hat keine Aktivierungswort-Engine, weil F-Droid jede Bibliothek aus dem Quellcode baut; der Build von llembas.eu hat eine.",
     "widget_description": "Per Sprache oder Text fragen oder den letzten Assistenten-Chat fortsetzen. Zeigt nichts aus Ihrem Konto.",
     "widget_hint": "Frag mich alles",
-    "widget_speak": "Sprechen"
+    "widget_speak": "Sprechen",
+    "media_model": "3D-Modell",
+    "job_expired": "Abgelaufen"
   },
   "es": {
     "about_version": "LLeMbas para Android %1$s",
@@ -1234,7 +1238,9 @@
     "wake_word_unavailable": "No en esta versión. La versión de F-Droid no tiene motor de palabra de activación, porque F-Droid compila cada biblioteca desde el código fuente; la de llembas.eu sí lo tiene.",
     "widget_description": "Pregunta por voz o por texto, o continúa el último chat del asistente. No muestra nada de tu cuenta.",
     "widget_hint": "Pregunta lo que quieras",
-    "widget_speak": "Hablar"
+    "widget_speak": "Hablar",
+    "media_model": "Modelo 3D",
+    "job_expired": "Caducado"
   },
   "fr": {
     "about_version": "LLeMbas pour Android %1$s",
@@ -1647,7 +1653,9 @@
     "wake_word_unavailable": "Pas dans cette version. La version F-Droid n’a pas de moteur de mot d’activation, car F-Droid compile chaque bibliothèque depuis les sources ; celle de llembas.eu en a un.",
     "widget_description": "Demandez à la voix ou par écrit, ou reprenez la dernière discussion de l’assistant. N’affiche rien de votre compte.",
     "widget_hint": "Posez une question",
-    "widget_speak": "Parler"
+    "widget_speak": "Parler",
+    "media_model": "Modèle 3D",
+    "job_expired": "Expiré"
   },
   "hu": {
     "about_version": "LLeMbas Androidra %1$s",
@@ -2060,7 +2068,9 @@
     "wake_word_unavailable": "Ebben a változatban nincs. Az F-Droid-változatban nincs ébresztőszó-motor, mert az F-Droid minden könyvtárat forrásból fordít; a llembas.eu-s változatban van.",
     "widget_description": "Kérdezz hanggal vagy szöveggel, vagy folytasd az asszisztens legutóbbi csevegését. A fiókodból semmit sem mutat.",
     "widget_hint": "Kérdezz bármit",
-    "widget_speak": "Beszéd"
+    "widget_speak": "Beszéd",
+    "media_model": "3D-modell",
+    "job_expired": "Lejárt"
   },
   "it": {
     "about_version": "LLeMbas per Android %1$s",
@@ -2472,7 +2482,9 @@
     "wake_word_unavailable": "Non in questa build. La build F-Droid non ha un motore per la parola di attivazione, perché F-Droid compila ogni libreria dal sorgente; la build di llembas.eu ce l’ha.",
     "widget_description": "Chiedi a voce o per iscritto, o continua l’ultima chat dell’assistente. Non mostra nulla del tuo account.",
     "widget_hint": "Chiedi qualsiasi cosa",
-    "widget_speak": "Parla"
+    "widget_speak": "Parla",
+    "media_model": "Modello 3D",
+    "job_expired": "Scaduto"
   },
   "pl": {
     "about_version": "LLeMbas na Androida %1$s",
@@ -2884,7 +2896,9 @@
     "wake_word_unavailable": "Nie w tej wersji. Wersja z F-Droid nie ma silnika słowa aktywującego, bo F-Droid buduje każdą bibliotekę ze źródeł; wersja z llembas.eu go ma.",
     "widget_description": "Pytaj głosem lub tekstem albo kontynuuj ostatni czat asystenta. Nie pokazuje niczego z Twojego konta.",
     "widget_hint": "Zapytaj o cokolwiek",
-    "widget_speak": "Mów"
+    "widget_speak": "Mów",
+    "media_model": "Model 3D",
+    "job_expired": "Wygasło"
   },
   "sk": {
     "about_version": "LLeMbas pre Android %1$s",
@@ -3296,6 +3310,8 @@
     "wake_word_unavailable": "V tomto zostavení nie je. Zostavenie pre F-Droid nemá modul pre budiace slovo, pretože F-Droid zostavuje každú knižnicu zo zdrojov; zostavenie z llembas.eu ho má.",
     "widget_description": "Pýtajte sa hlasom alebo textom, alebo pokračujte v poslednej konverzácii s asistentom. Neukazuje nič z vášho účtu.",
     "widget_hint": "Opýtajte sa na čokoľvek",
-    "widget_speak": "Hovoriť"
+    "widget_speak": "Hovoriť",
+    "media_model": "3D model",
+    "job_expired": "Vypršalo"
   }
 }

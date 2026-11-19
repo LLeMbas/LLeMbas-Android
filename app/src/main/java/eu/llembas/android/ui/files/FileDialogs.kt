@@ -16,8 +16,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.CreateNewFolder
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.DeleteSweep
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.FolderShared
 import androidx.compose.material.icons.filled.RestoreFromTrash
@@ -130,6 +132,9 @@ fun FolderPicker(title: String, confirm: String, start: String, onPick: (String)
     var state by remember { mutableStateOf(FolderPickState(path = start)) }
     var asked by remember { mutableStateOf(start) }
     var again by remember { mutableIntStateOf(0) }
+    var naming by remember { mutableStateOf(false) }
+    var said by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
     LaunchedEffect(asked, again) {
         state = state.copy(loading = true, error = null)
         state = try {
@@ -147,8 +152,43 @@ fun FolderPicker(title: String, confirm: String, start: String, onPick: (String)
         if (parent != null) asked = parent else onDismiss()
     }
     Dialog(onDismissRequest = up, properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnClickOutside = false)) {
-        FolderPickContent(title, confirm, state, onOpen = { asked = it }, onUp = up, onPick = { onPick(state.path) }, onDismiss = onDismiss)
+        FolderPickContent(
+            title,
+            confirm,
+            state,
+            onOpen = { asked = it },
+            onUp = up,
+            onPick = { onPick(state.path) },
+            onDismiss = onDismiss,
+            onNewFolder = { naming = true },
+        )
     }
+    if (naming) {
+        NameDialog(
+            stringResource(R.string.folder_new),
+            stringResource(R.string.files_new_folder_ask),
+            "",
+            stringResource(R.string.save),
+            onName = { name ->
+                naming = false
+                val dir = state.path
+                scope.launch {
+                    try {
+                        val api = context.lembas.instances.client() ?: throw ApiException(401, context.getString(R.string.assist_signed_out))
+                        api.makeFolder(dir, name)
+                        // Made, and walked into: it is most likely where the thing is meant to go.
+                        if (asked == FileKinds.child(dir, name)) again++ else asked = FileKinds.child(dir, name)
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        said = context.filesSay(e)
+                    }
+                }
+            },
+            onDismiss = { naming = false },
+        )
+    }
+    said?.let { SaidDialog(it, onClose = { said = null }) }
 }
 
 /** The folder picker's page: where it is, that folder's folders, and the one button that chooses the folder shown. */
@@ -161,11 +201,20 @@ fun FolderPickContent(
     onUp: () -> Unit = {},
     onPick: () -> Unit = {},
     onDismiss: () -> Unit = {},
+    /** Make a folder in the one shown; null where the page cannot. */
+    onNewFolder: (() -> Unit)? = null,
 ) {
     val palette = LocalPalette.current
     Scaffold(
         topBar = {
             TopAppBar(
+                actions = {
+                    if (onNewFolder != null) {
+                        IconButton(onClick = onNewFolder, enabled = !state.loading && state.error == null) {
+                            Icon(Icons.Filled.CreateNewFolder, contentDescription = stringResource(R.string.folder_new))
+                        }
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = if (state.parent != null) onUp else onDismiss) {
                         Icon(
@@ -380,7 +429,7 @@ data class VersionsState(val versions: List<FileVersion> = emptyList(), val load
 
 /** A file's versions, newest first; an older one can be made the file again, which adds a version and loses none. */
 @Composable
-fun VersionsDialog(path: String, onClose: () -> Unit, onRestored: () -> Unit) {
+fun VersionsDialog(path: String, onClose: () -> Unit, onRestored: () -> Unit, onDownload: ((FileVersion) -> Unit)? = null) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var state by remember(path) { mutableStateOf(VersionsState()) }
@@ -396,7 +445,7 @@ fun VersionsDialog(path: String, onClose: () -> Unit, onRestored: () -> Unit) {
         }
     }
     Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnClickOutside = false)) {
-        VersionsContent(FileKinds.name(path), state, onRestore = { asking = it }, onClose = onClose)
+        VersionsContent(FileKinds.name(path), state, onRestore = { asking = it }, onClose = onClose, onDownload = onDownload)
     }
     asking?.let { version ->
         ConfirmDialog(
@@ -421,9 +470,19 @@ fun VersionsDialog(path: String, onClose: () -> Unit, onRestored: () -> Unit) {
     }
 }
 
-/** The versions' page: when, by whom and how large; the one the file holds now says so, the others can be restored. */
+/**
+ * The versions' page: when, by whom and how large; the one the file holds now says so, the others
+ * can be restored, and any of them saved to the phone as it was ([onDownload]; a 48 dp button
+ * before the row's last part, so the buttons stand in one column whatever that part says).
+ */
 @Composable
-fun VersionsContent(name: String, state: VersionsState, onRestore: (FileVersion) -> Unit = {}, onClose: () -> Unit = {}) {
+fun VersionsContent(
+    name: String,
+    state: VersionsState,
+    onRestore: (FileVersion) -> Unit = {},
+    onClose: () -> Unit = {},
+    onDownload: ((FileVersion) -> Unit)? = null,
+) {
     val palette = LocalPalette.current
     val context = LocalContext.current
     Scaffold(
@@ -447,12 +506,22 @@ fun VersionsContent(name: String, state: VersionsState, onRestore: (FileVersion)
             }
             LazyColumn(Modifier.fillMaxSize()) {
                 items(state.versions, key = { it.id }) { version ->
+                    val download: (@Composable () -> Unit)? = if (onDownload != null) {
+                        {
+                            IconButton(onClick = { onDownload(version) }) {
+                                Icon(Icons.Filled.Download, contentDescription = stringResource(R.string.download))
+                            }
+                        }
+                    } else {
+                        null
+                    }
                     ListItem(
                         headlineContent = { Text(ScheduleLogic.moment(version.at) ?: version.id, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                         supportingContent = {
                             val facts = listOfNotNull(version.by?.ifBlank { null }, Formatter.formatShortFileSize(context, version.size))
                             Text(facts.joinToString(" · "), maxLines = 1, overflow = TextOverflow.Ellipsis)
                         },
+                        leadingContent = download,
                         trailingContent = {
                             if (version.current) {
                                 Text(stringResource(R.string.version_current), style = MaterialTheme.typography.labelLarge, color = palette.inkMuted)

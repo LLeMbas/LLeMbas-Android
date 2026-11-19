@@ -26,6 +26,7 @@ import eu.llembas.android.api.LembasJson
 import eu.llembas.android.api.LinkedDevice
 import eu.llembas.android.api.LiveReply
 import eu.llembas.android.api.MediaFor
+import eu.llembas.android.api.MediaJob
 import eu.llembas.android.api.Mention
 import eu.llembas.android.api.Message
 import eu.llembas.android.api.MessagePage
@@ -102,6 +103,8 @@ data class ChatState(
     val lastSent: String? = null,
     /** The model picked for this open chat, by its ref: which of two models with one id the chat is on. */
     val picked: String? = null,
+    /** The chat's long generations (a video, a track, a 3D model), by id, as each was last read. */
+    val mediaJobs: Map<String, JobSeen> = emptyMap(),
 )
 
 /**
@@ -655,6 +658,98 @@ class ChatViewModel(app: Application) :
         }
     }
 
+    // --- Generated media's jobs -----------------------------------------------------------------
+
+    /**
+     * Follow the chat's long generations while the screen is in front: every job of the chat once
+     * (a finished one's file is drawn on its card), then the ones under way every few seconds --
+     * there is no stream frame for a job. One that ends by itself wakes the chat with a reply this
+     * app did not start: when a job says the chat was told, the transcript is read again and that
+     * reply followed. Runs until cancelled (the screen left, or no longer in front). An instance
+     * without these routes has no jobs, and nothing is asked again.
+     */
+    suspend fun watchMedia() {
+        val chat = _state.value.chat ?: return
+        val client = runCatching { api() }.getOrNull() ?: return
+        try {
+            val jobs = client.mediaJobs(chat.id)
+            val before = _state.value.mediaJobs
+            _state.update { it.withJobs(jobs, SystemClock.elapsedRealtime()) }
+            // Away and back: a job that told the chat meanwhile left a reply this screen has not read.
+            if (jobs.any { woke(before[it.id]?.job, it) }) rereadAndFollow()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            // An older instance, or one out of reach: the cards say what the calls said.
+        }
+        val waited = mutableMapOf<String, Int>()
+        while (true) {
+            delay(JOB_POLL_MS)
+            val now = _state.value
+            val telling = now.mediaJobs.values.filter { awaitsTelling(it.job) && it.at > 0 && (waited[it.job.id] ?: 0) < TELL_ROUNDS }.map { it.job.id }
+            var woken = false
+            for (id in (now.jobsToRead() + telling).distinct()) {
+                val before = _state.value.mediaJobs[id]?.job
+                val read = try {
+                    client.mediaJob(id)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: ApiException) {
+                    // Gone, or never this person's: the card says so in the instance's words and is not asked for again.
+                    if (e.status != 404) continue
+                    val ref = now.jobRefs.firstOrNull { it.id == id }
+                    MediaJob(id = id, kind = before?.kind ?: ref?.kind.orEmpty(), state = "expired", error = e.message.orEmpty(), told = true)
+                } catch (_: Exception) {
+                    continue
+                }
+                if (awaitsTelling(read)) waited[id] = (waited[id] ?: 0) + 1
+                _state.update { it.withJobs(listOf(read), SystemClock.elapsedRealtime()) }
+                if (woke(before, read)) woken = true
+            }
+            if (woken) rereadAndFollow()
+        }
+    }
+
+    /**
+     * The chat was woken (a job ended): its transcript as the server has it now, and the reply
+     * being written there followed. The telling is written a moment before the reply exists, so
+     * where none is live yet the chat is read once more shortly after. While this screen follows
+     * a reply of its own nothing is touched: the wake waits in the queue, and the stream's `next`
+     * brings it.
+     */
+    private suspend fun rereadAndFollow() {
+        val chat = _state.value.chat ?: return
+        repeat(2) { round ->
+            if (_state.value.live != null) return
+            val read = try {
+                api().chat(chat.id)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                return
+            }
+            if (_state.value.live != null) return
+            _state.update { it.copy(chat = read.chat, messages = read.messages, more = read.more) }
+            read.live?.let {
+                follow(it)
+                return
+            }
+            if (round == 0) delay(WAKE_PAUSE_MS)
+        }
+    }
+
+    /** Stop a generation: the job as it is after, in the card. One that has ended stays what it was. */
+    fun cancelJob(job: MediaJob) {
+        viewModelScope.launch {
+            try {
+                val after = api().cancelMediaJob(job.id)
+                _state.update { it.withJobs(listOf(after), SystemClock.elapsedRealtime()) }
+            } catch (e: Exception) {
+                fail(e)
+            }
+        }
+    }
+
     private var panelOpen = false
 
     fun panel(open: Boolean) {
@@ -833,5 +928,8 @@ class ChatViewModel(app: Application) :
 
     private companion object {
         const val MENTION_PAUSE_MS = 250L
+
+        /** Between a job's "the chat was told" and the reply that telling starts. */
+        const val WAKE_PAUSE_MS = 2000L
     }
 }

@@ -24,11 +24,15 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -47,14 +51,18 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import eu.llembas.android.R
 import eu.llembas.android.api.ApiClient
 import eu.llembas.android.api.ApiException
 import eu.llembas.android.api.RangeReader
+import eu.llembas.android.api.Raw
 import eu.llembas.android.api.sampleFor
 import eu.llembas.android.lembas
 import eu.llembas.android.ui.files.FileCache
@@ -271,10 +279,11 @@ private fun PdfPagesList(pages: PdfPages) {
 /**
  * A file on the instance as the platform's player reads it: piece by piece, each a `Range`
  * request made by the app's own HTTP client with the token in its header. The player is never
- * given an address, so the token is never in one.
+ * given an address, so the token is never in one. [what] is a file by its path or by its node
+ * id (what a generated file's result carries).
  */
-class RemoteMedia(api: ApiClient, path: String, private val length: Long) : MediaDataSource() {
-    private val reader = RangeReader(length) { from, to -> api.rawBytes(path, from, to) }
+class RemoteMedia(api: ApiClient, what: Raw, private val length: Long) : MediaDataSource() {
+    private val reader = RangeReader(length) { from, to -> api.rawBytes(what, from, to) }
 
     override fun readAt(position: Long, buffer: ByteArray, offset: Int, size: Int): Int = reader.read(position, buffer, offset, size)
 
@@ -283,32 +292,39 @@ class RemoteMedia(api: ApiClient, path: String, private val length: Long) : Medi
     override fun close() = reader.close()
 }
 
+/** The most a chat's attachment may weigh to be copied for the player. */
+const val ATTACHED_MAX_BYTES = 512L * 1024 * 1024
+
 /**
- * Sound or video of the tree, streamed: it starts before the file is there, and seeking asks
- * for the piece it lands in. Leaving the app pauses it; leaving the viewer lets go of it.
+ * Sound or video, played by the platform's player. A file of the tree ([Raw.Path], [Raw.Node])
+ * is streamed: it starts before the file is there, and seeking asks for the piece it lands in.
+ * A chat's attachment ([Raw.Attached]) is answered whole by the instance, so it is copied into
+ * the private cache first and played from there; the copy goes when the player does. Leaving
+ * the app pauses it; leaving the viewer lets go of it.
  */
 @Composable
-fun MediaBody(path: String, size: Long, video: Boolean, fallback: @Composable (String?) -> Unit) {
+fun MediaBody(what: Raw, size: Long, video: Boolean, fallback: @Composable (String?) -> Unit) {
     val context = LocalContext.current
     val palette = LocalPalette.current
     val scope = rememberCoroutineScope()
-    var ui by remember(path) { mutableStateOf(PlayerUi()) }
-    var failed by remember(path) { mutableStateOf(false) }
-    var player by remember(path) { mutableStateOf<MediaPlayer?>(null) }
-    var surface by remember(path) { mutableStateOf<SurfaceHolder?>(null) }
-    var ratio by remember(path) { mutableStateOf(16f / 9f) }
+    var ui by remember(what) { mutableStateOf(PlayerUi()) }
+    var failed by remember(what) { mutableStateOf(false) }
+    var said by remember(what) { mutableStateOf<String?>(null) }
+    var player by remember(what) { mutableStateOf<MediaPlayer?>(null) }
+    var surface by remember(what) { mutableStateOf<SurfaceHolder?>(null) }
+    var ratio by remember(what) { mutableStateOf(16f / 9f) }
 
-    DisposableEffect(path) {
+    DisposableEffect(what) {
         var held: MediaPlayer? = null
         var source: RemoteMedia? = null
+        var copy: File? = null
         val starting = scope.launch {
             val api = context.lembas.instances.client()
-            if (api == null || size <= 0) {
+            if (api == null || (size <= 0 && what !is Raw.Attached)) {
                 failed = true
                 return@launch
             }
             try {
-                val media = RemoteMedia(api, path, size).also { source = it }
                 val made = MediaPlayer().also { held = it }
                 made.setAudioAttributes(
                     AudioAttributes.Builder()
@@ -316,7 +332,13 @@ fun MediaBody(path: String, size: Long, video: Boolean, fallback: @Composable (S
                         .setContentType(if (video) AudioAttributes.CONTENT_TYPE_MOVIE else AudioAttributes.CONTENT_TYPE_MUSIC)
                         .build(),
                 )
-                made.setDataSource(media)
+                if (what is Raw.Attached) {
+                    val local = FileCache.viewing(context, "attachment").also { copy = it }
+                    api.copyInto(api.raw(what), local, ATTACHED_MAX_BYTES)
+                    made.setDataSource(local.path)
+                } else {
+                    made.setDataSource(RemoteMedia(api, what, size).also { source = it })
+                }
                 made.setOnPreparedListener {
                     ui = ui.copy(ready = true, durationMs = it.duration.coerceAtLeast(0))
                     player = it
@@ -328,7 +350,11 @@ fun MediaBody(path: String, size: Long, video: Boolean, fallback: @Composable (S
                 }
                 made.setOnVideoSizeChangedListener { _, w, h -> if (w > 0 && h > 0) ratio = (w.toFloat() / h).coerceIn(0.3f, 4f) }
                 made.prepareAsync()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
+                // The instance's refusal of a copy is a sentence to read; the player's own failure is not.
+                said = if (e is ApiException || unreachable(e)) viewerSays(context, e) else null
                 failed = true
             }
         }
@@ -337,6 +363,7 @@ fun MediaBody(path: String, size: Long, video: Boolean, fallback: @Composable (S
             player = null
             held?.runCatching { release() }
             source?.runCatching { close() }
+            copy?.runCatching { delete() }
         }
     }
 
@@ -354,7 +381,7 @@ fun MediaBody(path: String, size: Long, video: Boolean, fallback: @Composable (S
     }
 
     if (failed) {
-        fallback(null)
+        fallback(said)
         return
     }
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
@@ -403,5 +430,69 @@ fun MediaBody(path: String, size: Long, video: Boolean, fallback: @Composable (S
                 ui = ui.copy(positionMs = to)
             },
         )
+    }
+}
+
+/** What a player opened over a chat plays: which bytes, what it is called, how large, and whether there is a picture. */
+data class Playing(val what: Raw, val title: String, val size: Long, val video: Boolean)
+
+/** How a player's file was found before it was handed to the player. */
+private sealed interface Probed {
+    data object Asking : Probed
+
+    data object There : Probed
+
+    data class Refused(val message: String?) : Probed
+}
+
+/**
+ * A player over the whole screen, for a file a chat names: a generated video or track (by its
+ * node id) or an attachment. A file of the tree is asked for its first byte before the player
+ * gets it, so one that is no longer there says so in a sentence rather than as a player that
+ * does not start. Back or the cross closes it and lets go of the player.
+ */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+fun PlayerDialog(playing: Playing, onClose: () -> Unit, gone: String) {
+    val context = LocalContext.current
+    val palette = LocalPalette.current
+    val probed by produceState<Probed>(Probed.Asking, playing.what) {
+        if (playing.what is Raw.Attached) {
+            value = Probed.There
+            return@produceState
+        }
+        value = try {
+            val api = context.lembas.instances.client() ?: throw ApiException(401, context.getString(R.string.assist_signed_out))
+            withContext(Dispatchers.IO) { api.rawBytes(playing.what, 0, 0) }
+            Probed.There
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // By its id the instance's own refusal names the id; "no longer there" is what a person reads.
+            Probed.Refused(if (e is ApiException && e.status == 404) gone else viewerSays(context, e))
+        }
+    }
+    val unplayable: @Composable (String?) -> Unit = { note ->
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text(note ?: stringResource(R.string.files_not_shown), color = palette.inkMuted, modifier = Modifier.padding(32.dp))
+        }
+    }
+    Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnClickOutside = false)) {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    navigationIcon = { IconButton(onClick = onClose) { Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.close)) } },
+                    title = { Text(playing.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                )
+            },
+        ) { padding ->
+            Box(Modifier.padding(padding).fillMaxSize()) {
+                when (val now = probed) {
+                    Probed.Asking -> Progress(Fetched.Loading())
+                    is Probed.Refused -> unplayable(now.message)
+                    Probed.There -> MediaBody(playing.what, playing.size, playing.video, unplayable)
+                }
+            }
+        }
     }
 }

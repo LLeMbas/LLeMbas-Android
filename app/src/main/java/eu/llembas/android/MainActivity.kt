@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -275,6 +276,7 @@ class MainActivity : ComponentActivity() {
         // The title of each report whose conversation was opened, by its chat: what that chat's bar says.
         val reportTitles = remember { mutableStateMapOf<String, String>() }
         val menu: () -> Unit = { scope.launch { drawer.open() } }
+        val filesAt: (String) -> Unit = { folder -> over("files-at/" + Uri.encode(folder)) }
         ModalNavigationDrawer(
             drawerState = drawer,
             // The drawer opens by a swipe only from a chat: elsewhere the swipe is Back's.
@@ -292,6 +294,7 @@ class MainActivity : ComponentActivity() {
                         onNewChat = { top("new") },
                         onLeave = { top("new") },
                         onOpened = { id -> top("chat/$id") },
+                        onFiles = filesAt,
                     )
                 }
                 composable("new-agent") {
@@ -311,9 +314,12 @@ class MainActivity : ComponentActivity() {
                         onMenu = menu,
                         onNewChat = { top("new") },
                         onLeave = { top("new") },
+                        onFiles = filesAt,
                     )
                 }
                 composable("files") { FilesScreen(onBack = { nav.popBackStack() }) }
+                // Files at a folder: where a generated file's "Open in Files" leads.
+                composable("files-at/{at}") { e -> FilesScreen(onBack = { nav.popBackStack() }, start = e.arguments?.getString("at")) }
                 composable("archived") {
                     ArchivedScreen(onBack = { nav.popBackStack() }, onOpen = { top("chat/$it") }, onRestored = { chats.load() })
                 }
@@ -340,6 +346,7 @@ class MainActivity : ComponentActivity() {
                         onNewChat = { top("new") },
                         onLeave = { nav.popBackStack() },
                         report = reportTitles[id].orEmpty(),
+                        onFiles = filesAt,
                     )
                 }
                 composable("scheduled") {

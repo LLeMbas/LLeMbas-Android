@@ -152,10 +152,6 @@ class FileLogicTest {
         val without = listing.copy(entries = listing.entries.filter { it.name != "map.png" })
         assertEquals(setOf("/home/frodo/lembas.md"), state.listed(without).selected)
         assertTrue(state.listed(listing.copy(path = "/home/frodo/recipes")).selected.isEmpty())
-        // A new file is never written over one that is there.
-        assertTrue(state.taken("lembas.md"))
-        assertTrue(state.taken(" lembas.md "))
-        assertFalse(state.taken("lembas.txt"))
     }
 
     @Test

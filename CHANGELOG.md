@@ -5,8 +5,9 @@ is in alpha and releases come off `main`.
 
 ## [Unreleased]
 
-For Files as described here the instance must be newer than LLeMbas 2.0.0-beta.16. On an older
-one Files lists and shows text as before, and says so where it cannot do more.
+For Files and generated media as described here the instance must be newer than
+LLeMbas 2.0.0-beta.16. On an older one Files lists and shows text as before, and says so where
+it cannot do more.
 
 ### Added
 
@@ -17,7 +18,7 @@ one Files lists and shows text as before, and says so where it cannot do more.
   copies, downloads, shares or deletes them all, and says which the instance refused.
 - **The trash and a file's versions.** What was deleted can be restored or removed for good,
   one thing or everything. A file's earlier versions are listed, and any of them can be made
-  the file again without losing the others.
+  the file again without losing the others, or saved to the phone as it was.
 - **Download, Open with and Share.** A file is saved where you choose in the phone's own
   "Save to" page; several files or a folder come as one zip. Open with and Share hand another
   app a copy from the app's private storage, which is deleted again. The app asks for no
@@ -31,6 +32,24 @@ one Files lists and shows text as before, and says so where it cannot do more.
   HTML page and an SVG are shown as their source -- the app draws nothing a file could script.
 - **"Save to Files" in the share sheet.** Something shared from another app can be kept in a
   folder of your files instead of being sent into a chat; shared text is kept as a note.
+- **What a model makes is shown in the chat.** A picture, a video, a piece of music or a 3D
+  model the instance made has a card in the reply: the picture drawn, video and music with
+  Play, a 3D model as what it is. Each card leads to the file in Files, saves it where you
+  choose, shares it, or opens it with another app.
+- **A long generation shows how it stands.** A video or a track takes minutes. Its card says
+  what is being made, whether it is waiting or running and for how long, and has Cancel. When
+  it is ready the card becomes the player and the chat says so; when it was not made, the card
+  says why in the instance's own words. Nothing of this is shown over the lock screen, and the
+  app posts no notification about a file.
+- **Sound and video you attached can be played** from the message they are attached to.
+- **A new folder from inside the folder picker**, when moving, copying or saving a share.
+- **A table can be shown as its text**, and as a table again.
+
+### Changed
+
+- **A new file is never written over another.** The instance now makes a new file only where
+  nothing has that name, and says what is there otherwise.
+- **Only models you can chat with are offered** in the model lists and for the assistant.
 
 ### Fixed
 

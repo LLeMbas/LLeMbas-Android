@@ -70,8 +70,8 @@ class FileShots {
     @Test
     fun folderPicker() {
         val state = FolderPickState(path = home, parent = "/home", folders = entries.filter { it.isFolder }, loading = false)
-        shoot("51-folder-picker") { FolderPickContent("Move to which folder?", "Move here", state) }
-        shoot("51-folder-picker", Phone.Small, fontScale = 1.5f) { FolderPickContent("Move to which folder?", "Move here", state) }
+        shoot("51-folder-picker") { FolderPickContent("Move to which folder?", "Move here", state, onNewFolder = {}) }
+        shoot("51-folder-picker", Phone.Small, fontScale = 1.5f) { FolderPickContent("Move to which folder?", "Move here", state, onNewFolder = {}) }
         shoot("51-folder-picker-empty") { FolderPickContent("Copy to which folder?", "Copy here", state.copy(folders = emptyList())) }
     }
 
@@ -95,8 +95,8 @@ class FileShots {
             ),
             loading = false,
         )
-        shoot("53-versions") { VersionsContent("lembas.md", versions) }
-        shoot("53-versions", Phone.Small, fontScale = 1.5f) { VersionsContent("lembas.md", versions) }
+        shoot("53-versions") { VersionsContent("lembas.md", versions, onDownload = {}) }
+        shoot("53-versions", Phone.Small, fontScale = 1.5f) { VersionsContent("lembas.md", versions, onDownload = {}) }
     }
 
     @Test
