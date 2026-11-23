@@ -92,6 +92,7 @@ import eu.llembas.android.api.ShowCard
 import eu.llembas.android.api.Step
 import eu.llembas.android.api.ToolCall
 import eu.llembas.android.api.ending
+import eu.llembas.android.api.fateUnknown
 import eu.llembas.android.api.replyModel
 import eu.llembas.android.api.shownMarkdown
 import eu.llembas.android.lembas
