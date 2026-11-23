@@ -158,22 +158,28 @@ val Message.byMachine: Boolean get() = machine || origin == ORIGIN_HARNESS
  * ([asked], the row before it): what was said to that turn was never written into the chat
  * (instances from before the reply to a harness turn followed the device hold a few). One quiet
  * line says so in its place -- the server's rule for its own page, never a blank row with
- * buttons. A reply still being written, one that was stopped or failed, and an empty reply to
- * something a person asked are not this.
+ * buttons. A reply still being written, one that was stopped or failed, one that holds a plan
+ * and nothing else, and an empty reply to something a person asked are not this.
+ *
+ * [live] is the reply this screen knows is being written, by its id: that one is never this,
+ * whatever its row says. A row says `complete` only when the server does, and a row that says
+ * nothing reads as complete ([Message.complete]); the rule does not rest on that alone.
  */
-fun replyUnrecorded(reply: Message, asked: Message?): Boolean = !reply.isUser &&
+fun replyUnrecorded(reply: Message, asked: Message?, live: String? = null): Boolean = !reply.isUser &&
+    reply.id != live &&
     reply.complete &&
     !reply.stopped &&
     reply.error.isNullOrBlank() &&
     reply.end == null &&
     reply.text.isNullOrBlank() &&
     reply.steps.isEmpty() &&
+    reply.plan == null &&
     reply.attachments.isEmpty() &&
     asked != null &&
     asked.isUser &&
     asked.byMachine
 
-/** The replies of [messages] that are [replyUnrecorded], by id. */
-fun unrecordedReplies(messages: List<Message>): Set<String> = messages.indices
-    .filter { replyUnrecorded(messages[it], messages.getOrNull(it - 1)) }
+/** The replies of [messages] that are [replyUnrecorded], by id; [live] is the one being written, if any. */
+fun unrecordedReplies(messages: List<Message>, live: String? = null): Set<String> = messages.indices
+    .filter { replyUnrecorded(messages[it], messages.getOrNull(it - 1), live) }
     .mapTo(HashSet()) { messages[it].id }

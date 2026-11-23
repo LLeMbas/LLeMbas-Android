@@ -212,9 +212,18 @@ class MainActivity : ComponentActivity() {
         }
         // The list is read again each time the drawer opens, so a new title or a finished
         // reply's dot is there without a pull.
-        LaunchedEffect(drawer.isOpen) { if (drawer.isOpen) chats.load() }
-        // The badge on Reports follows the instance while the app is in front.
+        // While it is open the list follows the replies; closed, nothing reads it.
         val lifecycle = LocalLifecycleOwner.current.lifecycle
+        LaunchedEffect(drawer.isOpen) {
+            chats.shown(drawer.isOpen)
+            if (drawer.isOpen) {
+                chats.load()
+                lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) { chats.watchRunning() }
+            }
+        }
+        // The chat on screen: the end of its reply is not something new in the list.
+        LaunchedEffect(current) { chats.open = current }
+        // The badge on Reports follows the instance while the app is in front.
         LaunchedEffect(instance.id) { lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) { chats.watchReports() } }
         LaunchedEffect(open) {
             open?.let {

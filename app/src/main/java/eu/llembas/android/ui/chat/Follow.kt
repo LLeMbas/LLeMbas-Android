@@ -60,13 +60,31 @@ fun transcriptChange(before: List<Message>?, after: List<Message>, restored: Boo
 /**
  * Whether the view goes to the end after [change], given whether it was [following]. Opening a
  * chat and sending a message always do; an older page never does; everything else -- and a reply
- * growing, a keyboard opening -- only for a person who is at the end already.
+ * growing, a keyboard opening -- only for a person who is at the end already, and never while
+ * the list is being scrolled by the person ([personScrolling]): a wheel, a key or a screen
+ * reader moving it upwards has not come to rest yet, so the following has not ended yet, and
+ * going to the end now would cancel that scroll and throw the reader back down.
  */
-fun movesToEnd(change: TranscriptChange, following: Boolean): Boolean = when (change) {
+fun movesToEnd(change: TranscriptChange, following: Boolean, personScrolling: Boolean = false): Boolean = when (change) {
     TranscriptChange.Opened, TranscriptChange.Sent -> true
     TranscriptChange.None, TranscriptChange.Older -> false
-    TranscriptChange.Appended, TranscriptChange.Changed -> following
+    TranscriptChange.Appended, TranscriptChange.Changed -> following && !personScrolling
 }
+
+/**
+ * Whether a scroll is the person's. One that is [inProgress] and that this app did not start
+ * ([ownScrolls]: how many of the app's own scrolls are under way) is theirs, whatever moved
+ * the list -- a finger, a wheel, a keyboard, a screen reader. The app marks its own; everything
+ * else is somebody.
+ */
+fun personScrolls(inProgress: Boolean, ownScrolls: Int): Boolean = inProgress && ownScrolls <= 0
+
+/**
+ * Whether a scroll that has come to rest was the person's: a finger was on the list
+ * ([touched]), the list went back towards its start ([wentBack]), or the scroll began with
+ * none of this app's own under way ([startedByApp] false).
+ */
+fun scrollWasPersons(touched: Boolean, wentBack: Boolean, startedByApp: Boolean): Boolean = touched || wentBack || !startedByApp
 
 /**
  * Whether the view follows, once a scroll has come to rest [distance] pixels short of the end.
@@ -114,5 +132,19 @@ suspend fun yielding(scroll: suspend () -> Unit) {
         scroll()
     } catch (e: CancellationException) {
         currentCoroutineContext().ensureActive()
+    }
+}
+
+/**
+ * [yielding], counted in [own] while it runs: how the list's watchers tell this app's scroll
+ * from the person's ([personScrolls]). A count and not a flag: one of the app's scrolls may
+ * overtake another, and the first one's end must not unmark the second.
+ */
+suspend fun ownScroll(own: IntArray, scroll: suspend () -> Unit) {
+    own[0]++
+    try {
+        yielding(scroll)
+    } finally {
+        own[0]--
     }
 }

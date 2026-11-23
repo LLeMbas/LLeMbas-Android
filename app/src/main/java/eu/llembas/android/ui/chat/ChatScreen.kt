@@ -287,7 +287,7 @@ fun ChatContent(
     val rows = state.messages
     val info = state.modelInfo
     // Only in an agent chat: there a turn's reply is the linked computer's, and may never have been written here.
-    val unrecorded = remember(rows, chat?.isAgent) { if (chat?.isAgent == true) unrecordedReplies(rows) else emptySet() }
+    val unrecorded = remember(rows, chat?.isAgent, live?.messageId) { if (chat?.isAgent == true) unrecordedReplies(rows, live?.messageId) else emptySet() }
 
     // The view keeps to the end while a reply is written only for a person who is there
     // (`Follow.kt` has the rule): a finger on the list ends the following at once, and where the
@@ -297,6 +297,10 @@ fun ChatContent(
     val slack = with(LocalDensity.current) { 48.dp.roundToPx() }
     // Whether a finger has been on the list since it last came to rest.
     val touched = remember { booleanArrayOf(false) }
+    // How many of this app's own scrolls are under way (`ownScroll`): any other scroll is the person's.
+    val own = remember { intArrayOf(0) }
+    // The model drops the far end of a long transcript only under a person who is at its end.
+    LaunchedEffect(following) { actions.reading(atEnd = following) }
     LaunchedEffect(list) {
         list.interactionSource.interactions.collect {
             if (it is DragInteraction.Start) {
@@ -309,15 +313,21 @@ fun ChatContent(
         var moving = false
         var fromIndex = list.firstVisibleItemIndex
         var fromOffset = list.firstVisibleItemScrollOffset
+        var startedByApp = false
         snapshotFlow { list.isScrollInProgress }.collect { now ->
             if (now && !moving) {
                 fromIndex = list.firstVisibleItemIndex
                 fromOffset = list.firstVisibleItemScrollOffset
+                startedByApp = own[0] > 0
             }
             if (moving && !now) {
                 // Only the person's own scroll ends the following (`restFollows`): this app's
                 // scroll to the end, overtaken by a line that arrived meanwhile, does not.
-                val byPerson = touched[0] || wentBack(fromIndex, fromOffset, list.firstVisibleItemIndex, list.firstVisibleItemScrollOffset)
+                val byPerson = scrollWasPersons(
+                    touched = touched[0],
+                    wentBack = wentBack(fromIndex, fromOffset, list.firstVisibleItemIndex, list.firstVisibleItemScrollOffset),
+                    startedByApp = startedByApp,
+                )
                 following = restFollows(following, byPerson, list.distanceToEnd(), slack)
                 touched[0] = false
             }
@@ -335,18 +345,19 @@ fun ChatContent(
             // An older page above the very top: the row that was first stays first, so reading
             // goes on upwards from it. Anywhere else the list keeps its place by the rows' keys.
             val kept = keptRow(before.orEmpty(), rows)
-            if (kept != null && list.firstVisibleItemIndex == 0) yielding { list.scrollToItem(kept + if (state.more) 1 else 0) }
-        } else if (movesToEnd(change, following)) {
+            if (kept != null && list.firstVisibleItemIndex == 0) ownScroll(own) { list.scrollToItem(kept + if (state.more) 1 else 0) }
+        } else if (movesToEnd(change, following, personScrolls(list.isScrollInProgress, own[0]))) {
+            // A list the person is moving is left to them: where it rests says whether it follows.
             following = true
-            yielding { list.toEnd() }
+            ownScroll(own) { list.toEnd() }
         }
     }
     val growth = live?.let { it.shown.size * 100_000 + (it.tail.text.length + it.tail.thinking.length) } ?: 0
-    LaunchedEffect(growth) { if (growth > 0 && following && !list.isScrollInProgress) yielding { list.toEnd() } }
+    LaunchedEffect(growth) { if (growth > 0 && following && !list.isScrollInProgress) ownScroll(own) { list.toEnd() } }
     // The keyboard opening takes the list's foot away: a person at the end stays at the end.
     LaunchedEffect(list) {
         // A finger on the list ends a scroll of ours by cancelling it: this follower goes on.
-        snapshotFlow { list.layoutInfo.viewportSize.height }.drop(1).collect { if (following && !list.isScrollInProgress) yielding { list.toEnd() } }
+        snapshotFlow { list.layoutInfo.viewportSize.height }.drop(1).collect { if (following && !list.isScrollInProgress) ownScroll(own) { list.toEnd() } }
     }
 
     CompositionLocalProvider(LocalCopy provides copy, LocalChatMedia provides chatMedia) {

@@ -14,10 +14,13 @@ What is said here of replies that start by themselves needs an instance newer th
   and the main agent answers, when a scheduled task's result or a finished generation wakes the
   chat, or when the linked computer starts a turn itself, the reply appears and is written in
   front of you, with its tools and cards, instead of only after the chat was opened again.
-  Coming back to the app reads the chat once, for what happened meanwhile. Nothing is asked of
-  the instance while the phone is locked or the app is not in front.
-- **The list of chats moves by itself.** A chat a reply starts in goes to the top of the drawer
-  and shows its dot without the drawer being closed and opened.
+  Coming back to the app reads the chat once, for what happened meanwhile. Such a reply is
+  followed only while the app is in front of an unlocked phone: locked or in the background the
+  app lets it go and asks the instance nothing, and on your return it picks up where the chat
+  is then. A reply you asked for yourself goes on being received, as before.
+- **The list of chats moves by itself.** While the drawer is open, a chat a reply starts in
+  goes to the top and shows its dot, and the dot of a reply being written goes when the reply
+  ends, without the drawer being closed and opened.
 
 ### Changed
 
@@ -36,6 +39,8 @@ What is said here of replies that start by themselves needs an instance newer th
   - The app's own scroll to the end can no longer be taken for you scrolling away, which
     stopped the chat from following a reply although you had not touched it. The assistant's
     sheet has the same fix.
+  - Scrolling up with a mouse wheel, a keyboard or a screen reader while a reply arrives no
+    longer throws you back to the end: only a finger used to count as you scrolling.
   - A reply's foot is as tall while it is written as when it has finished, so the end of a
     reply no longer changes the height of the page.
 

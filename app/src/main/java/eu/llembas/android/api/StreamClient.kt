@@ -22,48 +22,29 @@ data class Frame(val event: String, val data: String)
  * what [LiveReply.apply] wants.
  *
  * A refusal (a 4xx: the chat was deleted, the token signed out) ends the flow with the error;
- * only a broken connection is retried.
+ * only a broken connection is retried -- and each opening after the first is a new request, so
+ * it waits for its `turn` (the gate: nothing new is asked behind a lock).
  */
 class StreamClient(private val api: ApiClient) {
     private val http = api.http.newBuilder().readTimeout(0, TimeUnit.SECONDS).build()
 
-    fun follow(chatId: String, messageId: String): Flow<Frame> = flow {
-        var wait = 1_000L
-        while (true) {
-            var closed = false
-            var refused: ApiException? = null
-            once(api.streamRequest(chatId, messageId)).collect { result ->
-                when (result) {
-                    is Outcome.Event -> {
-                        wait = 1_000L
-                        emit(result.frame)
-                        if (result.frame.event == "close") closed = true
-                    }
-
-                    is Outcome.Refused -> refused = result.error
-
-                    is Outcome.Dropped -> Unit
-                }
-            }
-            refused?.let { throw it }
-            if (closed) return@flow
-            delay(wait)
-            wait = (wait * 2).coerceAtMost(30_000L)
-        }
-    }
+    fun follow(chatId: String, messageId: String, turn: suspend () -> Unit = {}): Flow<Frame> = reopened(turn) { once(api.streamRequest(chatId, messageId)) }
 
     /**
      * Follow an events route that ends itself now and then (`close` after a while, as the
      * activity panel's does): opened again at once after a `close`, and after a pause that
      * grows to 30 seconds when the connection drops or closes without a frame. It runs until
-     * its collector stops; a refusal (4xx) ends it with the error.
+     * its collector stops; a refusal (4xx) ends it with the error. Each opening, the first
+     * too, waits for its [turn].
      */
-    fun watch(request: () -> Request): Flow<Frame> = flow {
+    fun watch(turn: suspend () -> Unit = {}, request: () -> Request): Flow<Frame> = flow {
         var wait = 1_000L
         while (true) {
             var closed = false
             var said = false
             var refused: ApiException? = null
+            // Every opening is a request of its own: it waits for its turn (the gate).
+            turn()
             once(request()).collect { result ->
                 when (result) {
                     is Outcome.Event -> {
@@ -91,12 +72,6 @@ class StreamClient(private val api: ApiClient) {
         }
     }
 
-    private sealed interface Outcome {
-        data class Event(val frame: Frame) : Outcome
-        data class Refused(val error: ApiException) : Outcome
-        data object Dropped : Outcome
-    }
-
     private fun once(request: Request): Flow<Outcome> = callbackFlow {
         val source = EventSources.createFactory(http).newEventSource(
             request,
@@ -122,6 +97,45 @@ class StreamClient(private val api: ApiClient) {
             },
         )
         awaitClose { source.cancel() }
+    }
+}
+
+/** What one opening of a stream gave: a frame, a refusal (4xx), or a connection that broke. */
+sealed interface Outcome {
+    data class Event(val frame: Frame) : Outcome
+    data class Refused(val error: ApiException) : Outcome
+    data object Dropped : Outcome
+}
+
+/**
+ * A reply's stream, [open]ed again whenever it ends before `close`: after a pause of 1, 2, 4, 8 …
+ * up to 30 seconds, and after its [turn] -- every opening but the first is a request nobody is
+ * waiting for at that moment, so it asks first whether it may start. A refusal ends the flow
+ * with the error.
+ */
+fun reopened(turn: suspend () -> Unit, open: () -> Flow<Outcome>): Flow<Frame> = flow {
+    var wait = 1_000L
+    while (true) {
+        var closed = false
+        var refused: ApiException? = null
+        open().collect { result ->
+            when (result) {
+                is Outcome.Event -> {
+                    wait = 1_000L
+                    emit(result.frame)
+                    if (result.frame.event == "close") closed = true
+                }
+
+                is Outcome.Refused -> refused = result.error
+
+                is Outcome.Dropped -> Unit
+            }
+        }
+        refused?.let { throw it }
+        if (closed) return@flow
+        delay(wait)
+        wait = (wait * 2).coerceAtMost(30_000L)
+        turn()
     }
 }
 

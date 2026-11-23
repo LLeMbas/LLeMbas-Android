@@ -117,6 +117,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+/** Whether the Scheduled list starts listening to the events route now: only [inFront], and only once ([listening]). */
+fun listens(inFront: Boolean, listening: Boolean): Boolean = inFront && !listening
+
 /** A server without the scheduling routes answers 404 (or 405): it is older, not broken. */
 private fun Throwable.unsupported(): Boolean = this is ApiException && (status == 404 || status == 405)
 
@@ -136,6 +139,19 @@ class ScheduledViewModel(app: Application) : AndroidViewModel(app) {
     val state = _state.asStateFlow()
 
     private var live: Job? = null
+
+    /**
+     * Whether the list is on screen, in front. The events route is listened to only then: a read
+     * that comes back after the screen was left (or the phone locked) must not open it, for
+     * nothing would close it again while this model lives.
+     */
+    private var front = false
+
+    /** The screen came to the front: the list is read, and followed until [stop]. */
+    fun shown() {
+        front = true
+        load()
+    }
 
     fun load() {
         viewModelScope.launch {
@@ -164,7 +180,7 @@ class ScheduledViewModel(app: Application) : AndroidViewModel(app) {
      * Without it the list is what the last read said, and a pull reads it again.
      */
     private fun watch() {
-        if (live?.isActive == true) return
+        if (!listens(front, live?.isActive == true)) return
         live = viewModelScope.launch {
             // The one connection the drawer's badge listens on too (`EventsHub`).
             val frames = runCatching { getApplication<Application>().lembas.eventFrames() }.getOrNull() ?: return@launch
@@ -183,6 +199,7 @@ class ScheduledViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun stop() {
+        front = false
         live?.cancel()
         live = null
     }
@@ -210,7 +227,7 @@ class ScheduledViewModel(app: Application) : AndroidViewModel(app) {
 fun ScheduledScreen(onBack: () -> Unit, onOpen: (String) -> Unit, onNew: () -> Unit, onModels: () -> Unit, model: ScheduledViewModel = viewModel()) {
     val state by model.state.collectAsStateWithLifecycle()
     LifecycleResumeEffect(Unit) {
-        model.load()
+        model.shown()
         onPauseOrDispose { model.stop() }
     }
     ScheduledContent(state, onBack = onBack, onOpen = onOpen, onNew = onNew, onModels = onModels, onPause = model::pause, onRetry = model::load)

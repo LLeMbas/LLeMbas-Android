@@ -45,6 +45,7 @@ import eu.llembas.android.api.whereabouts
 import eu.llembas.android.lembas
 import eu.llembas.android.ui.explain
 import eu.llembas.android.ui.files.noSuchRoute
+import eu.llembas.android.whileOpen
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -53,10 +54,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.takeWhile
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -254,6 +254,24 @@ fun ChatState.withNewest(read: ChatDetail): ChatState {
     return copy(chat = read.chat, messages = messages.subList(0, at).filterNot { it.id in newest } + read.messages)
 }
 
+/** Past this many rows a transcript left open is cut back to [KEPT_ROWS]: several times what a person scrolls through. */
+const val KEPT_MOST = 600
+
+/** How many of the newest rows stay when a transcript is cut back. */
+const val KEPT_ROWS = 400
+
+/**
+ * The transcript, held to a size: a chat left open while replies arrive by themselves (an
+ * agent's wakes, a schedule) would otherwise grow for as long as it is open. Past [most] rows
+ * the oldest go, down to the newest [keep], and "older" is offered again, which reads them
+ * back. Only for a person who is [atEnd]: someone reading further up is reading the very rows
+ * that would go, and nothing is taken from under them.
+ */
+fun ChatState.capped(atEnd: Boolean, most: Int = KEPT_MOST, keep: Int = KEPT_ROWS): ChatState {
+    if (!atEnd || messages.size <= most) return this
+    return copy(messages = messages.takeLast(keep), more = true)
+}
+
 /**
  * Whether the events route's `reply` frame [said] is news to this screen: a reply in the chat
  * that is open here, which is neither the one being followed nor a row already drawn as
@@ -324,6 +342,9 @@ interface ChatActions {
     fun delete(then: () -> Unit) {}
     fun older() {}
     fun clearUnsent() {}
+
+    /** Whether the person is at the transcript's end ([atEnd]) or reading further up: the screen's word, for what may be dropped. */
+    fun reading(atEnd: Boolean) {}
 }
 
 /**
@@ -416,7 +437,8 @@ class ChatViewModel(app: Application) :
                 _state.update {
                     it.copy(chat = detail.chat, messages = detail.messages, more = detail.more, models = models, loading = false)
                 }
-                detail.live?.let { follow(it) }
+                // Being written when the chat was opened: whoever started it, nobody asked for it from here just now.
+                detail.live?.let { follow(it, own = false) }
                 // Whether a team is offered and what runs in the background: the cheap read,
                 // without the context count. A server without the panel has no answer.
                 runCatching { client.activity(chatId, context = false) }.onSuccess { a ->
@@ -454,91 +476,167 @@ class ChatViewModel(app: Application) :
         }
     }
 
-    /** Follow a reply to its end, then whatever the queue started after it. */
-    private fun follow(messageId: String) {
+    private val gate get() = getApplication<Application>().lembas.gate
+
+    /** The transcript's reads, one at a time and none twice for the same news. */
+    private val reads = Reads()
+
+    /** The reply the person asked for from this screen last, by its id: the one that goes on behind a lock. */
+    private var ownReply: String? = null
+
+    /** Whether the person is at the transcript's end, as the screen last said. */
+    private var atEnd = true
+
+    override fun reading(atEnd: Boolean) {
+        this.atEnd = atEnd
+    }
+
+    /** How a reply's stream ended. */
+    private sealed interface Through {
+        /** With `done`; [next] is the reply the queue started after it. */
+        data class Done(val next: String?) : Through
+
+        /** Without a `done`: the row is gone on the server, or it ended some way the stream did not tell. */
+        data object Closed : Through
+
+        /** With an error, which has been said. */
+        data object Failed : Through
+    }
+
+    /**
+     * Follow a reply to its end, then whatever the queue started after it.
+     *
+     * [own]: the person asked for this reply from this screen (a message sent, an edit, Regenerate,
+     * Continue). Its stream is the request they started, and goes on when the phone locks or the
+     * app leaves the front, as any request under way does. Every other reply -- one the events
+     * route said, one found being written when the chat was opened or read again, the queue's
+     * next -- is followed only while the app is in front of an unlocked phone ([whileOpen]): when
+     * that ends its stream is let go, and on the return one read catches up and follows what is
+     * being written then. Without that an agent's chat with wakes queued would chain a read and a
+     * stream for hours behind the lock.
+     *
+     * Whatever follows a stream is a new request and waits at the gate, the person's own reply's
+     * too: a broken connection opened again, the read after `done` with a `next`, the read after
+     * a stream that closed without `done`.
+     */
+    private fun follow(messageId: String, own: Boolean) {
         val chat = _state.value.chat ?: return
+        if (own) ownReply = messageId
         // Already followed, and still being written: the events route says this app's own replies
         // too, and a second stream for one reply would start its drawing over.
         if (following?.isActive == true && _state.value.live?.let { it.messageId == messageId && it.finished == null } == true) return
         following?.cancel()
         following = viewModelScope.launch {
             _state.update { it.copy(live = LiveReply(messageId)) }
-            // Set at `done`, which is the end of the reply: from then on the stream is followed
-            // only for the name a model may still give the chat (the `title` frame).
-            var ended: LiveReply? = null
-            try {
-                StreamClient(api()).follow(chat.id, messageId).collect { frame ->
-                    val before = ended
-                    if (before != null) {
-                        val named = before.apply(frame.event, frame.data)
-                        ended = named
-                        if (named.title != before.title) _state.update { s -> s.copy(chat = s.chat?.let { c -> named.title?.let { c.copy(title = it) } ?: c }) }
-                        return@collect
-                    }
-                    val live = (_state.value.live ?: LiveReply(messageId)).apply(frame.event, frame.data)
-                    val finished = live.finished
-                    if (finished == null) {
-                        // The tree outlives the reply: kept for the activity sheet once it ends.
-                        _state.update { s -> s.copy(live = live, tree = live.tree ?: s.tree) }
-                        return@collect
-                    }
-                    ended = live
-                    _state.update { s ->
-                        s.copy(
-                            live = null,
-                            tree = live.tree ?: s.tree,
-                            messages = s.messages.map { if (it.id == finished.id) finished else it },
-                            chat = s.chat?.let { c -> live.title?.let { c.copy(title = it) } ?: c },
-                        )
-                    }
-                    // The queue handed a waiting prompt to a fresh reply: the transcript has moved
-                    // on the server, so it is read again rather than patched -- and that reply is
-                    // followed instead of this stream's tail.
-                    live.next?.let { next ->
-                        refresh()
-                        follow(next)
-                    }
+            when (val through = gate.whileOpen(stays = { ownReply == messageId }) { stream(chat, messageId) }) {
+                // Let go at the gate. What the stream had shown stays in the row; once the app
+                // is in front again the chat is read, and what is being written then followed.
+                // A stream let go after its `done` (it was open for the chat's name) left nothing unread.
+                null -> {
+                    val mark = reads.mark()
+                    val unfinished = _state.value.live?.messageId == messageId
+                    _state.update { it.closedUnfinished(messageId, null) }
+                    if (unfinished) rereadAndFollow(rounds = 1, mark = mark)
                 }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                // After `done` only the name was still to come: nothing to say, nothing to redo.
-                if (ended != null) return@launch
-                fail(e)
+
+                // The queue handed a waiting prompt to a fresh reply: the transcript has moved
+                // on the server, so it is read again rather than patched, and what the read says
+                // is being written is followed (the stream's word for it, where the read failed).
+                is Through.Done -> through.next?.let { next ->
+                    gate.passLater()
+                    val read = refresh()
+                    (if (read != null) read.live else next)?.let { follow(it, own = false) }
+                }
+
+                // The transcript is read again, so what was written is still there; where it
+                // cannot be read, what the stream had shown stays.
+                Through.Closed -> {
+                    gate.passLater()
+                    val reread = try {
+                        api().chat(chat.id)
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (_: Exception) {
+                        null
+                    }
+                    _state.update { it.closedUnfinished(messageId, reread).capped(atEnd) }
+                    // Another reply is being written there (a queued turn): that one is followed.
+                    reread?.live?.takeIf { it != messageId }?.let { follow(it, own = false) }
+                }
+
                 // The reply goes on on the server; what it has written so far is read back
                 // rather than left half-drawn.
-                _state.update { it.copy(live = null) }
-                refresh()
-                return@launch
-            }
-            // The stream closed without a `done`: the row is gone on the server, or it ended some
-            // way the stream did not tell. The transcript is read again, so what was written is
-            // still there; where it cannot be read, what the stream had shown stays.
-            if (ended == null) {
-                val reread = try {
-                    api().chat(chat.id)
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (_: Exception) {
-                    null
+                Through.Failed -> {
+                    gate.passLater()
+                    refresh()
                 }
-                _state.update { it.closedUnfinished(messageId, reread) }
-                // Another reply is being written there (a queued turn): that one is followed.
-                reread?.live?.takeIf { it != messageId }?.let { follow(it) }
             }
         }
     }
 
-    /**
-     * The transcript as the server has it now. The older pages the person loaded stay
-     * ([withNewest]); [whole] is for a change that rewrote the transcript itself (a compaction),
-     * after which only what was read is true.
-     */
-    private suspend fun refresh(whole: Boolean = false) {
-        val chat = _state.value.chat ?: return
-        runCatching { api().chat(chat.id) }.onSuccess { d ->
-            _state.update { if (whole) it.copy(chat = d.chat, messages = d.messages, more = d.more) else it.withNewest(d) }
+    /** The stream of the reply [messageId], drawn as it comes, to its end; a connection that breaks is opened again at the gate. */
+    private suspend fun stream(chat: Chat, messageId: String): Through {
+        // Set at `done`, which is the end of the reply: from then on the stream is followed
+        // only for the name a model may still give the chat (the `title` frame).
+        var ended: LiveReply? = null
+        var next: String? = null
+        try {
+            StreamClient(api()).follow(chat.id, messageId, turn = { gate.passLater() }).takeWhile { frame ->
+                val before = ended
+                if (before != null) {
+                    val named = before.apply(frame.event, frame.data)
+                    ended = named
+                    if (named.title != before.title) _state.update { s -> s.copy(chat = s.chat?.let { c -> named.title?.let { c.copy(title = it) } ?: c }) }
+                    return@takeWhile true
+                }
+                val live = (_state.value.live ?: LiveReply(messageId)).apply(frame.event, frame.data)
+                val finished = live.finished
+                if (finished == null) {
+                    // The tree outlives the reply: kept for the activity sheet once it ends.
+                    _state.update { s -> s.copy(live = live, tree = live.tree ?: s.tree) }
+                    return@takeWhile true
+                }
+                ended = live
+                _state.update { s ->
+                    s.copy(
+                        live = null,
+                        tree = live.tree ?: s.tree,
+                        messages = s.messages.map { if (it.id == finished.id) finished else it },
+                        chat = s.chat?.let { c -> live.title?.let { c.copy(title = it) } ?: c },
+                    )
+                }
+                // With a `next` the queue's reply is followed instead of this stream's tail.
+                next = live.next
+                live.next == null
+            }.collect { }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // After `done` only the name was still to come: nothing to say, nothing to redo.
+            if (ended != null) return Through.Done(next)
+            fail(e)
+            _state.update { it.copy(live = null) }
+            return Through.Failed
         }
+        return if (ended != null) Through.Done(next) else Through.Closed
+    }
+
+    /**
+     * The transcript as the server has it now, or null where it could not be read. The older
+     * pages the person loaded stay ([withNewest]); [whole] is for a change that rewrote the
+     * transcript itself (a compaction), after which only what was read is true.
+     */
+    private suspend fun refresh(whole: Boolean = false): ChatDetail? {
+        val chat = _state.value.chat ?: return null
+        val read = try {
+            api().chat(chat.id)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            return null
+        }
+        _state.update { if (whole) it.copy(chat = read.chat, messages = read.messages, more = read.more) else it.withNewest(read).capped(atEnd) }
+        return read
     }
 
     private fun took(turn: Turn) {
@@ -548,7 +646,7 @@ class ChatViewModel(app: Application) :
                 lastSent = turn.message?.id ?: s.lastSent,
             )
         }
-        turn.reply?.let { follow(it.id) }
+        turn.reply?.let { follow(it.id, own = true) }
     }
 
     /**
@@ -592,7 +690,7 @@ class ChatViewModel(app: Application) :
                         forceTool = if (picture) IMAGE_TOOL else null,
                     )
                     _state.update { it.copy(chat = made.chat, messages = listOfNotNull(made.message, made.reply), lastSent = made.message?.id) }
-                    made.reply?.let { follow(it.id) }
+                    made.reply?.let { follow(it.id, own = true) }
                 } else {
                     took(client.sendMessage(chat.id, text, files, forceTool = if (picture) IMAGE_TOOL else null))
                 }
@@ -613,14 +711,14 @@ class ChatViewModel(app: Application) :
     override fun regenerate(message: Message) = control { api, chat ->
         val turn = api.regenerate(chat.id, message.id)
         _state.update { s -> s.copy(messages = s.messages.map { if (it.id == message.id) turn.reply ?: it else it }) }
-        turn.reply?.let { follow(it.id) }
+        turn.reply?.let { follow(it.id, own = true) }
     }
 
     override fun edit(message: Message, text: String) = control { api, chat ->
         val turn = api.edit(chat.id, message.id, text)
         // Everything after the edited turn is gone on the server; read it back.
         refresh()
-        turn.reply?.let { follow(it.id) }
+        turn.reply?.let { follow(it.id, own = true) }
     }
 
     override fun continueChat() = control { api, chat -> took(api.continueChat(chat.id)) }
@@ -688,7 +786,7 @@ class ChatViewModel(app: Application) :
             }
         }
         try {
-            StreamClient(client).watch { client.activityEvents(chat.id) }.collect { frame ->
+            StreamClient(client).watch(turn = { gate.pass() }) { client.activityEvents(chat.id) }.collect { frame ->
                 if (frame.event != "activity") return@collect
                 val read = runCatching { LembasJson.decodeFromString(ActivityFrame.serializer(), frame.data) }.getOrNull() ?: return@collect
                 val changed = read.version != _state.value.activity?.version
@@ -712,12 +810,17 @@ class ChatViewModel(app: Application) :
      * there is no stream frame for a job. One that ends by itself wakes the chat with a reply this
      * app did not start: when a job says the chat was told, the transcript is read again and that
      * reply followed. Runs until cancelled (the screen left, or no longer in front). An instance
-     * without these routes has no jobs, and nothing is asked again.
+     * without these routes has no jobs, and nothing is asked again. Every request waits at the
+     * gate; how often a finished job was asked whether the chat was told is kept for as long as
+     * the chat is open ([toldWaits]), so a return to the screen does not start that count over.
      */
+    private val toldWaits = mutableMapOf<String, Int>()
+
     suspend fun watchMedia() {
         val chat = _state.value.chat ?: return
         val client = runCatching { api() }.getOrNull() ?: return
         try {
+            gate.pass()
             val jobs = client.mediaJobs(chat.id)
             val before = _state.value.mediaJobs
             _state.update { it.withJobs(jobs, SystemClock.elapsedRealtime()) }
@@ -728,14 +831,15 @@ class ChatViewModel(app: Application) :
         } catch (_: Exception) {
             // An older instance, or one out of reach: the cards say what the calls said.
         }
-        val waited = mutableMapOf<String, Int>()
         while (true) {
             delay(JOB_POLL_MS)
             val now = _state.value
-            val telling = now.mediaJobs.values.filter { awaitsTelling(it.job) && it.at > 0 && (waited[it.job.id] ?: 0) < TELL_ROUNDS }.map { it.job.id }
+            val telling = now.mediaJobs.values.filter { awaitsTelling(it.job) && it.at > 0 && (toldWaits[it.job.id] ?: 0) < TELL_ROUNDS }.map { it.job.id }
             var woken = false
             for (id in (now.jobsToRead() + telling).distinct()) {
                 val before = _state.value.mediaJobs[id]?.job
+                // Each a request of its own: none behind a lock, or with the app not in front.
+                gate.pass()
                 val read = try {
                     client.mediaJob(id)
                 } catch (e: CancellationException) {
@@ -748,7 +852,7 @@ class ChatViewModel(app: Application) :
                 } catch (_: Exception) {
                     continue
                 }
-                if (awaitsTelling(read)) waited[id] = (waited[id] ?: 0) + 1
+                if (awaitsTelling(read)) toldWaits[id] = (toldWaits[id] ?: 0) + 1
                 _state.update { it.withJobs(listOf(read), SystemClock.elapsedRealtime()) }
                 if (woke(before, read)) woken = true
             }
@@ -757,37 +861,47 @@ class ChatViewModel(app: Application) :
     }
 
     /**
-     * The chat was woken (a job ended): its transcript as the server has it now, and the reply
-     * being written there followed. The telling is written a moment before the reply exists, so
-     * where none is live yet the chat is read once more shortly after. While this screen follows
-     * a reply of its own nothing is touched: the wake waits in the queue, and the stream's `next`
-     * brings it.
+     * The chat has news (a job ended and told it, the events route said a reply, the app is back
+     * in front): its transcript as the server has it now, and the reply being written there
+     * followed. A job's telling is written a moment before the reply exists, so with two
+     * [rounds], where none is live yet, the chat is read once more shortly after. While this
+     * screen follows a reply nothing is touched: the news waits in the queue, and the stream's
+     * `next` brings it.
+     *
+     * Each read waits at the gate, and goes through [reads]: [mark] is the moment the news was
+     * learned, and a read that began after it has answered already is not made again -- a
+     * burst of frames, or a return that several watchers notice, is one read. [wanted] is asked
+     * once more when it is this one's turn.
      */
-    private suspend fun rereadAndFollow(rounds: Int = 2) {
+    private suspend fun rereadAndFollow(rounds: Int = 2, mark: Long = reads.mark(), wanted: () -> Boolean = { true }) {
         val chat = _state.value.chat ?: return
-        // One at a time: a job's telling and the events route may both say the same reply.
-        rereading.withLock {
-            repeat(rounds) { round ->
-                if (_state.value.live != null) return
+        var since = mark
+        for (round in 0 until rounds) {
+            if (round > 0) {
+                delay(WAKE_PAUSE_MS)
+                // The later round is there to read after the pause: only a read from now on stands for it.
+                since = reads.mark()
+            }
+            gate.passLater()
+            var failed = false
+            reads.since(since, wanted = { _state.value.live == null && wanted() }) {
                 val read = try {
                     api().chat(chat.id)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (_: Exception) {
-                    return
+                    failed = true
+                    return@since false
                 }
-                if (_state.value.live != null) return
-                _state.update { it.withNewest(read) }
-                read.live?.let {
-                    follow(it)
-                    return
+                if (_state.value.live == null) {
+                    _state.update { it.withNewest(read).capped(atEnd) }
+                    read.live?.let { follow(it, own = false) }
                 }
-                if (round < rounds - 1) delay(WAKE_PAUSE_MS)
+                true
             }
+            if (failed || _state.value.live != null) return
         }
     }
-
-    private val rereading = Mutex()
 
     // --- Replies this app did not start -------------------------------------------------------
 
@@ -804,31 +918,33 @@ class ChatViewModel(app: Application) :
      * (`reply`), and the one for this chat that is not followed already is read and followed as
      * any reply is. Runs until cancelled (the screen left, or no longer in front).
      *
-     * On a return to the front the chat is read once, before listening: a reply that started and
-     * ended meanwhile is said by nobody. Nothing is asked while the phone is locked or the app is
+     * On a return to the front the chat is read once: a reply that started and ended meanwhile
+     * is said by nobody. The route is listened to while that read is under way, so a reply that
+     * starts just then is not missed; what it says then is checked against what the read found
+     * before anything is read again. Nothing is asked while the phone is locked or the app is
      * not in front (`InstanceGate`); what was heard then is taken up on the return. An instance
      * that does not send the frame changes nothing here but that one read.
      */
     suspend fun watchReplies() {
         if (_state.value.chat == null) return
         val app = getApplication<Application>().lembas
-        if (watchedReplies) {
-            app.gate.pass()
-            rereadAndFollow(rounds = 1)
-        }
+        val back = watchedReplies
         watchedReplies = true
-        val frames = runCatching { app.eventFrames() }.getOrNull() ?: return
+        val returned = reads.mark()
+        val frames = runCatching { app.eventFrames() }.getOrNull()
         try {
             coroutineScope {
-                frames.collect { frame ->
+                if (back) launch { rereadAndFollow(rounds = 1, mark = returned) }
+                frames?.collect { frame ->
                     if (frame.event != "reply") return@collect
                     val said = runCatching { LembasJson.decodeFromString(ReplyFrame.serializer(), frame.data) }.getOrNull() ?: return@collect
                     if (!_state.value.asksFor(said) || !heard.add(said.messageId)) return@collect
+                    val learned = reads.mark()
                     // Not in the collector: the one connection is shared, and a watcher that
                     // waits holds the others' frames back.
                     launch {
                         try {
-                            takeUp(said)
+                            takeUp(said, learned)
                         } finally {
                             heard -= said.messageId
                         }
@@ -843,17 +959,19 @@ class ChatViewModel(app: Application) :
     }
 
     /**
-     * A reply the events route said, for this chat. While this screen follows a reply of its own
-     * nothing is touched -- what was said waits in the queue behind it, and that stream's `next`
-     * brings it; once nothing is being written here, and if it is still news, the transcript is
-     * read (it holds the turn the reply answers, which this screen has not seen either) and the
-     * reply being written followed.
+     * A reply the events route said, for this chat -- that it started, or (`live` false) that it
+     * ended. While this screen follows a reply of its own nothing is touched: what was said waits
+     * in the queue behind it, and that stream's `next` brings it; once nothing is being written
+     * here, and if it is still news, the transcript is read (it holds the turn the reply answers,
+     * which this screen has not seen either) and the reply being written followed. News that a
+     * read begun since [learned] has already brought costs nothing: the end of a reply this
+     * screen followed to its `done` is no news at all ([asksFor]).
      */
-    private suspend fun takeUp(said: ReplyFrame) {
-        getApplication<Application>().lembas.gate.pass()
+    private suspend fun takeUp(said: ReplyFrame, learned: Long) {
+        gate.pass()
         _state.first { !it.running }
         if (!_state.value.asksFor(said)) return
-        rereadAndFollow(rounds = 1)
+        rereadAndFollow(rounds = 1, mark = learned) { _state.value.asksFor(said) }
     }
 
     /**

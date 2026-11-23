@@ -29,11 +29,16 @@ class LembasApp : Application() {
     /** The one connection to the person's events route, shared by all that watch it. */
     val events = EventsHub(CoroutineScope(SupervisorJob() + Dispatchers.Default))
 
-    /** The events route of the instance in use, as its frames; null when not signed in. */
+    /**
+     * The events route of the instance in use, as its frames; null when not signed in. Whoever
+     * collects them does so only while its screen is in front (`repeatOnLifecycle`), never from
+     * a scope that outlives the screen: the connection is open for as long as anybody listens.
+     */
     suspend fun eventFrames(): Flow<Frame>? {
         val instance = instances.current() ?: return null
         val api = instances.clientFor(instance)
-        return events.frames(instance.id) { StreamClient(api).watch { api.events() } }
+        // Every opening of the route waits at the gate: it is not opened, or opened again, behind a lock.
+        return events.frames(instance.id) { StreamClient(api).watch(turn = { gate.pass() }) { api.events() } }
     }
 
     /** Whether a new request with the account's files may start: the app in front, the phone unlocked. */

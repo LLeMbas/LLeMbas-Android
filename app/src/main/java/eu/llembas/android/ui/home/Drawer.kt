@@ -79,6 +79,7 @@ import eu.llembas.android.api.ChatPage
 import eu.llembas.android.api.Doorstep
 import eu.llembas.android.api.Folder
 import eu.llembas.android.api.LembasJson
+import eu.llembas.android.api.ReplyFrame
 import eu.llembas.android.api.ReportsFrame
 import eu.llembas.android.api.SearchHit
 import eu.llembas.android.api.fit
@@ -91,12 +92,17 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import java.time.Instant
 import java.time.LocalDate
+import java.time.OffsetDateTime
 import java.time.ZoneId
 
 data class ChatsState(
@@ -126,17 +132,57 @@ fun ChatsState.reported(data: String): ChatsState {
 }
 
 /**
- * The list's newest page read again ([page]), put where it was: the chats as the server orders
- * and marks them now (the one a reply just started in first, running or unread). What a person
- * had loaded below the page stays below it -- the rows after the last one the page still names --
- * and no chat is listed twice.
+ * The list's newest page read again ([page]), merged by id: the page's chats first, as the server
+ * orders and marks them now (the one a reply just started in first, running or unread), then
+ * every chat this list held that the page does not name, in the order it had. A chat that came
+ * up from a later page a person had loaded is in the page, so it moves; the ones around its old
+ * place stay. No chat is listed twice.
+ *
+ * The list is ordered by when a chat last changed, so the page holds every chat that changed
+ * since its own last one did: a chat held here from after that moment which the page does not
+ * name is no longer in the list (deleted, archived or filed away elsewhere), and goes. A page
+ * with nothing after it is the whole list.
  */
 fun ChatsState.withNewest(page: ChatPage): ChatsState {
+    if (!page.more) return copy(chats = page.chats, more = false)
     val newest = page.chats.mapTo(HashSet()) { it.id }
-    val older = chats.drop(chats.indexOfLast { it.id in newest } + 1)
-    // Nothing shown joins the page: it is the whole list, as a first read is.
-    if (older.size == chats.size || older.isEmpty()) return copy(chats = page.chats, more = page.more)
-    return copy(chats = page.chats + older)
+    val floor = page.chats.lastOrNull()?.updatedAt?.let(::moment)
+    val older = chats.filter { it.id !in newest && !gone(it, floor) }
+    // Nothing below the page: whether there is more is the page's word.
+    return copy(chats = page.chats + older, more = if (older.isEmpty()) page.more else more)
+}
+
+/** Whether [chat], which the newest page does not name, changed after the page's last chat did ([floor]): it would be in the page were it still listed. */
+private fun gone(chat: Chat, floor: Instant?): Boolean {
+    val changed = chat.updatedAt?.let(::moment) ?: return false
+    return floor != null && changed.isAfter(floor)
+}
+
+/** A time as the server writes it (ISO 8601 with an offset); null for anything else. */
+private fun moment(stamp: String): Instant? = runCatching { OffsetDateTime.parse(stamp).toInstant() }.getOrNull()
+
+/**
+ * Whether the events route's `reply` frame [said] asks for the list to be read again. Only
+ * while something shows the list ([shown]; the drawer reads it whenever it opens), and only for
+ * what the list does not show already: a reply that started in a chat whose row says it is
+ * running is no news (every reconnection of the route says all of those again), and the end
+ * of a reply in a chat that is listed is marked on its row without a read ([ended]). A list
+ * not read yet is left to its first read.
+ */
+fun ChatsState.readsFor(said: ReplyFrame, shown: Boolean): Boolean {
+    if (!shown || chats.isEmpty() || said.chatId.isBlank()) return false
+    val row = chats.firstOrNull { it.id == said.chatId }
+    return if (said.live) row?.running != true else row == null
+}
+
+/**
+ * A reply ended in the chat [said] names (`live` false): its row is no longer running, and shows
+ * that it has something new -- unless it is the chat [open] on screen, where the person watched
+ * it end. Nothing is read for it.
+ */
+fun ChatsState.ended(said: ReplyFrame, open: String?): ChatsState {
+    if (said.live || chats.none { it.id == said.chatId }) return this
+    return copy(chats = chats.map { if (it.id == said.chatId) it.copy(running = false, unread = it.unread || it.id != open) else it })
 }
 
 /** The drawer's list: every chat of the instance in use, both kinds, newest first. */
@@ -212,10 +258,7 @@ class ChatsViewModel(app: Application) : AndroidViewModel(app) {
                     reportsTold++
                     _state.update { it.reported(frame.data) }
                 }
-                // A reply started in one of the person's chats (an instance that says so): the list
-                // is read again shortly, so that chat moves up and shows its dot as it would
-                // have at the drawer's next opening.
-                if (frame.event == "reply" && refused == null) listSoon()
+                if (frame.event == "reply" && refused == null) replySaid(frame.data)
             }
         } catch (e: CancellationException) {
             throw e
@@ -224,23 +267,83 @@ class ChatsViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    private var listing: Job? = null
+    /** Whether the list is on screen (the drawer is open): only then is it read again by itself. */
+    private var shown = false
+
+    /** The chat open on screen, by its id: the end of its reply is not something new. */
+    var open: String? = null
+
+    /** Whether this instance says when replies end; until it has, a running row is read again now and then. */
+    private val ends = ReplyEnds()
+
+    fun shown(now: Boolean) {
+        shown = now
+        // What was asked for while it was open is the next opening's read.
+        if (!now) soon.forget()
+    }
+
+    /**
+     * The events route said a reply started or ended in one of the person's chats. An end is
+     * marked on the chat's row at once, with no read; a start in a chat the list does not show
+     * as running moves that chat up and gives it its dot at the list's next read, shortly --
+     * while the drawer is open. Closed, nothing is read: it reads the list when it opens.
+     */
+    private fun replySaid(data: String) {
+        val said = runCatching { LembasJson.decodeFromString(ReplyFrame.serializer(), data) }.getOrNull() ?: return
+        ends.hear(said)
+        val reads = _state.value.readsFor(said, shown)
+        if (!said.live) _state.update { it.ended(said, open) }
+        if (reads) soon.ask()
+    }
 
     /**
      * The newest page of the list, read once things have been quiet for a moment: several
-     * replies starting together (a queue, a team) are one read. It waits at the gate, so a
-     * frame heard just before the phone locked or the app left the front is one read on the
-     * return, not a request behind the lock. A list not read yet is left to its first read.
+     * replies starting together (a queue, a team) are one read, and a run of them that never
+     * falls quiet still gets one every few seconds. It waits at the gate, so a frame heard just
+     * before the phone locked or the app left the front is one read on the return, not a
+     * request behind the lock. A read under way is never cut short by the next frame.
      */
-    private fun listSoon() {
-        listing?.cancel()
-        listing = viewModelScope.launch {
-            delay(LIST_PAUSE_MS)
-            val app = getApplication<Application>().lembas
-            app.gate.pass()
-            if (refused != null || _state.value.chats.isEmpty()) return@launch
-            val page = runCatching { app.instances.client()?.chats() }.getOrNull() ?: return@launch
-            _state.update { it.withNewest(page) }
+    private val soon by lazy {
+        Soon(viewModelScope, LIST_PAUSE_MS, LIST_MOST_MS, before = { getApplication<Application>().lembas.gate.pass() }) { readNewest() }
+    }
+
+    private val reading = Mutex()
+
+    /** The list's newest page, merged into what is shown. A list not read yet is left to its first read. */
+    private suspend fun readNewest() = reading.withLock {
+        if (refused != null || _state.value.chats.isEmpty()) return@withLock
+        val page = try {
+            getApplication<Application>().lembas.instances.client()?.chats()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            null
+        } ?: return@withLock
+        _state.update { it.withNewest(page) }
+    }
+
+    /**
+     * While the list is on screen and the app in front: an instance that does not say when a
+     * reply ends leaves a row's running mark as old as the list's last read, so while any row
+     * shows one the list is read again at a bounded rate ([runningPause]), at the gate, and no
+     * more once none does. An instance that says the ends ([ReplyEnds]) is never asked: its
+     * frames clear the marks. Runs until cancelled (the drawer closed, the app left the front).
+     */
+    suspend fun watchRunning() {
+        val gate = getApplication<Application>().lembas.gate
+        var round = 0
+        while (true) {
+            _state.first { state -> state.chats.any { it.running } }
+            if (ends.said) return
+            delay(runningPause(round))
+            gate.pass()
+            if (ends.said) return
+            if (_state.value.chats.none { it.running }) {
+                round = 0
+                continue
+            }
+            round++
+            readNewest()
         }
     }
 
@@ -355,6 +458,9 @@ private const val SEARCH_PAUSE_MS = 400L
 
 /** Between a `reply` frame and the list's read: a reply is said about a quarter of a second after it starts. */
 private const val LIST_PAUSE_MS = 1500L
+
+/** The longest a read of the list waits for the replies' frames to fall quiet. */
+private const val LIST_MOST_MS = 6000L
 
 /** Where the drawer can go, besides a chat. */
 interface DrawerActions {
