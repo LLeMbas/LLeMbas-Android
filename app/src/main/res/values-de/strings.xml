@@ -51,6 +51,7 @@
     <string name="continue_reply">Fortsetzen</string>
     <string name="older">Frühere Nachrichten</string>
     <string name="queued">Wartet auf das Senden</string>
+    <string name="reply_unrecorded">Die Antwort darauf wurde nicht aufgezeichnet.</string>
     <string name="thinking">Denkt nach</string>
     <string name="thought">Nachgedacht</string>
     <string name="output_cut">Die Ausgabe ist hier verkürzt. Vollständig finden Sie sie auf der Webseite.</string>

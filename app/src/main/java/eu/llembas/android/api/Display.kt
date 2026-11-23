@@ -136,11 +136,44 @@ enum class Drawn {
  * instruction, the line that opens a report's conversation) is not something the person said,
  * so it is never their bubble: a quiet note -- and in a report's conversation ([reportChat]) the
  * [first] such line, which only tells the model what the conversation continues, is left out,
- * since the report itself is one tap back.
+ * since the report itself is one tap back. A turn the linked computer's harness started
+ * (`origin` `harness`: a job's end, a team member's report) is such a line whatever else the
+ * row says: nobody typed it, here or in a terminal.
  */
 fun drawn(message: Message, first: Boolean, reportChat: Boolean): Drawn = when {
     !message.isUser -> Drawn.Reply
-    !message.machine -> Drawn.Person
+    !message.byMachine -> Drawn.Person
     reportChat && first -> Drawn.Hidden
     else -> Drawn.Note
 }
+
+/** The `origin` of a turn the linked computer's harness started by itself. */
+const val ORIGIN_HARNESS = "harness"
+
+/** Whether nobody typed this row: the server wrote it (`machine`), or a device's harness did. */
+val Message.byMachine: Boolean get() = machine || origin == ORIGIN_HARNESS
+
+/**
+ * Whether [reply] is a finished reply that holds nothing at all and answers a turn nobody typed
+ * ([asked], the row before it): what was said to that turn was never written into the chat
+ * (instances from before the reply to a harness turn followed the device hold a few). One quiet
+ * line says so in its place -- the server's rule for its own page, never a blank row with
+ * buttons. A reply still being written, one that was stopped or failed, and an empty reply to
+ * something a person asked are not this.
+ */
+fun replyUnrecorded(reply: Message, asked: Message?): Boolean = !reply.isUser &&
+    reply.complete &&
+    !reply.stopped &&
+    reply.error.isNullOrBlank() &&
+    reply.end == null &&
+    reply.text.isNullOrBlank() &&
+    reply.steps.isEmpty() &&
+    reply.attachments.isEmpty() &&
+    asked != null &&
+    asked.isUser &&
+    asked.byMachine
+
+/** The replies of [messages] that are [replyUnrecorded], by id. */
+fun unrecordedReplies(messages: List<Message>): Set<String> = messages.indices
+    .filter { replyUnrecorded(messages[it], messages.getOrNull(it - 1)) }
+    .mapTo(HashSet()) { messages[it].id }

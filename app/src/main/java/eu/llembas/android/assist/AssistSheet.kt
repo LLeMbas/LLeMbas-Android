@@ -97,7 +97,7 @@ import eu.llembas.android.ui.ModelAvatar
 import eu.llembas.android.ui.ProgressStatus
 import eu.llembas.android.ui.chat.PhoneCard
 import eu.llembas.android.ui.chat.Steps
-import eu.llembas.android.ui.chat.followsAt
+import eu.llembas.android.ui.chat.restFollows
 import eu.llembas.android.ui.chat.yielding
 import eu.llembas.android.ui.progressLineOf
 import eu.llembas.android.ui.theme.LocalPalette
@@ -227,13 +227,26 @@ fun ColumnScope.AssistSheetContent(
     // come to rest says whether it is taken up again, and a question asked always shows.
     var following by remember { mutableStateOf(true) }
     val slack = with(LocalDensity.current) { 48.dp.roundToPx() }
+    val touched = remember { booleanArrayOf(false) }
     LaunchedEffect(scroll) {
-        scroll.interactionSource.interactions.collect { if (it is DragInteraction.Start) following = false }
+        scroll.interactionSource.interactions.collect {
+            if (it is DragInteraction.Start) {
+                touched[0] = true
+                following = false
+            }
+        }
     }
     LaunchedEffect(scroll) {
         var moving = false
+        var from = scroll.value
         snapshotFlow { scroll.isScrollInProgress }.collect { now ->
-            if (moving && !now) following = followsAt(scroll.maxValue - scroll.value, slack)
+            if (now && !moving) from = scroll.value
+            if (moving && !now) {
+                // Only the person's own scroll ends the following (`restFollows`), not one of ours
+                // that an arriving line left short of the end.
+                following = restFollows(following, touched[0] || scroll.value < from, scroll.maxValue - scroll.value, slack)
+                touched[0] = false
+            }
             moving = now
         }
     }

@@ -51,6 +51,7 @@
     <string name="continue_reply">Folytatás</string>
     <string name="older">Korábbi üzenetek</string>
     <string name="queued">Küldésre vár</string>
+    <string name="reply_unrecorded">Az erre adott válasz nem lett rögzítve.</string>
     <string name="thinking">Gondolkodás</string>
     <string name="thought">Gondolkodott</string>
     <string name="output_cut">A kimenet itt lerövidítve jelenik meg. A teljes szöveg a weblapon található.</string>

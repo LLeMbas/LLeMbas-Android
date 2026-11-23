@@ -51,6 +51,7 @@
     <string name="continue_reply">Kontynuuj</string>
     <string name="older">Wcześniejsze wiadomości</string>
     <string name="queued">Czeka na wysłanie</string>
+    <string name="reply_unrecorded">Odpowiedź na to nie została zapisana.</string>
     <string name="thinking">Rozumowanie</string>
     <string name="thought">Rozumowanie</string>
     <string name="output_cut">Wynik jest tu skrócony. Cały znajduje się na stronie internetowej.</string>

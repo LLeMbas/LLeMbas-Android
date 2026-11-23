@@ -103,6 +103,7 @@ import eu.llembas.android.api.Message
 import eu.llembas.android.api.Raw
 import eu.llembas.android.api.ShowCard
 import eu.llembas.android.api.drawn
+import eu.llembas.android.api.unrecordedReplies
 import eu.llembas.android.ui.ModelAvatar
 import eu.llembas.android.ui.ProgressStatus
 import eu.llembas.android.ui.files.TransferHost
@@ -154,6 +155,12 @@ fun ChatScreen(
     // screen is in front and not otherwise. An agent chat runs on a computer and makes none.
     LaunchedEffect(state.chat?.id) {
         if (state.chat?.id != null && !isAgent) lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) { model.watchMedia() }
+    }
+    // Replies nobody asked for from this screen (a subagent that woke the main agent, a schedule,
+    // a turn the linked computer started): heard on the person's events route while the screen is
+    // in front, and caught up with once on every return to it.
+    LaunchedEffect(state.chat?.id) {
+        if (state.chat?.id != null) lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) { model.watchReplies() }
     }
     LaunchedEffect(state.error, state.notice) {
         (state.error ?: state.notice)?.let {
@@ -279,6 +286,8 @@ fun ChatContent(
     val live = state.live
     val rows = state.messages
     val info = state.modelInfo
+    // Only in an agent chat: there a turn's reply is the linked computer's, and may never have been written here.
+    val unrecorded = remember(rows, chat?.isAgent) { if (chat?.isAgent == true) unrecordedReplies(rows) else emptySet() }
 
     // The view keeps to the end while a reply is written only for a person who is there
     // (`Follow.kt` has the rule): a finger on the list ends the following at once, and where the
@@ -286,13 +295,32 @@ fun ChatContent(
     var following by rememberSaveable { mutableStateOf(true) }
     var drawnBefore by rememberSaveable { mutableStateOf(false) }
     val slack = with(LocalDensity.current) { 48.dp.roundToPx() }
+    // Whether a finger has been on the list since it last came to rest.
+    val touched = remember { booleanArrayOf(false) }
     LaunchedEffect(list) {
-        list.interactionSource.interactions.collect { if (it is DragInteraction.Start) following = false }
+        list.interactionSource.interactions.collect {
+            if (it is DragInteraction.Start) {
+                touched[0] = true
+                following = false
+            }
+        }
     }
     LaunchedEffect(list) {
         var moving = false
+        var fromIndex = list.firstVisibleItemIndex
+        var fromOffset = list.firstVisibleItemScrollOffset
         snapshotFlow { list.isScrollInProgress }.collect { now ->
-            if (moving && !now) following = followsAt(list.distanceToEnd(), slack)
+            if (now && !moving) {
+                fromIndex = list.firstVisibleItemIndex
+                fromOffset = list.firstVisibleItemScrollOffset
+            }
+            if (moving && !now) {
+                // Only the person's own scroll ends the following (`restFollows`): this app's
+                // scroll to the end, overtaken by a line that arrived meanwhile, does not.
+                val byPerson = touched[0] || wentBack(fromIndex, fromOffset, list.firstVisibleItemIndex, list.firstVisibleItemScrollOffset)
+                following = restFollows(following, byPerson, list.distanceToEnd(), slack)
+                touched[0] = false
+            }
             moving = now
         }
     }
@@ -453,6 +481,8 @@ fun ChatContent(
                         item { TextButton(onClick = actions::older) { Text(stringResource(R.string.older)) } }
                     }
                     items(rows, key = { it.id }) { message ->
+                        // One key for a reply while it is written and once it is stored: the row
+                        // is the same row at `done`, so the list has nothing to put elsewhere.
                         // The first row is the chat's first message only once nothing older is left to load.
                         val first = !state.more && message.id == rows.firstOrNull()?.id
                         when (drawn(message, first, reportChat = report != null || chat?.report != null)) {
@@ -465,7 +495,11 @@ fun ChatContent(
 
                             // One call for a reply being written and the same reply finished:
                             // what the person opened in it (a thinking chip) stays open at `done`.
-                            Drawn.Reply -> {
+                            // A finished reply with nothing in it, after a turn nobody typed: one
+                            // quiet line in its place, not a blank row with buttons.
+                            Drawn.Reply -> if (message.id in unrecorded) {
+                                MachineNote(stringResource(R.string.reply_unrecorded))
+                            } else {
                                 val writing = live?.takeIf { it.messageId == message.id && it.finished == null }
                                 AssistantMessage(
                                     message,

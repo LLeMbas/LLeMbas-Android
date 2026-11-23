@@ -64,6 +64,8 @@ STRINGS: dict[str, str] = {
     "continue_reply": "Continue",
     "older": "Earlier messages",
     "queued": "Waiting to be sent",
+    # In place of a finished reply that holds nothing, after a turn nobody typed (the server's sentence).
+    "reply_unrecorded": "The reply to this was not recorded.",
     "thinking": "Thinking",
     "thought": "Thought",
     "output_cut": "Output shortened here. The whole of it is on the web page.",

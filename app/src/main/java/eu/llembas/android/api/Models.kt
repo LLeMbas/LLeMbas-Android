@@ -453,6 +453,15 @@ data class ChatPage(val chats: List<Chat> = emptyList(), val more: Boolean = fal
 @Serializable
 data class ChatDetail(val chat: Chat, val messages: List<Message> = emptyList(), val more: Boolean = false, val live: String? = null)
 
+/**
+ * `GET /events`, frame `reply`: a reply started in the chat [chatId] -- whoever started it, this
+ * app's own too. [messageId] is the reply's row; [live] false says it had already ended when the
+ * frame was sent. An event, not a state: it is said once (and, on a connection just opened, for
+ * every reply being written then).
+ */
+@Serializable
+data class ReplyFrame(@SerialName("chat_id") val chatId: String = "", @SerialName("message_id") val messageId: String = "", val live: Boolean = false)
+
 @Serializable
 data class MessagePage(val messages: List<Message> = emptyList(), val more: Boolean = false)
 

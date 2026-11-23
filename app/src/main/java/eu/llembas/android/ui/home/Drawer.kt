@@ -75,6 +75,7 @@ import androidx.lifecycle.viewModelScope
 import eu.llembas.android.R
 import eu.llembas.android.api.ApiException
 import eu.llembas.android.api.Chat
+import eu.llembas.android.api.ChatPage
 import eu.llembas.android.api.Doorstep
 import eu.llembas.android.api.Folder
 import eu.llembas.android.api.LembasJson
@@ -122,6 +123,20 @@ data class ChatsState(
 fun ChatsState.reported(data: String): ChatsState {
     val frame = runCatching { LembasJson.decodeFromString(ReportsFrame.serializer(), data) }.getOrNull() ?: return this
     return copy(unreadReports = frame.unread.coerceAtLeast(0), reports = true)
+}
+
+/**
+ * The list's newest page read again ([page]), put where it was: the chats as the server orders
+ * and marks them now (the one a reply just started in first, running or unread). What a person
+ * had loaded below the page stays below it -- the rows after the last one the page still names --
+ * and no chat is listed twice.
+ */
+fun ChatsState.withNewest(page: ChatPage): ChatsState {
+    val newest = page.chats.mapTo(HashSet()) { it.id }
+    val older = chats.drop(chats.indexOfLast { it.id in newest } + 1)
+    // Nothing shown joins the page: it is the whole list, as a first read is.
+    if (older.size == chats.size || older.isEmpty()) return copy(chats = page.chats, more = page.more)
+    return copy(chats = page.chats + older)
 }
 
 /** The drawer's list: every chat of the instance in use, both kinds, newest first. */
@@ -197,11 +212,35 @@ class ChatsViewModel(app: Application) : AndroidViewModel(app) {
                     reportsTold++
                     _state.update { it.reported(frame.data) }
                 }
+                // A reply started in one of the person's chats (an instance that says so): the list
+                // is read again shortly, so that chat moves up and shows its dot as it would
+                // have at the drawer's next opening.
+                if (frame.event == "reply" && refused == null) listSoon()
             }
         } catch (e: CancellationException) {
             throw e
         } catch (_: Exception) {
             // Nothing to say: the count is read when the drawer opens, as before.
+        }
+    }
+
+    private var listing: Job? = null
+
+    /**
+     * The newest page of the list, read once things have been quiet for a moment: several
+     * replies starting together (a queue, a team) are one read. It waits at the gate, so a
+     * frame heard just before the phone locked or the app left the front is one read on the
+     * return, not a request behind the lock. A list not read yet is left to its first read.
+     */
+    private fun listSoon() {
+        listing?.cancel()
+        listing = viewModelScope.launch {
+            delay(LIST_PAUSE_MS)
+            val app = getApplication<Application>().lembas
+            app.gate.pass()
+            if (refused != null || _state.value.chats.isEmpty()) return@launch
+            val page = runCatching { app.instances.client()?.chats() }.getOrNull() ?: return@launch
+            _state.update { it.withNewest(page) }
         }
     }
 
@@ -313,6 +352,9 @@ class ChatsViewModel(app: Application) : AndroidViewModel(app) {
 }
 
 private const val SEARCH_PAUSE_MS = 400L
+
+/** Between a `reply` frame and the list's read: a reply is said about a quarter of a second after it starts. */
+private const val LIST_PAUSE_MS = 1500L
 
 /** Where the drawer can go, besides a chat. */
 interface DrawerActions {

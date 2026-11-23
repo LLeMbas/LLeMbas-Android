@@ -112,6 +112,10 @@ private val Bubble = RoundedCornerShape(topStart = 20.dp, topEnd = 6.dp, bottomS
 private val Block = RoundedCornerShape(12.dp)
 private val Pill = RoundedCornerShape(50)
 
+/** A reply's foot: the gap above it, and the height of its row of buttons (an icon button's 48 dp). */
+private val FootTop = 2.dp
+private val FootHeight = 48.dp
+
 /**
  * The person's turn: their words in a bubble on the right (never markdown), what they attached
  * above it as thumbnails. A long press offers Copy and, where the turn can still change, Edit.
@@ -253,7 +257,10 @@ fun AssistantMessage(
             }
         }
         if (writing) {
-            Writing(Modifier.padding(top = if (steps.isEmpty()) 0.dp else 8.dp), withLine = steps.isEmpty())
+            // Once there is something written, the pulse stands in the finished reply's foot --
+            // the same top and the same height as its row of buttons -- so the reply ending
+            // does not change the row's height under a person at the end of it.
+            if (steps.isEmpty()) Writing(withLine = true) else Writing(Modifier.padding(top = FootTop), minHeight = FootHeight)
         } else {
             // How a reply that did not finish ended (display.md §4): the progress text alone --
             // "Stopped: by you", "Failed: …" -- staying at the end of the reply; an error in
@@ -267,7 +274,7 @@ fun AssistantMessage(
                 )
             }
             // The actions and the foot share one row: the icons keep their 48 dp, the foot gives.
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 2.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = FootTop)) {
                 if (words.isNotBlank()) {
                     IconButton(onClick = { copy(words) }) {
                         Icon(
@@ -354,13 +361,13 @@ internal fun footLine(message: Message, models: List<ModelInfo> = emptyList()): 
 
 /** Three dots that breathe, and (before the first word) the loading line beside them. */
 @Composable
-fun Writing(modifier: Modifier = Modifier, withLine: Boolean = false) {
+fun Writing(modifier: Modifier = Modifier, withLine: Boolean = false, minHeight: Dp = 32.dp) {
     val palette = LocalPalette.current
     // Still in a preview or a screenshot, where an animation that never ends never lets the
     // picture be taken.
     val still = LocalInspectionMode.current
     val pulse = rememberInfiniteTransition(label = "writing")
-    Row(modifier.heightIn(min = 32.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(modifier.heightIn(min = minHeight), verticalAlignment = Alignment.CenterVertically) {
         repeat(3) { i ->
             val alpha = if (still) {
                 listOf(1f, 0.6f, 0.3f)[i]

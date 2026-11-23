@@ -33,6 +33,7 @@ import eu.llembas.android.api.Mention
 import eu.llembas.android.api.Message
 import eu.llembas.android.api.MessagePage
 import eu.llembas.android.api.ModelInfo
+import eu.llembas.android.api.ReplyFrame
 import eu.llembas.android.api.StartModel
 import eu.llembas.android.api.StreamClient
 import eu.llembas.android.api.SubagentTree
@@ -47,11 +48,15 @@ import eu.llembas.android.ui.files.noSuchRoute
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -234,6 +239,34 @@ fun ChatState.withOlder(before: String, page: MessagePage): ChatState {
 }
 
 /**
+ * The transcript read again ([read]: the chat and its newest page), put where the newest page
+ * was. The older pages a person loaded stay above it -- taking them away would take the row
+ * they are reading from under them -- as long as the page still joins them: its first row is
+ * one this screen holds, and the server says there is more above it. A page that joins nothing
+ * here (the chat was rewound past it, or compacted) is the whole transcript, as before. No row
+ * is there twice: the list's rows are keyed by id.
+ */
+fun ChatState.withNewest(read: ChatDetail): ChatState {
+    val first = read.messages.firstOrNull()?.id
+    val at = if (first == null) -1 else messages.indexOfFirst { it.id == first }
+    if (at <= 0 || !read.more) return copy(chat = read.chat, messages = read.messages, more = read.more)
+    val newest = read.messages.mapTo(HashSet()) { it.id }
+    return copy(chat = read.chat, messages = messages.subList(0, at).filterNot { it.id in newest } + read.messages)
+}
+
+/**
+ * Whether the events route's `reply` frame [said] is news to this screen: a reply in the chat
+ * that is open here, which is neither the one being followed nor a row already drawn as
+ * finished. The server says every reply that starts, this app's own too, so most frames for an
+ * open chat are not news.
+ */
+fun ChatState.asksFor(said: ReplyFrame): Boolean {
+    if (chat == null || chat.id != said.chatId || said.messageId.isBlank()) return false
+    if (live?.messageId == said.messageId) return false
+    return messages.none { it.id == said.messageId && !it.isUser && it.complete }
+}
+
+/**
  * The stream of the reply [messageId] closed without a `done`. What was written stays in view:
  * the transcript as the server has it now ([reread]), or -- where that could not be read -- the
  * row with the steps the stream had shown, closed, and how it ended where the stream said so.
@@ -242,7 +275,7 @@ fun ChatState.withOlder(before: String, page: MessagePage): ChatState {
 fun ChatState.closedUnfinished(messageId: String, reread: ChatDetail?): ChatState {
     val was = live?.takeIf { it.messageId == messageId }
     if (live != null && was == null) return this
-    if (reread != null) return copy(chat = reread.chat, messages = reread.messages, more = reread.more, live = null)
+    if (reread != null) return withNewest(reread).copy(live = null)
     if (was == null || was.shown.isEmpty()) return copy(live = null)
     val kept = was.shown.map { it.copy(open = false) }
     return copy(
@@ -424,6 +457,9 @@ class ChatViewModel(app: Application) :
     /** Follow a reply to its end, then whatever the queue started after it. */
     private fun follow(messageId: String) {
         val chat = _state.value.chat ?: return
+        // Already followed, and still being written: the events route says this app's own replies
+        // too, and a second stream for one reply would start its drawing over.
+        if (following?.isActive == true && _state.value.live?.let { it.messageId == messageId && it.finished == null } == true) return
         following?.cancel()
         following = viewModelScope.launch {
             _state.update { it.copy(live = LiveReply(messageId)) }
@@ -493,10 +529,15 @@ class ChatViewModel(app: Application) :
         }
     }
 
-    private suspend fun refresh() {
+    /**
+     * The transcript as the server has it now. The older pages the person loaded stay
+     * ([withNewest]); [whole] is for a change that rewrote the transcript itself (a compaction),
+     * after which only what was read is true.
+     */
+    private suspend fun refresh(whole: Boolean = false) {
         val chat = _state.value.chat ?: return
         runCatching { api().chat(chat.id) }.onSuccess { d ->
-            _state.update { it.copy(chat = d.chat, messages = d.messages, more = d.more) }
+            _state.update { if (whole) it.copy(chat = d.chat, messages = d.messages, more = d.more) else it.withNewest(d) }
         }
     }
 
@@ -722,25 +763,97 @@ class ChatViewModel(app: Application) :
      * a reply of its own nothing is touched: the wake waits in the queue, and the stream's `next`
      * brings it.
      */
-    private suspend fun rereadAndFollow() {
+    private suspend fun rereadAndFollow(rounds: Int = 2) {
         val chat = _state.value.chat ?: return
-        repeat(2) { round ->
-            if (_state.value.live != null) return
-            val read = try {
-                api().chat(chat.id)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (_: Exception) {
-                return
+        // One at a time: a job's telling and the events route may both say the same reply.
+        rereading.withLock {
+            repeat(rounds) { round ->
+                if (_state.value.live != null) return
+                val read = try {
+                    api().chat(chat.id)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (_: Exception) {
+                    return
+                }
+                if (_state.value.live != null) return
+                _state.update { it.withNewest(read) }
+                read.live?.let {
+                    follow(it)
+                    return
+                }
+                if (round < rounds - 1) delay(WAKE_PAUSE_MS)
             }
-            if (_state.value.live != null) return
-            _state.update { it.copy(chat = read.chat, messages = read.messages, more = read.more) }
-            read.live?.let {
-                follow(it)
-                return
-            }
-            if (round == 0) delay(WAKE_PAUSE_MS)
         }
+    }
+
+    private val rereading = Mutex()
+
+    // --- Replies this app did not start -------------------------------------------------------
+
+    /** Whether this chat's screen has been in front before: the next time is a return. */
+    private var watchedReplies = false
+
+    /** The replies the events route said and that are waiting their turn, so each is taken up once. */
+    private val heard = mutableSetOf<String>()
+
+    /**
+     * Learn of replies nobody asked for from this screen -- a subagent that finished and woke the
+     * main agent, a schedule's result, a helper's wake, a turn the linked computer started --
+     * while the chat is in front: the person's events route says each reply as it starts
+     * (`reply`), and the one for this chat that is not followed already is read and followed as
+     * any reply is. Runs until cancelled (the screen left, or no longer in front).
+     *
+     * On a return to the front the chat is read once, before listening: a reply that started and
+     * ended meanwhile is said by nobody. Nothing is asked while the phone is locked or the app is
+     * not in front (`InstanceGate`); what was heard then is taken up on the return. An instance
+     * that does not send the frame changes nothing here but that one read.
+     */
+    suspend fun watchReplies() {
+        if (_state.value.chat == null) return
+        val app = getApplication<Application>().lembas
+        if (watchedReplies) {
+            app.gate.pass()
+            rereadAndFollow(rounds = 1)
+        }
+        watchedReplies = true
+        val frames = runCatching { app.eventFrames() }.getOrNull() ?: return
+        try {
+            coroutineScope {
+                frames.collect { frame ->
+                    if (frame.event != "reply") return@collect
+                    val said = runCatching { LembasJson.decodeFromString(ReplyFrame.serializer(), frame.data) }.getOrNull() ?: return@collect
+                    if (!_state.value.asksFor(said) || !heard.add(said.messageId)) return@collect
+                    // Not in the collector: the one connection is shared, and a watcher that
+                    // waits holds the others' frames back.
+                    launch {
+                        try {
+                            takeUp(said)
+                        } finally {
+                            heard -= said.messageId
+                        }
+                    }
+                }
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            // An older instance, or the route refused: the chat is read when it is opened, as before.
+        }
+    }
+
+    /**
+     * A reply the events route said, for this chat. While this screen follows a reply of its own
+     * nothing is touched -- what was said waits in the queue behind it, and that stream's `next`
+     * brings it; once nothing is being written here, and if it is still news, the transcript is
+     * read (it holds the turn the reply answers, which this screen has not seen either) and the
+     * reply being written followed.
+     */
+    private suspend fun takeUp(said: ReplyFrame) {
+        getApplication<Application>().lembas.gate.pass()
+        _state.first { !it.running }
+        if (!_state.value.asksFor(said)) return
+        rereadAndFollow(rounds = 1)
     }
 
     /**
@@ -825,7 +938,7 @@ class ChatViewModel(app: Application) :
             _state.update { it.copy(compacting = true) }
             try {
                 api().compact(chat.id)
-                refresh()
+                refresh(whole = true)
                 loadActivity()
             } catch (e: Exception) {
                 fail(e)

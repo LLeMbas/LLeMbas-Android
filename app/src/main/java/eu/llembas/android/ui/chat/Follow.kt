@@ -76,6 +76,25 @@ fun movesToEnd(change: TranscriptChange, following: Boolean): Boolean = when (ch
 fun followsAt(distance: Int, slack: Int): Boolean = distance <= slack
 
 /**
+ * Whether the view follows once a scroll has come to rest. Only a scroll the person made
+ * ([byPerson]: a finger on the list, or the list gone back towards its start, which this
+ * app's own scroll to the end never does) can end the following, by where it rests. Any other scroll is this
+ * app's own keeping to the end; a line, a card or a picture that arrived before it settled
+ * leaves it short of the end without anybody having left, and reading that as "scrolled away"
+ * is what switches the following off under a person who never moved. Such a scroll can only
+ * take the following up (it rested at the end), never end it.
+ */
+fun restFollows(following: Boolean, byPerson: Boolean, distance: Int, slack: Int): Boolean = if (byPerson) {
+    followsAt(distance, slack)
+} else {
+    following ||
+        followsAt(distance, slack)
+}
+
+/** Whether a list that stood at row [fromIndex], [fromOffset] pixels into it, has gone back towards its start. */
+fun wentBack(fromIndex: Int, fromOffset: Int, toIndex: Int, toOffset: Int): Boolean = toIndex < fromIndex || (toIndex == fromIndex && toOffset < fromOffset)
+
+/**
  * The row that keeps its place when an older page arrives while the list stands at its very
  * top: the first row there was before, by its place in [after]. Null when it is gone.
  */

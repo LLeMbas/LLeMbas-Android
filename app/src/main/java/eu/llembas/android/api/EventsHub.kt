@@ -16,9 +16,13 @@ import java.util.concurrent.ConcurrentHashMap
  * the drawer's Reports badge, the Scheduled list -- instead of one each. It is open while
  * somebody watches and closed when nobody does.
  *
- * Every frame of the route is a whole state (`schedules`, `reports`), which the server sends at
+ * A frame of the route is a whole state (`schedules`, `reports`), which the server sends at
  * once to a new connection. A watcher that joins a connection already open missed that, so it
- * is first told the last frame of each kind this connection carried.
+ * is first told the last frame of each such kind this connection carried.
+ *
+ * `reply` is the exception ([MOMENTS]): something that happened, not how things are. It is
+ * passed on to whoever is watching and never said again -- a watcher that joins later would
+ * take a reply long finished for one that has just started.
  *
  * A route that refuses (an older server) ends quietly: its watchers hear nothing, as they did
  * when each asked for itself.
@@ -36,11 +40,16 @@ class EventsHub(private val scope: CoroutineScope) {
             val shared = open()
                 // A connection opened anew is told everything again: what the last one said is stale.
                 .onStart { latest.clear() }
-                .onEach { latest[it.event] = it }
+                .onEach { if (it.event !in MOMENTS) latest[it.event] = it }
                 .catch { }
                 .shareIn(scope, SharingStarted.WhileSubscribed(), replay = 0)
             Line(key, shared, latest).also { line = it }
         }
         return now.frames.onSubscription { now.latest.values.toList().forEach { emit(it) } }
+    }
+
+    companion object {
+        /** The frames that say something happened, rather than how things are: never told again to a late watcher. */
+        val MOMENTS = setOf("reply")
     }
 }

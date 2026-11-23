@@ -51,6 +51,7 @@
     <string name="continue_reply">Continuer</string>
     <string name="older">Messages précédents</string>
     <string name="queued">En attente d\'envoi</string>
+    <string name="reply_unrecorded">La réponse à ceci n’a pas été enregistrée.</string>
     <string name="thinking">Réflexion</string>
     <string name="thought">Réflexion</string>
     <string name="output_cut">La sortie est raccourcie ici. Vous la trouverez en entier sur la page web.</string>

@@ -51,6 +51,7 @@
     <string name="continue_reply">Pokračovat</string>
     <string name="older">Starší zprávy</string>
     <string name="queued">Čeká na odeslání</string>
+    <string name="reply_unrecorded">Odpověď na toto nebyla zaznamenána.</string>
     <string name="thinking">Přemýšlí</string>
     <string name="thought">Přemýšlel</string>
     <string name="output_cut">Výstup je zde zkrácen. Celý ho najdete na webové stránce.</string>

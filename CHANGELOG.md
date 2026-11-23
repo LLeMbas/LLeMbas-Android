@@ -3,6 +3,42 @@
 What changed in each release of LLeMbas for Android. Versions follow SemVer; until 1.0.0 the app
 is in alpha and releases come off `main`.
 
+## Unreleased
+
+What is said here of replies that start by themselves needs an instance newer than LLeMbas
+2.0.0-beta.17. On an older one the app behaves as before.
+
+### Added
+
+- **An open chat shows a reply it did not ask for, as it is written.** When a subagent finishes
+  and the main agent answers, when a scheduled task's result or a finished generation wakes the
+  chat, or when the linked computer starts a turn itself, the reply appears and is written in
+  front of you, with its tools and cards, instead of only after the chat was opened again.
+  Coming back to the app reads the chat once, for what happened meanwhile. Nothing is asked of
+  the instance while the phone is locked or the app is not in front.
+- **The list of chats moves by itself.** A chat a reply starts in goes to the top of the drawer
+  and shows its dot without the drawer being closed and opened.
+
+### Changed
+
+- **A turn the linked computer started is a quiet note**, as a schedule's line is: it never
+  looks like something you typed.
+- In an agent chat, a finished reply that holds nothing, after such a turn, says "The reply to
+  this was not recorded." in one line. Older instances left a few of these as blank rows.
+
+### Fixed
+
+- **The chat keeps its place.** At the end of the chat you stay at the end; anywhere else, what
+  you are reading does not move.
+  - Reading the chat again (after an edit, a queued message, a reply that woke the chat) no
+    longer takes away the earlier messages you had loaded, and with them the row you were
+    reading.
+  - The app's own scroll to the end can no longer be taken for you scrolling away, which
+    stopped the chat from following a reply although you had not touched it. The assistant's
+    sheet has the same fix.
+  - A reply's foot is as tall while it is written as when it has finished, so the end of a
+    reply no longer changes the height of the page.
+
 ## [1.0.0-beta.13] — 2026-11-19
 
 For Files, generated media and MCP servers as described here the instance must be newer than

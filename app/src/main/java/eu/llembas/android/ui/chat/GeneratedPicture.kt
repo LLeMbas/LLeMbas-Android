@@ -126,6 +126,14 @@ fun GeneratedPicture(media: GeneratedMedia, modifier: Modifier = Modifier) {
     }
 }
 
+/**
+ * The shape a picture's place is given before its bytes are there: width over height, from the
+ * size the server said, kept between a quarter and four. A size the server did not say is a
+ * square. The place is that shape from its first draw to its last, so the picture arriving (or
+ * not arriving) moves nothing in the transcript.
+ */
+internal fun pictureRatio(width: Int, height: Int): Float = if (width > 0 && height > 0) (width.toFloat() / height).coerceIn(0.25f, 4f) else 1f
+
 @Composable
 private fun Picture(key: String, width: Int, height: Int, modifier: Modifier, fetch: suspend (ApiClient) -> ByteArray) {
     val palette = LocalPalette.current
@@ -140,14 +148,14 @@ private fun Picture(key: String, width: Int, height: Int, modifier: Modifier, fe
             gone = Pictures.isGone(key)
         }
     }
-    val ratio = if (width > 0 && height > 0) width.toFloat() / height else 1f
+    val ratio = pictureRatio(width, height)
     val shape = RoundedCornerShape(16.dp)
     val described = stringResource(R.string.image_generated)
     Box(
         modifier
             .widthIn(max = 480.dp)
             .fillMaxWidth()
-            .aspectRatio(ratio.coerceIn(0.25f, 4f))
+            .aspectRatio(ratio)
             .clip(shape)
             .background(palette.surfaceRaised)
             .border(1.dp, palette.border, shape)
