@@ -51,6 +51,7 @@
     <string name="continue_reply">Continua</string>
     <string name="older">Messaggi precedenti</string>
     <string name="queued">In attesa di invio</string>
+    <string name="fate_unknown">Non si sa se questo messaggio abbia raggiunto il computer. Invialo di nuovo o scartalo.</string>
     <string name="reply_unrecorded">La risposta a questo non è stata registrata.</string>
     <string name="thinking">Ragionamento</string>
     <string name="thought">Ha ragionato</string>

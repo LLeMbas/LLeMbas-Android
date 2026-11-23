@@ -24,6 +24,9 @@ What is said here of replies that start by themselves needs an instance newer th
 
 ### Changed
 
+- **A message of which it is not known whether it reached the linked computer says so**, in
+  the instance's words, instead of looking queued: the instance does not send it by itself.
+  Sending it again or discarding it is done on the web page for now.
 - **A turn the linked computer started is a quiet note**, as a schedule's line is: it never
   looks like something you typed.
 - In an agent chat, a finished reply that holds nothing, after such a turn, says "The reply to

@@ -150,6 +150,17 @@ fun drawn(message: Message, first: Boolean, reportChat: Boolean): Drawn = when {
 /** The `origin` of a turn the linked computer's harness started by itself. */
 const val ORIGIN_HARNESS = "harness"
 
+/** The `origin` of a message handed to the linked computer whose arrival there was never heard. */
+const val ORIGIN_UNSURE = "unsure"
+
+/**
+ * Whether this is the person's message of which nobody knows whether it reached the linked
+ * computer (`origin` `unsure`, waiting): the instance never sends it by itself, so it is not
+ * "queued, two ahead" -- it says what it is, in the instance's sentence. Any other origin this
+ * app does not know is drawn as none.
+ */
+val Message.fateUnknown: Boolean get() = isUser && queued && origin == ORIGIN_UNSURE
+
 /** Whether nobody typed this row: the server wrote it (`machine`), or a device's harness did. */
 val Message.byMachine: Boolean get() = machine || origin == ORIGIN_HARNESS
 

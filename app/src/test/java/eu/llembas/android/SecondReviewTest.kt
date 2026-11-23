@@ -3,12 +3,16 @@ package eu.llembas.android
 import eu.llembas.android.api.Chat
 import eu.llembas.android.api.ChatDetail
 import eu.llembas.android.api.ChatPage
+import eu.llembas.android.api.Drawn
 import eu.llembas.android.api.Frame
+import eu.llembas.android.api.LembasJson
 import eu.llembas.android.api.LiveReply
 import eu.llembas.android.api.Message
 import eu.llembas.android.api.Outcome
 import eu.llembas.android.api.ReplyFrame
 import eu.llembas.android.api.Step
+import eu.llembas.android.api.drawn
+import eu.llembas.android.api.fateUnknown
 import eu.llembas.android.api.reopened
 import eu.llembas.android.api.replyUnrecorded
 import eu.llembas.android.api.unrecordedReplies
@@ -376,6 +380,45 @@ class SecondReviewTest {
         // A start is not an end, and a chat not listed changes nothing.
         assertSame(list, list.ended(said("c1"), open = null))
         assertSame(list, list.ended(said("c9", live = false), open = null))
+    }
+
+    private fun fixture(name: String): String = requireNotNull(javaClass.classLoader!!.getResource("$name.json")) {
+        "contract/$name.json is missing"
+    }.readText()
+
+    @Test
+    fun theEndFrameIsReadAsTheServerWritesItAndDoesWhatAnEndDoes() {
+        val start = LembasJson.decodeFromString(ReplyFrame.serializer(), fixture("event_reply"))
+        val end = LembasJson.decodeFromString(ReplyFrame.serializer(), fixture("event_reply_end"))
+        // The same reply, said twice: once being written, once over.
+        assertEquals(ReplyFrame(chatId = start.chatId, messageId = start.messageId, live = false), end)
+        assertTrue(start.live)
+        val list = ChatsState(chats = listOf(Chat(id = end.chatId, running = true)), more = false)
+        // No read for it, the mark gone, something new.
+        assertFalse(list.readsFor(end, shown = true))
+        assertEquals(listOf(Chat(id = end.chatId, running = false, unread = true)), list.ended(end, open = null).chats)
+        // The pair is the proof that this instance says the ends.
+        val ends = ReplyEnds()
+        ends.hear(start)
+        ends.hear(end)
+        assertTrue(ends.said)
+        // For the chat on screen that followed the reply, it is no news.
+        val open = ChatState(chat = Chat(id = end.chatId), messages = listOf(reply(end.messageId, complete = false)), live = LiveReply(end.messageId))
+        assertFalse(open.asksFor(end))
+    }
+
+    @Test
+    fun aMessageWhoseArrivalIsUnknownSaysSoAndNotThatItWaitsItsTurn() {
+        val unsure = Message(id = "q1", role = "user", text = "And the bread?", queued = true, origin = "unsure")
+        assertTrue(unsure.fateUnknown)
+        // Still the person's own bubble.
+        assertEquals(Drawn.Person, drawn(unsure, first = false, reportChat = false))
+        // Once sent it is a turn like any other; a queued prompt is only queued; a reply is never this.
+        assertFalse(unsure.copy(queued = false, origin = "").fateUnknown)
+        assertFalse(unsure.copy(origin = "").fateUnknown)
+        assertFalse(unsure.copy(role = "assistant").fateUnknown)
+        // An origin this app does not know is drawn as none.
+        assertEquals(Drawn.Person, drawn(unsure.copy(queued = false, origin = "somewhere"), first = false, reportChat = false))
     }
 
     @Test

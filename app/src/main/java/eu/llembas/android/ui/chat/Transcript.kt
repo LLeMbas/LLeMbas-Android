@@ -171,10 +171,11 @@ fun UserMessage(message: Message, canEdit: Boolean, onEdit: () -> Unit, modifier
         }
         if (message.queued) {
             // The server's queued progress ("Queued, 2 ahead · 12s") where it sends one.
+            // Not one whose arrival at the computer is unknown: that one waits for the person, not for its turn.
             Text(
-                progressLineOf(message.progress) ?: stringResource(R.string.queued),
+                if (message.fateUnknown) stringResource(R.string.fate_unknown) else progressLineOf(message.progress) ?: stringResource(R.string.queued),
                 style = MaterialTheme.typography.labelSmall,
-                color = palette.inkFaint,
+                color = if (message.fateUnknown) palette.warning else palette.inkFaint,
                 modifier = Modifier.padding(top = 4.dp, end = 4.dp),
             )
         }

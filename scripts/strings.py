@@ -64,6 +64,8 @@ STRINGS: dict[str, str] = {
     "continue_reply": "Continue",
     "older": "Earlier messages",
     "queued": "Waiting to be sent",
+    # A message handed to the linked computer whose arrival was never heard (`origin` `unsure`): the server's sentence.
+    "fate_unknown": "It is not known whether this reached the computer. Send it again, or discard it.",
     # In place of a finished reply that holds nothing, after a turn nobody typed (the server's sentence).
     "reply_unrecorded": "The reply to this was not recorded.",
     "thinking": "Thinking",

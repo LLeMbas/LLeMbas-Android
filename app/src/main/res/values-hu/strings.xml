@@ -51,6 +51,7 @@
     <string name="continue_reply">Folytatás</string>
     <string name="older">Korábbi üzenetek</string>
     <string name="queued">Küldésre vár</string>
+    <string name="fate_unknown">Nem tudni, hogy ez eljutott-e a számítógéphez. Küldje el újra, vagy vesse el.</string>
     <string name="reply_unrecorded">Az erre adott válasz nem lett rögzítve.</string>
     <string name="thinking">Gondolkodás</string>
     <string name="thought">Gondolkodott</string>

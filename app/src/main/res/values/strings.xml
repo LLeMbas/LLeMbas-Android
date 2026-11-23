@@ -52,6 +52,7 @@
     <string name="continue_reply">Continue</string>
     <string name="older">Earlier messages</string>
     <string name="queued">Waiting to be sent</string>
+    <string name="fate_unknown">It is not known whether this reached the computer. Send it again, or discard it.</string>
     <string name="reply_unrecorded">The reply to this was not recorded.</string>
     <string name="thinking">Thinking</string>
     <string name="thought">Thought</string>

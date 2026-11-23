@@ -51,6 +51,7 @@
     <string name="continue_reply">Continuer</string>
     <string name="older">Messages précédents</string>
     <string name="queued">En attente d\'envoi</string>
+    <string name="fate_unknown">On ne sait pas si ce message est parvenu à l’ordinateur. Renvoyez-le ou supprimez-le.</string>
     <string name="reply_unrecorded">La réponse à ceci n’a pas été enregistrée.</string>
     <string name="thinking">Réflexion</string>
     <string name="thought">Réflexion</string>

@@ -51,6 +51,7 @@
     <string name="continue_reply">Pokračovať</string>
     <string name="older">Staršie správy</string>
     <string name="queued">Čaká na odoslanie</string>
+    <string name="fate_unknown">Nie je známe, či sa táto správa dostala do počítača. Odošlite ju znova alebo ju zahoďte.</string>
     <string name="reply_unrecorded">Odpoveď na toto nebola zaznamenaná.</string>
     <string name="thinking">Premýšľa</string>
     <string name="thought">Premýšľal</string>
