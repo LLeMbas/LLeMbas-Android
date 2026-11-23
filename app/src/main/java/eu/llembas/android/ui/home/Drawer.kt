@@ -250,7 +250,14 @@ class ChatsViewModel(app: Application) : AndroidViewModel(app) {
      * badge is then what the drawer's own read said.
      */
     suspend fun watchReports() {
-        val frames = runCatching { getApplication<Application>().lembas.eventFrames() }.getOrNull() ?: return
+        val app = getApplication<Application>().lembas
+        // What one instance proved about its frames says nothing of another.
+        val instance = app.instances.current()?.id
+        if (instance != endsOf) {
+            ends = ReplyEnds()
+            endsOf = instance
+        }
+        val frames = runCatching { app.eventFrames() }.getOrNull() ?: return
         try {
             frames.collect { frame ->
                 // An instance this app refuses shows its refusal and nothing else.
@@ -274,7 +281,10 @@ class ChatsViewModel(app: Application) : AndroidViewModel(app) {
     var open: String? = null
 
     /** Whether this instance says when replies end; until it has, a running row is read again now and then. */
-    private val ends = ReplyEnds()
+    private var ends = ReplyEnds()
+
+    /** The instance [ends] is about, by its id. */
+    private var endsOf: String? = null
 
     fun shown(now: Boolean) {
         shown = now
