@@ -137,13 +137,14 @@ class ClientTest {
         val api = client()
         val declared = "\"client\":[\"phone_actions\"]"
         val answer = """{"chat":{"id":"c1"}}"""
-        repeat(6) { server.enqueue(MockResponse().setResponseCode(201).setBody(answer)) }
+        repeat(7) { server.enqueue(MockResponse().setResponseCode(201).setBody(answer)) }
         api.createChat("Hello")
         api.sendMessage("c1", "And then?")
         api.edit("c1", "m1", "Hello again")
         api.regenerate("c1", "m2")
         api.continueChat("c1")
         api.executePlan("c1")
+        api.sendWaiting("c1", "m3")
         val paths = listOf(
             "/api/v2/chats",
             "/api/v2/chats/c1/messages",
@@ -151,6 +152,7 @@ class ClientTest {
             "/api/v2/chats/c1/messages/m2/regenerate",
             "/api/v2/chats/c1/continue",
             "/api/v2/chats/c1/plan/execute",
+            "/api/v2/chats/c1/messages/m3/send",
         )
         for (path in paths) {
             val request = server.takeRequest()

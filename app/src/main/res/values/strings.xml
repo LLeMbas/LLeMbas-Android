@@ -53,6 +53,9 @@
     <string name="older">Earlier messages</string>
     <string name="queued">Waiting to be sent</string>
     <string name="fate_unknown">It is not known whether this reached the computer. Send it again, or discard it.</string>
+    <string name="fate_carried">The computer has this message and takes it in with its next turn.</string>
+    <string name="send_now">Send now</string>
+    <string name="discard_message_confirm">Discard this message?</string>
     <string name="reply_unrecorded">The reply to this was not recorded.</string>
     <string name="thinking">Thinking</string>
     <string name="thought">Thought</string>

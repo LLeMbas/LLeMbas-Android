@@ -134,6 +134,14 @@ class ScreenShots {
     }
 
     @Test
+    fun waitingMessages() {
+        // How each waits, in words, and Send now / Discard under it; the rows must hold at a small phone's width and large type.
+        shoot("03-waiting") { ChatContent(Fakes.waiting, NoChatActions, agent = false) }
+        shoot("03-waiting", Phone.Small) { ChatContent(Fakes.waiting, NoChatActions, agent = false) }
+        shoot("03-waiting", Phone.Small, fontScale = 1.5f) { ChatContent(Fakes.waiting, NoChatActions, agent = false) }
+    }
+
+    @Test
     fun writing() {
         // The 3.4.0 progress line under the reply: `{{text}} · {{elapsed}}`, the clock still.
         shoot("04-writing") { ChatContent(Fakes.writing, NoChatActions, agent = false) }

@@ -52,6 +52,9 @@
     <string name="older">Korábbi üzenetek</string>
     <string name="queued">Küldésre vár</string>
     <string name="fate_unknown">Nem tudni, hogy ez eljutott-e a számítógéphez. Küldje el újra, vagy vesse el.</string>
+    <string name="fate_carried">A számítógépnél van ez az üzenet, és a következő körében veszi figyelembe.</string>
+    <string name="send_now">Küldés most</string>
+    <string name="discard_message_confirm">Elveti ezt az üzenetet?</string>
     <string name="reply_unrecorded">Az erre adott válasz nem lett rögzítve.</string>
     <string name="thinking">Gondolkodás</string>
     <string name="thought">Gondolkodott</string>

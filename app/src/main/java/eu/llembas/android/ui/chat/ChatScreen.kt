@@ -103,6 +103,7 @@ import eu.llembas.android.api.Message
 import eu.llembas.android.api.Raw
 import eu.llembas.android.api.ShowCard
 import eu.llembas.android.api.drawn
+import eu.llembas.android.api.editable
 import eu.llembas.android.api.unrecordedReplies
 import eu.llembas.android.ui.ModelAvatar
 import eu.llembas.android.ui.ProgressStatus
@@ -275,6 +276,7 @@ fun ChatContent(
     var tuning by remember { mutableStateOf(false) }
     var renaming by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<Message?>(null) }
+    var discarding by remember { mutableStateOf<Message?>(null) }
     var suggestion by remember { mutableStateOf("") }
     var suggested by remember { mutableIntStateOf(0) }
     val copy: (String) -> Unit = { text ->
@@ -502,7 +504,15 @@ fun ChatContent(
 
                             Drawn.Note -> MachineNote(message.text.orEmpty())
 
-                            Drawn.Person -> UserMessage(message, canEdit = live == null, onEdit = { editing = message })
+                            // A message that waits is sent now or discarded, never edited.
+                            Drawn.Person -> UserMessage(
+                                message,
+                                canEdit = message.editable(writing = live != null),
+                                onEdit = { editing = message },
+                                busy = state.acting != null,
+                                onSendNow = { actions.sendNow(message) },
+                                onDiscard = { discarding = message },
+                            )
 
                             // One call for a reply being written and the same reply finished:
                             // what the person opened in it (a thinking chip) stays open at `done`.
@@ -568,6 +578,21 @@ fun ChatContent(
                 }) { Text(stringResource(R.string.save)) }
             },
             dismissButton = { TextButton(onClick = { renaming = false }) { Text(stringResource(R.string.cancel)) } },
+        )
+    }
+
+    // Discarding cannot be taken back, so it is asked once -- in the page's own words.
+    discarding?.let { message ->
+        AlertDialog(
+            onDismissRequest = { discarding = null },
+            text = { Text(stringResource(R.string.discard_message_confirm)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    actions.discard(message)
+                    discarding = null
+                }) { Text(stringResource(R.string.discard)) }
+            },
+            dismissButton = { TextButton(onClick = { discarding = null }) { Text(stringResource(R.string.cancel)) } },
         )
     }
 

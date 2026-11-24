@@ -115,6 +115,8 @@ data class ChatState(
     val picked: String? = null,
     /** The chat's long generations (a video, a track, a 3D model), by id, as each was last read. */
     val mediaJobs: Map<String, JobSeen> = emptyMap(),
+    /** The waiting message that is being sent now or discarded, by its id, until the instance has answered. */
+    val acting: String? = null,
 )
 
 /**
@@ -311,6 +313,12 @@ interface ChatActions {
     fun stop() {}
     fun regenerate(message: Message) {}
     fun edit(message: Message, text: String) {}
+
+    /** Send a message that waits ([Message.waiting]) now, as a turn with a reply of its own. */
+    fun sendNow(message: Message) {}
+
+    /** Withdraw a message that waits: it was never given to a model, and its row goes. */
+    fun discard(message: Message) {}
     fun continueChat() {}
     fun executePlan() {}
     fun answer(card: Card, answer: CardAnswer) {}
@@ -719,6 +727,34 @@ class ChatViewModel(app: Application) :
         // Everything after the edited turn is gone on the server; read it back.
         refresh()
         turn.reply?.let { follow(it.id, own = true) }
+    }
+
+    /**
+     * A waiting message's two actions. Each is one request a tap starts. The reply a send
+     * starts is the person's own, followed as one they typed for; a refusal's read waits until
+     * nothing is being written on this screen (a reply's own stream says everything until
+     * then, and a read beside it could draw a stale row over a finished one), and at the gate.
+     */
+    private val waiting = WaitingActions(
+        state = _state,
+        read = { refresh() },
+        follow = { follow(it.reply, it.own) },
+        say = ::fail,
+        catchUp = {
+            val mark = reads.mark()
+            _state.first { !it.running }
+            rereadAndFollow(rounds = 1, mark = mark)
+        },
+    )
+
+    override fun sendNow(message: Message) {
+        val chat = _state.value.chat ?: return
+        viewModelScope.launch { waiting.sendNow(message) { api().sendWaiting(chat.id, message.id) } }
+    }
+
+    override fun discard(message: Message) {
+        val chat = _state.value.chat ?: return
+        viewModelScope.launch { waiting.discard(message) { api().discardWaiting(chat.id, message.id) } }
     }
 
     override fun continueChat() = control { api, chat -> took(api.continueChat(chat.id)) }

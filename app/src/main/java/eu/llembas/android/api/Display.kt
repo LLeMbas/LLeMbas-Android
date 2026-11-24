@@ -161,6 +161,41 @@ const val ORIGIN_UNSURE = "unsure"
  */
 val Message.fateUnknown: Boolean get() = isUser && queued && origin == ORIGIN_UNSURE
 
+/** The `origin` of a message the linked computer has said it holds for its next turn. */
+const val ORIGIN_CARRIED = "carried"
+
+/** Why a message of the person's has not been given to a model yet. */
+enum class Waiting {
+    /** A reply was being written when it was sent: it goes when its turn comes. */
+    Queued,
+
+    /** Handed to the linked computer, its arrival never heard: the instance never sends it by itself. */
+    Unsure,
+
+    /** The linked computer holds it and takes it in with its next turn. */
+    Carried,
+}
+
+/**
+ * How this message waits, or null for one that does not: a message of the person's with
+ * `queued` true. Such a message is not a turn yet, so it is sent now or discarded, never
+ * edited. An origin this app does not know waits as a plain queued one does.
+ */
+val Message.waiting: Waiting?
+    get() = when {
+        !isUser || !queued -> null
+        origin == ORIGIN_UNSURE -> Waiting.Unsure
+        origin == ORIGIN_CARRIED -> Waiting.Carried
+        else -> Waiting.Queued
+    }
+
+/**
+ * Whether Edit is offered on this message of the person's: not while a reply is being
+ * [writing], and never on one that still waits -- the instance refuses that, since it has not
+ * been a turn yet and a linked computer may still hold its old words.
+ */
+fun Message.editable(writing: Boolean): Boolean = isUser && !writing && !queued
+
 /** Whether nobody typed this row: the server wrote it (`machine`), or a device's harness did. */
 val Message.byMachine: Boolean get() = machine || origin == ORIGIN_HARNESS
 

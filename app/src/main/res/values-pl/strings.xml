@@ -52,6 +52,9 @@
     <string name="older">Wcześniejsze wiadomości</string>
     <string name="queued">Czeka na wysłanie</string>
     <string name="fate_unknown">Nie wiadomo, czy ta wiadomość dotarła do komputera. Wyślij ją ponownie albo odrzuć.</string>
+    <string name="fate_carried">Komputer ma tę wiadomość i uwzględni ją w swojej następnej turze.</string>
+    <string name="send_now">Wyślij teraz</string>
+    <string name="discard_message_confirm">Odrzucić tę wiadomość?</string>
     <string name="reply_unrecorded">Odpowiedź na to nie została zapisana.</string>
     <string name="thinking">Rozumowanie</string>
     <string name="thought">Rozumowanie</string>

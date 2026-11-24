@@ -52,6 +52,9 @@
     <string name="older">Starší zprávy</string>
     <string name="queued">Čeká na odeslání</string>
     <string name="fate_unknown">Není známo, zda se tato zpráva dostala do počítače. Odešlete ji znovu, nebo ji zahoďte.</string>
+    <string name="fate_carried">Počítač tuto zprávu má a převezme ji při svém dalším tahu.</string>
+    <string name="send_now">Odeslat teď</string>
+    <string name="discard_message_confirm">Zahodit tuto zprávu?</string>
     <string name="reply_unrecorded">Odpověď na toto nebyla zaznamenána.</string>
     <string name="thinking">Přemýšlí</string>
     <string name="thought">Přemýšlel</string>

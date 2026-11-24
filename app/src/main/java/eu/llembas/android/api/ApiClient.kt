@@ -342,6 +342,17 @@ class ApiClient(val base: String, private val token: String, val http: OkHttpCli
         },
     )
 
+    /**
+     * Send a message that waits (`queued`) now: the message as it is after, and the reply started
+     * for it, as a message sent answers. 409 in the instance's words while a reply is being
+     * written in the chat, and when the message no longer waits.
+     */
+    suspend fun sendWaiting(chatId: String, messageId: String): Turn = send("POST", "/chats/$chatId/messages/${segment(messageId)}/send", DECLARED)
+
+    /** Withdraw a message that waits: its row is gone. 409 in words when it no longer waits, 404 when it is not there. */
+    suspend fun discardWaiting(chatId: String, messageId: String): Discarded =
+        call(authed("$v2/chats/$chatId/messages/${segment(messageId)}/discard").post(emptyBody()).build(), Discarded.serializer())
+
     suspend fun regenerate(chatId: String, messageId: String): Turn = send("POST", "/chats/$chatId/messages/$messageId/regenerate", DECLARED)
 
     suspend fun continueChat(chatId: String): Turn = send("POST", "/chats/$chatId/continue", DECLARED)

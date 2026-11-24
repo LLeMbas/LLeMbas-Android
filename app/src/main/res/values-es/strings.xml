@@ -52,6 +52,9 @@
     <string name="older">Mensajes anteriores</string>
     <string name="queued">Esperando para enviarse</string>
     <string name="fate_unknown">No se sabe si esto llegó al ordenador. Envíalo de nuevo o descártalo.</string>
+    <string name="fate_carried">El ordenador tiene este mensaje y lo incorporará en su próximo turno.</string>
+    <string name="send_now">Enviar ahora</string>
+    <string name="discard_message_confirm">¿Descartar este mensaje?</string>
     <string name="reply_unrecorded">La respuesta a esto no se registró.</string>
     <string name="thinking">Pensando</string>
     <string name="thought">Pensamiento</string>

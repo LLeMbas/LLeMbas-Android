@@ -725,6 +725,10 @@ data class Message(
 @Serializable
 data class Turn(val message: Message? = null, val reply: Message? = null)
 
+/** The answer to discarding a waiting message: the row that is gone, by its id. */
+@Serializable
+data class Discarded(val id: String = "", val discarded: Boolean = false)
+
 @Serializable
 data class NewChat(val chat: Chat, val message: Message? = null, val reply: Message? = null)
 

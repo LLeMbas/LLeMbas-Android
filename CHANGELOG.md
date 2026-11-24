@@ -22,11 +22,20 @@ What is said here of replies that start by themselves needs an instance newer th
   goes to the top and shows its dot, and the dot of a reply being written goes when the reply
   ends, without the drawer being closed and opened.
 
+- **A message that waits can be sent now or discarded.** Under a message that has not been
+  given to a model yet -- queued behind a reply, or waiting on a linked computer -- there are
+  "Send now" and "Discard", as on the web page. Send now starts its reply, which is written in
+  front of you like any you asked for; Discard asks once and takes the message away. Where the
+  instance refuses (a reply is still being written; the message is no longer waiting), it says
+  so in its own words and the chat is read again. A waiting message is not offered Edit: the
+  instance refuses that. Needs an instance that has these two actions.
+
 ### Changed
 
-- **A message of which it is not known whether it reached the linked computer says so**, in
-  the instance's words, instead of looking queued: the instance does not send it by itself.
-  Sending it again or discarding it is done on the web page for now.
+- **A waiting message says how it waits**, in the instance's words. One of which it is not
+  known whether it reached the linked computer says so, instead of looking queued: the
+  instance does not send it by itself. One the computer holds says that the computer has it
+  and takes it in with its next turn.
 - **A turn the linked computer started is a quiet note**, as a schedule's line is: it never
   looks like something you typed.
 - In an agent chat, a finished reply that holds nothing, after such a turn, says "The reply to

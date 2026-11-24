@@ -52,6 +52,9 @@
     <string name="older">Messaggi precedenti</string>
     <string name="queued">In attesa di invio</string>
     <string name="fate_unknown">Non si sa se questo messaggio abbia raggiunto il computer. Invialo di nuovo o scartalo.</string>
+    <string name="fate_carried">Il computer ha questo messaggio e lo accoglierà al suo prossimo turno.</string>
+    <string name="send_now">Invia ora</string>
+    <string name="discard_message_confirm">Scartare questo messaggio?</string>
     <string name="reply_unrecorded">La risposta a questo non è stata registrata.</string>
     <string name="thinking">Ragionamento</string>
     <string name="thought">Ha ragionato</string>

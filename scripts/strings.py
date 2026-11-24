@@ -66,6 +66,11 @@ STRINGS: dict[str, str] = {
     "queued": "Waiting to be sent",
     # A message handed to the linked computer whose arrival was never heard (`origin` `unsure`): the server's sentence.
     "fate_unknown": "It is not known whether this reached the computer. Send it again, or discard it.",
+    # A message the linked computer has said it holds (`origin` `carried`): the server's sentence.
+    "fate_carried": "The computer has this message and takes it in with its next turn.",
+    # A waiting message's two actions (the page's own words; "Discard" is `discard`), and what Discard asks first.
+    "send_now": "Send now",
+    "discard_message_confirm": "Discard this message?",
     # In place of a finished reply that holds nothing, after a turn nobody typed (the server's sentence).
     "reply_unrecorded": "The reply to this was not recorded.",
     "thinking": "Thinking",

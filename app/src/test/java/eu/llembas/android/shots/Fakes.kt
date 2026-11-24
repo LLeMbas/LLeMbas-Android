@@ -182,6 +182,22 @@ object Fakes {
         summary = ActivitySummary(working = 2, queued = 1, done = 4, finished = 4, active = 3, total = 7),
     )
 
+    /**
+     * Three messages that wait, each its own way: queued behind a reply, handed to the linked
+     * computer with its arrival unknown, and held by the computer for its next turn.
+     */
+    val waiting = ChatState(
+        chat = chat,
+        messages = listOf(
+            question,
+            answer,
+            Message(id = "w1", role = "user", text = "And how long does it keep?", queued = true, progress = Progress(phase = "queued", ahead = 1)),
+            Message(id = "w2", role = "user", text = "Then run the tests once more.", queued = true, origin = "unsure"),
+            Message(id = "w3", role = "user", text = "And tidy the notes when that is done.", queued = true, origin = "carried"),
+        ),
+        models = models,
+    )
+
     private val fixture = LembasJson.decodeFromString(ActivityEnvelope.serializer(), text("activity")).activity
 
     private fun job(id: String, type: String, role: String, brief: String, state: String, seconds: Int, stoppable: Boolean = true) = ActivityAgent(

@@ -19,6 +19,8 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -91,10 +93,11 @@ import eu.llembas.android.api.ModelInfo
 import eu.llembas.android.api.ShowCard
 import eu.llembas.android.api.Step
 import eu.llembas.android.api.ToolCall
+import eu.llembas.android.api.Waiting
 import eu.llembas.android.api.ending
-import eu.llembas.android.api.fateUnknown
 import eu.llembas.android.api.replyModel
 import eu.llembas.android.api.shownMarkdown
+import eu.llembas.android.api.waiting
 import eu.llembas.android.lembas
 import eu.llembas.android.ui.MarkdownText
 import eu.llembas.android.ui.Segment
@@ -117,13 +120,28 @@ private val Pill = RoundedCornerShape(50)
 private val FootTop = 2.dp
 private val FootHeight = 48.dp
 
+/** A waiting message's two buttons: a tap target's height. */
+private val WaitingButton = 48.dp
+
 /**
  * The person's turn: their words in a bubble on the right (never markdown), what they attached
  * above it as thumbnails. A long press offers Copy and, where the turn can still change, Edit.
+ *
+ * A message that waits says how it waits in words under the bubble, and -- where [onSendNow]
+ * and [onDiscard] are given, which only the chat's own screen does -- offers the two things a
+ * person does with it. They rest while [busy]: one of them is being asked of the instance.
  */
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
-fun UserMessage(message: Message, canEdit: Boolean, onEdit: () -> Unit, modifier: Modifier = Modifier) {
+fun UserMessage(
+    message: Message,
+    canEdit: Boolean,
+    onEdit: () -> Unit,
+    modifier: Modifier = Modifier,
+    busy: Boolean = false,
+    onSendNow: (() -> Unit)? = null,
+    onDiscard: (() -> Unit)? = null,
+) {
     val palette = LocalPalette.current
     val copy = LocalCopy.current
     var menu by remember { mutableStateOf(false) }
@@ -170,15 +188,32 @@ fun UserMessage(message: Message, canEdit: Boolean, onEdit: () -> Unit, modifier
                 }
             }
         }
-        if (message.queued) {
-            // The server's queued progress ("Queued, 2 ahead · 12s") where it sends one.
-            // Not one whose arrival at the computer is unknown: that one waits for the person, not for its turn.
+        message.waiting?.let { waiting ->
+            // How it waits, in words. Queued behind a reply: the server's progress ("Queued: 2
+            // ahead · 12s") where it sends one. Not for one a linked computer was handed: that
+            // one waits for the person or for the computer, not for its turn here.
             Text(
-                if (message.fateUnknown) stringResource(R.string.fate_unknown) else progressLineOf(message.progress) ?: stringResource(R.string.queued),
+                when (waiting) {
+                    Waiting.Unsure -> stringResource(R.string.fate_unknown)
+                    Waiting.Carried -> stringResource(R.string.fate_carried)
+                    Waiting.Queued -> progressLineOf(message.progress) ?: stringResource(R.string.queued)
+                },
                 style = MaterialTheme.typography.labelSmall,
-                color = if (message.fateUnknown) palette.warning else palette.inkFaint,
+                color = if (waiting == Waiting.Unsure) palette.warning else palette.inkFaint,
                 modifier = Modifier.padding(top = 4.dp, end = 4.dp),
             )
+            if (onSendNow != null && onDiscard != null) {
+                // Two buttons of unknown width (eight languages, any type size): they share a
+                // row that wraps, each a full tap target, from the bubble's edge.
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.End)) {
+                    TextButton(onClick = onDiscard, enabled = !busy, modifier = Modifier.heightIn(min = WaitingButton)) {
+                        Text(stringResource(R.string.discard))
+                    }
+                    TextButton(onClick = onSendNow, enabled = !busy, modifier = Modifier.heightIn(min = WaitingButton)) {
+                        Text(stringResource(R.string.send_now))
+                    }
+                }
+            }
         }
     }
 }
