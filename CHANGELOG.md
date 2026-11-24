@@ -3,6 +3,13 @@
 What changed in each release of LLeMbas for Android. Versions follow SemVer; until 1.0.0 the app
 is in alpha and releases come off `main`.
 
+## Unreleased
+
+### Changed
+
+- **The launcher icon is the app's own**: the LLeMbas leaf with a small phone beside it, so the app
+  is told apart from the other LLeMbas products. The notification icon stays the leaf.
+
 ## [1.0.0-beta.14] — 2026-11-24
 
 What is said here of replies that start by themselves needs an instance newer than LLeMbas

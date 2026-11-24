@@ -6,9 +6,13 @@
 The mark is a 16x16 grid of rects, so it converts exactly into Android vector drawables -- one
 path per colour -- and needs no PNG at any density:
 
-  drawable/ic_launcher_foreground.xml   the leaf, in the adaptive icon's 66dp safe zone
-  drawable/ic_launcher_monochrome.xml   its silhouette, for themed icons
-  drawable/ic_notification.xml          the same silhouette: a status-bar icon is alpha only
+  drawable/ic_launcher_foreground.xml   the leaf and the app's own sign, in the adaptive icon's 66dp safe zone
+  drawable/ic_launcher_monochrome.xml   their silhouette, for themed icons
+  drawable/ic_notification.xml          the leaf's silhouette alone: a status-bar icon is alpha only
+
+Each LLeMbas product carries the server's leaf with one small pixel sign of its own in the free
+corner; this app's is a phone. The launcher's art is 24 pixels across: the leaf at (2, 2), the sign
+at (13, 14).
 """
 
 from __future__ import annotations
@@ -37,6 +41,37 @@ def rects(svg: str) -> list[tuple[int, int, int, int, str]]:
     return found
 
 
+# The app's sign: a phone, in the launcher only.
+SIGN_COLOUR = "#C792EA"
+SIGN = (
+    "..#####..",
+    "..#...#..",
+    "..#...#..",
+    "..#...#..",
+    "..#...#..",
+    "..#.#.#..",
+    "..#####..",
+)
+LEAF_AT = (2, 2)
+SIGN_AT = (13, 14)
+
+
+def sign() -> list[tuple[int, int, int, int, str]]:
+    cells = []
+    for y, row in enumerate(SIGN):
+        x = 0
+        while x < len(row):
+            if row[x] != "#":
+                x += 1
+                continue
+            w = 1
+            while x + w < len(row) and row[x + w] == "#":
+                w += 1
+            cells.append((x + SIGN_AT[0], y + SIGN_AT[1], w, 1, SIGN_COLOUR))
+            x += w
+    return cells
+
+
 def path(cells) -> str:
     return " ".join(f"M{x},{y}h{w}v{h}h-{w}z" for x, y, w, h, _ in cells)
 
@@ -61,14 +96,19 @@ def main() -> None:
     for cell in cells:
         by_colour[cell[4]].append(cell)
 
-    # 108dp adaptive canvas; the leaf scaled x3.5 (56dp) and centred, inside the 66dp safe zone.
+    # 108dp adaptive canvas; the art is 24 pixels across, scaled x2.75 (66dp) and centred: the safe zone.
+    launcher = [(x + LEAF_AT[0], y + LEAF_AT[1], w, h, c) for x, y, w, h, c in cells] + sign()
+    launcher_by_colour: dict[str, list] = defaultdict(list)
+    for cell in launcher:
+        launcher_by_colour[cell[4]].append(cell)
     coloured = "".join(
         f'        <path android:fillColor="{colour}" android:pathData="{path(group)}"/>\n'
-        for colour, group in sorted(by_colour.items())
+        for colour, group in sorted(launcher_by_colour.items())
     )
-    group = f'    <group android:translateX="26" android:translateY="26" android:scaleX="3.5" android:scaleY="3.5">\n{coloured}    </group>\n'
+    placed = '    <group android:translateX="21" android:translateY="21" android:scaleX="2.75" android:scaleY="2.75">\n'
+    group = f"{placed}{coloured}    </group>\n"
+    mono = f'{placed}        <path android:fillColor="#FFFFFFFF" android:pathData="{path(launcher)}"/>\n    </group>\n'
     silhouette = f'        <path android:fillColor="#FFFFFFFF" android:pathData="{path(cells)}"/>\n'
-    mono = f'    <group android:translateX="26" android:translateY="26" android:scaleX="3.5" android:scaleY="3.5">\n{silhouette}    </group>\n'
 
     RES.mkdir(parents=True, exist_ok=True)
     (RES / "ic_launcher_foreground.xml").write_text(vector(108, 108, group))
