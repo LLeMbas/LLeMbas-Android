@@ -1,9 +1,9 @@
 {
-  "tag": "d67ee97c09323ff9b52fd1843a069d7db7248872",
-  "commit": "d67ee97c09323ff9b52fd1843a069d7db7248872",
-  "sha256": "9240ddc510afdd1ca559fe8dab9d2f3ac9007f50665662c3101a964249b61aa0",
+  "tag": "v2.0.0-beta.18",
+  "commit": "4c0573f1e68b068b1382ae00c918babb37c91293",
+  "sha256": "b5cb5ca7a03fad9fa0f9f9a84f89a71f1ef5f0166eb510e522fac5966910447f",
   "res": {
-    "values": "8960ca24e842086f3c90e7057d0a77f974eba5cfe70c1691e3c10c258cae5294",
-    "values-night": "9a5dc831b8f1190cbbbaebad9093f1aa7187030fe41dcc94239308c6630b2f53"
+    "values": "d4d0387b6d963d6c3cd1b82dfb745117dfeb38502acd957d4f4e305309ab8d4e",
+    "values-night": "2d22b872202970c14efbbbc2f25bc0fba60ba25f67e504eb75159c6f85c15e9b"
   }
 }

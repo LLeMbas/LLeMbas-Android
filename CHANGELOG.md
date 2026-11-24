@@ -3,7 +3,7 @@
 What changed in each release of LLeMbas for Android. Versions follow SemVer; until 1.0.0 the app
 is in alpha and releases come off `main`.
 
-## Unreleased
+## [1.0.0-beta.14] — 2026-11-24
 
 What is said here of replies that start by themselves needs an instance newer than LLeMbas
 2.0.0-beta.17. On an older one the app behaves as before.
