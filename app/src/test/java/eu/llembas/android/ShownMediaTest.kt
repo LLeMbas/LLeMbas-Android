@@ -383,6 +383,38 @@ class ShownMediaTest {
         assertFalse(gate.open.value)
     }
 
+    @Test
+    fun aSessionTornDownWithoutBeingHiddenLeavesTheGateShut() = runTest {
+        val gate = InstanceGate { false }
+        val sheet = SheetAtGate(gate)
+        // Shown, then destroyed with no hide between them: the end is said all the same.
+        sheet.shown()
+        assertTrue(gate.open.value)
+        sheet.gone()
+        assertFalse(gate.open.value)
+        assertFalse(gate.look())
+        // Nothing asked for now starts until something of the app is in front again.
+        val fetched = mutableListOf<String>()
+        val picture = launch {
+            gate.passLater()
+            fetched += "picture"
+        }
+        runCurrent()
+        assertTrue(fetched.isEmpty())
+        // Hidden and then destroyed, or destroyed twice, is still one end; the next showing opens it.
+        sheet.gone()
+        sheet.gone()
+        assertFalse(gate.open.value)
+        sheet.shown()
+        runCurrent()
+        assertEquals(listOf("picture"), fetched)
+        picture.join()
+        // An activity in front is not undone by the sheet's end.
+        gate.activityStarted()
+        sheet.gone()
+        assertTrue(gate.open.value)
+    }
+
     // --- Open with ----------------------------------------------------------------------------------
 
     private fun bytes(vararg values: Int) = ByteArray(values.size) { values[it].toByte() }

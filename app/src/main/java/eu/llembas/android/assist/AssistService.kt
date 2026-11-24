@@ -28,6 +28,7 @@ import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import eu.llembas.android.AppLanguage
+import eu.llembas.android.SheetAtGate
 import eu.llembas.android.lembas
 import eu.llembas.android.ui.theme.LembasTheme
 import eu.llembas.android.wake.AssistLink
@@ -79,6 +80,8 @@ class LembasAssistService : VoiceInteractionService() {
 
     override fun onDestroy() {
         AssistLink.destroyed(System.currentTimeMillis())
+        // With the service gone no sheet of it is up, whatever its session managed to say.
+        lembas.gate.sessionHidden()
         super.onDestroy()
     }
 
@@ -143,6 +146,7 @@ class LembasAssistSession(context: Context) :
 
     /** Whether this session's sheet is up, as far as the wake word's pause is concerned. */
     private var up = false
+    private val atGate = SheetAtGate(context.lembas.gate)
 
     /** Over the lock screen: waiting for what is heard, to hand it to the sheet's activity. */
     private var handing: Job? = null
@@ -203,7 +207,7 @@ class LembasAssistSession(context: Context) :
         }
         // The sheet is the app in front: what it draws of the account (a reply's picture) may be
         // asked for, unless the phone is locked. Said each time; the gate keeps it as one.
-        context.lembas.gate.sessionShown()
+        atGate.shown()
         AssistLink.sheetShown(SystemClock.elapsedRealtime())
         // One sheet, never two: a sheet the wake word opened as a screen of the app, because
         // this one was slow to come, goes now that this one is here.
@@ -233,7 +237,7 @@ class LembasAssistSession(context: Context) :
             up = false
             AssistPresence.hidden()
         }
-        context.lembas.gate.sessionHidden()
+        atGate.gone()
         controller.close()
         scope.cancel()
         scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -244,6 +248,8 @@ class LembasAssistSession(context: Context) :
 
     override fun onDestroy() {
         super.onDestroy()
+        // A session torn down without being hidden must not leave the gate open behind it.
+        atGate.gone()
         controller.close()
         scope.cancel()
         registry.currentState = Lifecycle.State.DESTROYED

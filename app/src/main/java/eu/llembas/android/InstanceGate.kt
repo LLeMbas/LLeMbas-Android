@@ -137,3 +137,16 @@ suspend fun <T> sendFrom(items: List<T>, from: Int, turn: suspend () -> Unit, do
         done(i + 1)
     }
 }
+
+/**
+ * The assistant's sheet as the gate hears of it: every way the session's window can go says so.
+ * Android may show a sheet that is up again, hide it once, or tear the session down without
+ * hiding it at all -- [gone] is for each of those ends, so the sheet can never be left counted
+ * as the app in front when nothing of the app is.
+ */
+class SheetAtGate(private val gate: InstanceGate) {
+    fun shown() = gate.sessionShown()
+
+    /** Hidden, destroyed, or its service gone: whichever comes, and however many of them. */
+    fun gone() = gate.sessionHidden()
+}
