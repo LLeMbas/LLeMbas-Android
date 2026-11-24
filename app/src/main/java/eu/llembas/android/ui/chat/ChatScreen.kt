@@ -111,9 +111,11 @@ import eu.llembas.android.ui.files.TransferHost
 import eu.llembas.android.ui.files.TransferViewModel
 import eu.llembas.android.ui.files.rememberSaver
 import eu.llembas.android.ui.theme.LocalPalette
+import eu.llembas.android.ui.viewer.DocumentDialog
 import eu.llembas.android.ui.viewer.FileViewer
 import eu.llembas.android.ui.viewer.PlayerDialog
 import eu.llembas.android.ui.viewer.Playing
+import eu.llembas.android.ui.viewer.Reading
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 
@@ -175,6 +177,7 @@ fun ChatScreen(
     val transfers: TransferViewModel = viewModel(key = "chat-transfers")
     val saveTo = rememberSaver(transfers)
     var playing by remember { mutableStateOf<Playing?>(null) }
+    var reading by remember { mutableStateOf<Reading?>(null) }
     val media = remember(model, transfers) {
         object : MediaActions {
             override fun play(media: GeneratedMedia) {
@@ -183,6 +186,10 @@ fun ChatScreen(
 
             override fun play(attachment: Attachment) {
                 playing = Playing(Raw.Attached(attachment.id), attachment.name, attachment.size, video = attachment.kind == "video")
+            }
+
+            override fun view(media: GeneratedMedia) {
+                reading = Reading(media.raw, media.title, media.size)
             }
 
             // Where the file is now, by its id: it may have been renamed or moved since it was made.
@@ -238,6 +245,7 @@ fun ChatScreen(
         state.chat?.id?.let { id -> FileViewer(id, file, onClose = { showing = null }) }
     }
     playing?.let { PlayerDialog(it, onClose = { playing = null }, gone = stringResource(R.string.media_gone)) }
+    reading?.let { DocumentDialog(it, onClose = { reading = null }, gone = stringResource(R.string.media_gone)) }
     TransferHost(transfers)
 }
 

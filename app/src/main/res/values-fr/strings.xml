@@ -415,6 +415,16 @@
     <string name="media_video">Vidéo</string>
     <string name="media_music">Musique</string>
     <string name="media_model">Modèle 3D</string>
+    <string name="media_audio">Audio</string>
+    <string name="media_pdf">PDF</string>
+    <string name="media_archive">Archive</string>
+    <string name="media_text">Fichier texte</string>
+    <string name="media_binary">Fichier</string>
+    <string name="diff_deleted">Supprimé</string>
+    <string name="diff_counts">Lignes ajoutées : %1$s, supprimées : %2$s</string>
+    <string name="diff_show_all">Afficher les %1$s lignes</string>
+    <string name="diff_show_less">Afficher moins</string>
+    <string name="diff_more">%1$s lignes de plus ne sont pas affichées ici.</string>
     <string name="media_gone">Ce fichier n\'existe plus.</string>
     <string name="job_queued">En file d’attente</string>
     <string name="job_running">En cours</string>

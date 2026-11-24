@@ -385,6 +385,12 @@ data class LinkedDevice(
     @SerialName("max_mode") val maxMode: String = "",
     /** Whether the device remembers the model last used in a directory (spec 3.9.0). */
     @SerialName("directory_model") val directoryModel: Boolean = false,
+    /** Whether the device hands its files over the link at all (spec 3.11.0, `fs`). Parsed; no screen reads it yet. */
+    val files: Boolean = false,
+    /** False where its highest mode is plan: its files can be read and not changed. */
+    @SerialName("files_writable") val filesWritable: Boolean = false,
+    /** Whether the device lets files that run code (git's own, an agent's configuration) be changed from here. */
+    @SerialName("files_that_run_code") val filesThatRunCode: Boolean = false,
 ) {
     /** What to call it: its name, else its host. */
     val label: String get() = name.ifBlank { host.ifBlank { id } }
@@ -765,7 +771,39 @@ data class CardItem(
      * action's own fields, as the server checked them. Carried out by `actions/ActionRunner`.
      */
     val phone: JsonObject? = null,
+    /** An edit's changes, one per file (`contract/event_ask_edit.json`); empty on a card without them. */
+    val diffs: List<FileDiff> = emptyList(),
 )
+
+/**
+ * What an edit would do to one file, on its approval card: [oldText] is null for a file that is
+ * made, [deleted] marks one that goes. Both texts are a model's and a file's words: drawn as
+ * text by the app's own diff view (`api/Diff.kt`), never rendered.
+ */
+@Serializable
+data class FileDiff(
+    val path: String = "",
+    @SerialName("old_text") val oldText: String? = null,
+    @SerialName("new_text") val newText: String = "",
+    val deleted: Boolean = false,
+) {
+    /** A file that does not exist yet. */
+    val made: Boolean get() = oldText == null && !deleted
+}
+
+/**
+ * A person's two models for an editor (`GET /editor`, `contract/editor.json`): parsed so the
+ * shape is pinned; this app has no screen for them.
+ */
+@Serializable
+data class EditorModels(val autocomplete: Autocomplete = Autocomplete(), val main: Main = Main()) {
+    /** [source]: `person`, `instance` or null with no model. [allowed]: the refs an administrator allows, null for any. */
+    @Serializable
+    data class Autocomplete(val model: String? = null, val source: String? = null, val allowed: List<String>? = null)
+
+    @Serializable
+    data class Main(val model: String? = null)
+}
 
 @Serializable
 data class CardSubagent(val id: String = "", val name: String = "", val position: String = "")

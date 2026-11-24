@@ -424,7 +424,15 @@
     "mcp_browser_note": "Přihlášení probíhá v prohlížeči, přímo na instanci. Pokud prohlížeč není k instanci přihlášen, nejprve si to vyžádá. Potom se vraťte sem.",
     "files_waiting": "Čeká se, až bude aplikace otevřená a telefon odemčený.",
     "share_refused": "Něco ze sdíleného odsud odeslat nelze a bylo vynecháno.",
-    "media_in_trash": "Tento soubor je v koši."
+    "media_in_trash": "Tento soubor je v koši.",
+    "media_pdf": "PDF",
+    "media_archive": "Archiv",
+    "media_text": "Textový soubor",
+    "diff_deleted": "Smazáno",
+    "diff_counts": "Přidané řádky: %1$s, odebrané: %2$s",
+    "diff_show_all": "Zobrazit všechny řádky (%1$s)",
+    "diff_show_less": "Zobrazit méně",
+    "diff_more": "Další řádky, které se zde nezobrazují: %1$s."
   },
   "de": {
     "about_version": "LLeMbas für Android %1$s",
@@ -852,7 +860,15 @@
     "mcp_browser_note": "Die Anmeldung geschieht im Browser, auf der Instanz selbst. Ist der Browser dort nicht angemeldet, wird zuerst danach gefragt. Danach hierher zurückkehren.",
     "files_waiting": "Wartet, bis die App geöffnet und das Telefon entsperrt ist.",
     "share_refused": "Etwas vom Geteilten kann von hier nicht gesendet werden und wurde ausgelassen.",
-    "media_in_trash": "Diese Datei liegt im Papierkorb."
+    "media_in_trash": "Diese Datei liegt im Papierkorb.",
+    "media_pdf": "PDF",
+    "media_archive": "Archiv",
+    "media_text": "Textdatei",
+    "diff_deleted": "Gelöscht",
+    "diff_counts": "Zeilen hinzugefügt: %1$s, entfernt: %2$s",
+    "diff_show_all": "Alle %1$s Zeilen anzeigen",
+    "diff_show_less": "Weniger anzeigen",
+    "diff_more": "%1$s weitere Zeilen werden hier nicht angezeigt."
   },
   "es": {
     "about_version": "LLeMbas para Android %1$s",
@@ -1279,7 +1295,15 @@
     "mcp_browser_note": "El inicio de sesión se hace en el navegador, en la propia instancia. Si el navegador no tiene la sesión iniciada en la instancia, primero la pide. Después, vuelva aquí.",
     "files_waiting": "Esperando a que la aplicación esté abierta y el teléfono desbloqueado.",
     "share_refused": "Algo de lo compartido no se puede enviar desde aquí y se ha omitido.",
-    "media_in_trash": "Ese archivo está en la papelera."
+    "media_in_trash": "Ese archivo está en la papelera.",
+    "media_pdf": "PDF",
+    "media_archive": "Archivo comprimido",
+    "media_text": "Archivo de texto",
+    "diff_deleted": "Eliminado",
+    "diff_counts": "Líneas añadidas: %1$s, eliminadas: %2$s",
+    "diff_show_all": "Mostrar las %1$s líneas",
+    "diff_show_less": "Mostrar menos",
+    "diff_more": "Aquí no se muestran %1$s líneas más."
   },
   "fr": {
     "about_version": "LLeMbas pour Android %1$s",
@@ -1707,7 +1731,15 @@
     "mcp_browser_note": "La connexion se fait dans le navigateur, sur l’instance elle-même. Si le navigateur n’y est pas connecté, il le demande d’abord. Revenez ensuite ici.",
     "files_waiting": "En attente que l'application soit ouverte et le téléphone déverrouillé.",
     "share_refused": "Un élément partagé ne peut pas être envoyé d'ici et a été laissé de côté.",
-    "media_in_trash": "Ce fichier est dans la corbeille."
+    "media_in_trash": "Ce fichier est dans la corbeille.",
+    "media_pdf": "PDF",
+    "media_archive": "Archive",
+    "media_text": "Fichier texte",
+    "diff_deleted": "Supprimé",
+    "diff_counts": "Lignes ajoutées : %1$s, supprimées : %2$s",
+    "diff_show_all": "Afficher les %1$s lignes",
+    "diff_show_less": "Afficher moins",
+    "diff_more": "%1$s lignes de plus ne sont pas affichées ici."
   },
   "hu": {
     "about_version": "LLeMbas Androidra %1$s",
@@ -2135,7 +2167,15 @@
     "mcp_browser_note": "A bejelentkezés a böngészőben történik, magán a példányon. Ha a böngésző nincs bejelentkezve a példányba, előbb azt kéri. Utána térjen vissza ide.",
     "files_waiting": "Várakozás, amíg az alkalmazás meg van nyitva és a telefon fel van oldva.",
     "share_refused": "A megosztottak közül valami innen nem küldhető el, ezért kimaradt.",
-    "media_in_trash": "Ez a fájl a lomtárban van."
+    "media_in_trash": "Ez a fájl a lomtárban van.",
+    "media_pdf": "PDF",
+    "media_archive": "Archívum",
+    "media_text": "Szövegfájl",
+    "diff_deleted": "Törölve",
+    "diff_counts": "Hozzáadott sorok: %1$s, eltávolított: %2$s",
+    "diff_show_all": "Mind a(z) %1$s sor megjelenítése",
+    "diff_show_less": "Kevesebb megjelenítése",
+    "diff_more": "További %1$s sor itt nem látható."
   },
   "it": {
     "about_version": "LLeMbas per Android %1$s",
@@ -2562,7 +2602,15 @@
     "mcp_browser_note": "L’accesso avviene nel browser, sull’istanza stessa. Se il browser non ha effettuato l’accesso all’istanza, prima lo chiede. Poi torna qui.",
     "files_waiting": "In attesa che l'app sia aperta e il telefono sbloccato.",
     "share_refused": "Qualcosa di ciò che è stato condiviso non può essere inviato da qui ed è stato escluso.",
-    "media_in_trash": "Questo file è nel cestino."
+    "media_in_trash": "Questo file è nel cestino.",
+    "media_pdf": "PDF",
+    "media_archive": "Archivio",
+    "media_text": "File di testo",
+    "diff_deleted": "Eliminato",
+    "diff_counts": "Righe aggiunte: %1$s, rimosse: %2$s",
+    "diff_show_all": "Mostra tutte le %1$s righe",
+    "diff_show_less": "Mostra meno",
+    "diff_more": "Altre %1$s righe non sono mostrate qui."
   },
   "pl": {
     "about_version": "LLeMbas na Androida %1$s",
@@ -2989,7 +3037,15 @@
     "mcp_browser_note": "Logowanie odbywa się w przeglądarce, na samej instancji. Jeśli przeglądarka nie jest zalogowana do instancji, najpierw o to poprosi. Potem wróć tutaj.",
     "files_waiting": "Oczekiwanie, aż aplikacja będzie otwarta, a telefon odblokowany.",
     "share_refused": "Czegoś z udostępnionych rzeczy nie można stąd wysłać i zostało pominięte.",
-    "media_in_trash": "Ten plik jest w koszu."
+    "media_in_trash": "Ten plik jest w koszu.",
+    "media_pdf": "PDF",
+    "media_archive": "Archiwum",
+    "media_text": "Plik tekstowy",
+    "diff_deleted": "Usunięto",
+    "diff_counts": "Dodane wiersze: %1$s, usunięte: %2$s",
+    "diff_show_all": "Pokaż wszystkie wiersze (%1$s)",
+    "diff_show_less": "Pokaż mniej",
+    "diff_more": "Dalsze wiersze, których tu nie pokazano: %1$s."
   },
   "sk": {
     "about_version": "LLeMbas pre Android %1$s",
@@ -3416,6 +3472,14 @@
     "mcp_browser_note": "Prihlásenie prebieha v prehliadači, priamo na inštancii. Ak prehliadač nie je do inštancie prihlásený, najprv si to vyžiada. Potom sa vráťte sem.",
     "files_waiting": "Čaká sa, kým bude aplikácia otvorená a telefón odomknutý.",
     "share_refused": "Niečo zo zdieľaného sa odtiaľto nedá odoslať a bolo vynechané.",
-    "media_in_trash": "Tento súbor je v koši."
+    "media_in_trash": "Tento súbor je v koši.",
+    "media_pdf": "PDF",
+    "media_archive": "Archív",
+    "media_text": "Textový súbor",
+    "diff_deleted": "Zmazané",
+    "diff_counts": "Pridané riadky: %1$s, odobraté: %2$s",
+    "diff_show_all": "Zobraziť všetky riadky (%1$s)",
+    "diff_show_less": "Zobraziť menej",
+    "diff_more": "Ďalšie riadky, ktoré sa tu nezobrazujú: %1$s."
   }
 }

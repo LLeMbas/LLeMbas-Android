@@ -75,6 +75,8 @@ private object Pictures {
         cache.get(key)?.let { return it }
         if (key in failed) return null
         val api = context.lembas.instances.client() ?: return null
+        // A picture that comes into view behind the lock, or with the app not in front, waits there.
+        context.lembas.gate.passLater()
         val bytes = try {
             fetch(api).takeIf { it.size <= MAX_BYTES }
         } catch (e: CancellationException) {

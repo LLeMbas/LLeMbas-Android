@@ -415,6 +415,16 @@
     <string name="media_video">Videó</string>
     <string name="media_music">Zene</string>
     <string name="media_model">3D-modell</string>
+    <string name="media_audio">Hang</string>
+    <string name="media_pdf">PDF</string>
+    <string name="media_archive">Archívum</string>
+    <string name="media_text">Szövegfájl</string>
+    <string name="media_binary">Fájl</string>
+    <string name="diff_deleted">Törölve</string>
+    <string name="diff_counts">Hozzáadott sorok: %1$s, eltávolított: %2$s</string>
+    <string name="diff_show_all">Mind a(z) %1$s sor megjelenítése</string>
+    <string name="diff_show_less">Kevesebb megjelenítése</string>
+    <string name="diff_more">További %1$s sor itt nem látható.</string>
     <string name="media_gone">Ez a fájl már nem létezik.</string>
     <string name="job_queued">Sorban áll</string>
     <string name="job_running">Fut</string>

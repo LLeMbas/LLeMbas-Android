@@ -415,6 +415,16 @@
     <string name="media_video">Video</string>
     <string name="media_music">Hudba</string>
     <string name="media_model">3D model</string>
+    <string name="media_audio">Zvuk</string>
+    <string name="media_pdf">PDF</string>
+    <string name="media_archive">Archív</string>
+    <string name="media_text">Textový súbor</string>
+    <string name="media_binary">Súbor</string>
+    <string name="diff_deleted">Zmazané</string>
+    <string name="diff_counts">Pridané riadky: %1$s, odobraté: %2$s</string>
+    <string name="diff_show_all">Zobraziť všetky riadky (%1$s)</string>
+    <string name="diff_show_less">Zobraziť menej</string>
+    <string name="diff_more">Ďalšie riadky, ktoré sa tu nezobrazujú: %1$s.</string>
     <string name="media_gone">Tento súbor už neexistuje.</string>
     <string name="job_queued">Vo fronte</string>
     <string name="job_running">Beží</string>

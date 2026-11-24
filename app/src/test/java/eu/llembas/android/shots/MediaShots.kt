@@ -90,6 +90,67 @@ class MediaShots {
         shoot("60-media-cards", Phone.SmallScroll, fontScale = 1.5f, content = drawn)
     }
 
+    private fun shown(kind: String, name: String, size: Long, mime: String = "", width: Int = 0, height: Int = 0) = GeneratedMedia(
+        kind = kind,
+        path = "$made/$name",
+        nodeId = "node-$kind",
+        name = name,
+        mime = mime,
+        size = size,
+        width = width,
+        height = height,
+        shown = true,
+    )
+
+    /** Every kind a shown file can be, and one this app has never heard of: each is a name, a kind in words and the ways to the file. */
+    private val shownFiles = listOf(
+        shown("image", "chart.png", 48_211, "image/png", 1280, 720),
+        shown("audio", "a-recording-of-the-meeting-about-the-ovens-20260102-030405.ogg", 3_300_000, "audio/ogg"),
+        shown("video", "screen-recording-20260102-030405.webm", 12_400_000, "video/webm", 1920, 1080),
+        shown("pdf", "report-20260102-030405.pdf", 90_000, "application/pdf"),
+        shown("model3d", "loaf-20260102.glb", 880_000),
+        shown("archive", "bundle-20260102-030405.zip", 1_200_000, "application/zip"),
+        shown("binary", "core-20260102.dump", 64_000_000),
+        shown("text", "notes-on-the-long-fermentation-of-waybread.txt", 2_048, "text/plain"),
+        shown("hologram", "something-new.holo", 512),
+    )
+
+    @Test
+    fun filesAnAgentShowed() {
+        val drawn: @Composable () -> Unit = {
+            Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                shownFiles.forEach { MediaCard(it, null, actions) }
+            }
+        }
+        shoot("63-shown-files", Phone.Scroll, content = drawn)
+        shoot("63-shown-files", Phone.SmallScroll, content = drawn)
+        shoot("63-shown-files", Phone.SmallScroll, fontScale = 1.5f, content = drawn)
+    }
+
+    @Test
+    fun aChatWithShownFiles() {
+        fun call(id: String, media: GeneratedMedia) = ToolCall(
+            id = id,
+            name = "show",
+            status = "ok",
+            path = media.path,
+            media = media,
+            block = ToolBlock(kind = "tool", title = media.path, state = "done", label = "Shown"),
+        )
+        val reply = Message(
+            id = "m9",
+            role = "assistant",
+            steps = listOf(
+                Step(index = 0, kind = "tools", calls = listOf(call("c1", shownFiles[0]), call("c2", shownFiles[3]), call("c3", shownFiles[5]))),
+                Step(index = 1, kind = "text", markdown = "The chart, the report and everything else in one archive."),
+            ),
+        )
+        val state = Fakes.transcript.copy(messages = listOf(Message(id = "m8", role = "user", text = "Show me what the run left."), reply), summary = null)
+        shoot("64-chat-shown") { ChatContent(state, object : ChatActions {}, agent = false, media = actions) }
+        shoot("64-chat-shown", Phone.Small) { ChatContent(state, object : ChatActions {}, agent = false, media = actions) }
+        shoot("64-chat-shown", Phone.Small, fontScale = 1.5f) { ChatContent(state, object : ChatActions {}, agent = false, media = actions) }
+    }
+
     @Test
     fun aChatWithGeneratedMedia() {
         fun call(id: String, media: GeneratedMedia? = null, job: MediaJob? = null) = ToolCall(

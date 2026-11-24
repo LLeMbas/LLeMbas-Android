@@ -5,7 +5,32 @@ is in alpha and releases come off `main`.
 
 ## Unreleased
 
+What is said here of shown files and of an edit's diff needs an instance newer than LLeMbas
+2.0.0-beta.18. On an older one the app behaves as before.
+
+### Added
+
+- **A file an agent shows is in the chat, whatever it is.** When an agent puts a file in front
+  of you that is not text -- a screenshot it took, a recording, a report -- the reply holds it
+  where generated media is: a picture is drawn, with its name under it; sound and video have
+  Play and the app's own player; a PDF has Open, which lays its pages out over the chat. A 3D
+  model, an archive, a text file that came this way and any other file are a row with the
+  file's name, what it is in words and its size. A kind the app has not heard of is a "File",
+  never an empty place. Every one of them has Open in Files, Download, Share and Open with.
+  Whether a file is shown does not depend on what the model itself can read.
+- **An edit's approval card shows what would change.** Where a linked computer asks before an
+  edit, the card lists each file with the lines that go and the lines that come, marked by a
+  sign and by colour, with a little unchanged text around them; a new file and a deleted one
+  say so. Long lines scroll sideways inside their own box; a long change is folded to its first
+  lines with "Show all". Both texts are drawn as plain text. Allow and Deny are as they were.
+
 ### Changed
+
+- **A picture in a chat is fetched only while the app is in front of an unlocked phone**, like
+  every other file of the account; one that comes into view behind the lock waits.
+- Pinned to the server's `dev` at `809b87b`. A linked computer's files and the editor's two
+  models are read from the instance and not shown anywhere yet: this app has no browser for a
+  computer's files and no screen for the editor's settings.
 
 - **The launcher icon is the app's own**: the LLeMbas leaf with a small phone beside it, so the app
   is told apart from the other LLeMbas products. The notification icon stays the leaf.

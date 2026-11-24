@@ -12,6 +12,11 @@ import kotlinx.serialization.Serializable
  * `model3d`), and the file is in the person's Files at [path] -- a moment's truth, since they may
  * move it; [nodeId] names it wherever it is. Its bytes are `GET /files/raw?node=`. [width],
  * [height] and [seconds] are 0 where the server did not know them.
+ *
+ * With [shown] it is a file an agent put in front of the person (`contract/tool_media_shown.json`)
+ * and [kind] is what the file is, read from its bytes: `image`, `audio`, `video`, `pdf`,
+ * `model3d`, `archive`, `binary`, `text`, or a word this app does not know yet. Whatever it is,
+ * its card names it and leads to the file; what the phone can draw is drawn as well.
  */
 @Serializable
 data class GeneratedMedia(
@@ -25,15 +30,21 @@ data class GeneratedMedia(
     val width: Int = 0,
     val height: Int = 0,
     val seconds: Double = 0.0,
+    /** An agent showed this file (the `show` tool on a file that is not text); it did not make it. */
+    val shown: Boolean = false,
 ) {
-    /** How the card shows it, by what was asked for: an unknown kind is its details, never a player. */
+    /** How the card shows it, by its kind: an unknown kind is its details, never a player. */
     val view: MediaView
         get() = when (kind) {
             "image", "image_edit" -> MediaView.Picture
             "video" -> MediaView.Video
-            "music" -> MediaView.Sound
+            "music", "audio" -> MediaView.Sound
+            "pdf" -> MediaView.Document
             else -> MediaView.Details
         }
+
+    /** The kinds this app has a word for; anything else is said as "File" when shown, never as nothing. */
+    val knownKind: Boolean get() = kind in KINDS
 
     /** What to call it: its name, else the last name of its path. */
     val title: String get() = name.ifBlank { FileKinds.name(path) }
@@ -43,10 +54,18 @@ data class GeneratedMedia(
 
     /** The folder of the person's Files it was written to. */
     val folder: String get() = FileKinds.parent(path)
+
+    companion object {
+        val KINDS = setOf("image", "image_edit", "video", "music", "audio", "model3d", "pdf", "archive", "binary", "text")
+    }
 }
 
-/** What a generated file's card is: a picture drawn, a player, or (a 3D model, anything unknown) the file's details. */
-enum class MediaView { Picture, Video, Sound, Details }
+/**
+ * What a file's card is: a picture drawn, a player, a document with pages the phone can lay out
+ * (a PDF), or -- a 3D model, an archive, anything unknown -- the file's details. Every one of
+ * them names the file and has the ways to it.
+ */
+enum class MediaView { Picture, Video, Sound, Document, Details }
 
 /** The job a tool call started (`media_job`): [state] as it was when the call returned. */
 @Serializable

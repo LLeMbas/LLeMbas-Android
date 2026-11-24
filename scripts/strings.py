@@ -447,6 +447,18 @@ STRINGS: dict[str, str] = {
     "media_video": "Video",
     "media_music": "Music",
     "media_model": "3D model",
+    # A file an agent showed: what it is, in words, for every kind
+    "media_audio": "Audio",
+    "media_pdf": "PDF",
+    "media_archive": "Archive",
+    "media_text": "Text file",
+    "media_binary": "File",
+    # An edit's diff on its approval card
+    "diff_deleted": "Deleted",
+    "diff_counts": "Lines added: %1$s, removed: %2$s",
+    "diff_show_all": "Show all %1$s lines",
+    "diff_show_less": "Show less",
+    "diff_more": "%1$s more lines are not shown here.",
     "media_gone": "That file no longer exists.",
     "job_queued": "Queued",
     "job_running": "Running",

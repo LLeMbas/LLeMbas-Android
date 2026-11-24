@@ -100,9 +100,11 @@ private fun Approval(card: Card, onAnswer: (CardAnswer) -> Unit) {
             if (approvalTexts(listOf(item), edits).isNotEmpty()) {
                 Text(stringResource(R.string.card_edit_runs), style = MaterialTheme.typography.bodySmall, color = palette.inkMuted)
             }
-        } else if (item.detail.isNotBlank()) {
+        } else if (item.detail.isNotBlank() && item.diffs.isEmpty()) {
             Text(item.detail, fontFamily = FontFamily.Monospace)
         }
+        // An edit says what it would change: the diff stands where the call's arguments would, as text.
+        if (item.diffs.isNotEmpty()) CardDiffs(item.diffs)
         if (item.reason.isNotBlank()) Text(item.reason, style = MaterialTheme.typography.bodySmall, color = palette.inkFaint)
     }
     // A corrected command goes with an allow, never with a refusal, and only when it was corrected.

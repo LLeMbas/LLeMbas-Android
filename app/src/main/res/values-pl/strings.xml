@@ -415,6 +415,16 @@
     <string name="media_video">Wideo</string>
     <string name="media_music">Muzyka</string>
     <string name="media_model">Model 3D</string>
+    <string name="media_audio">Dźwięk</string>
+    <string name="media_pdf">PDF</string>
+    <string name="media_archive">Archiwum</string>
+    <string name="media_text">Plik tekstowy</string>
+    <string name="media_binary">Plik</string>
+    <string name="diff_deleted">Usunięto</string>
+    <string name="diff_counts">Dodane wiersze: %1$s, usunięte: %2$s</string>
+    <string name="diff_show_all">Pokaż wszystkie wiersze (%1$s)</string>
+    <string name="diff_show_less">Pokaż mniej</string>
+    <string name="diff_more">Dalsze wiersze, których tu nie pokazano: %1$s.</string>
     <string name="media_gone">Ten plik już nie istnieje.</string>
     <string name="job_queued">W kolejce</string>
     <string name="job_running">Działa</string>

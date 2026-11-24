@@ -28,6 +28,9 @@ import com.github.takahirom.roborazzi.inspectionMode
 import com.github.takahirom.roborazzi.size
 import eu.llembas.android.R
 import eu.llembas.android.actions.NavApp
+import eu.llembas.android.api.Card
+import eu.llembas.android.api.CardItem
+import eu.llembas.android.api.FileDiff
 import eu.llembas.android.assist.AssistActions
 import eu.llembas.android.assist.AssistSheetContent
 import eu.llembas.android.assist.AssistSheetFrame
@@ -139,6 +142,42 @@ class ScreenShots {
         shoot("03-waiting") { ChatContent(Fakes.waiting, NoChatActions, agent = false) }
         shoot("03-waiting", Phone.Small) { ChatContent(Fakes.waiting, NoChatActions, agent = false) }
         shoot("03-waiting", Phone.Small, fontScale = 1.5f) { ChatContent(Fakes.waiting, NoChatActions, agent = false) }
+    }
+
+    @Test
+    fun editDiffCard() {
+        // An edit's approval card with its diff: a changed file with one line wider than the phone
+        // (it scrolls in its own box), a new file long enough to fold, and a file that goes. The
+        // card itself must not be wider than the phone, at a small one's width and large type too.
+        val long = "    return loaf.heat(240, minutes=timer.MINUTES, rack=\"middle\", steam=True, turn_after=20)  # <b>hotter</b>, as asked"
+        val card = Card(
+            id = "card9",
+            kind = "approval",
+            items = listOf(
+                CardItem(
+                    key = "0",
+                    kind = "approval",
+                    tool = "edit",
+                    title = "Edit a file",
+                    detail = "{\"path\": \"src/oven.py\"}",
+                    reason = "Manual mode asks before every edit.",
+                    purpose = "Bake hotter",
+                    freeText = false,
+                    diffs = listOf(
+                        FileDiff(
+                            path = "src/bakery/ovens/oven.py",
+                            oldText = "import timer\n\n\ndef bake(loaf):\n    loaf.proof()\n    return loaf.heat(220)\n",
+                            newText = "import timer\n\n\ndef bake(loaf):\n    loaf.proof()\n    # 220 was cool for waybread.\n$long\n",
+                        ),
+                        FileDiff(path = "src/bakery/timer.py", oldText = null, newText = (1..30).joinToString("\n") { "STEP_$it = ${it * 5}" } + "\n"),
+                        FileDiff(path = "src/bakery/old.py", oldText = "x = 1\ny = 2\n", newText = "", deleted = true),
+                    ),
+                ),
+            ),
+        )
+        shoot("09-edit-diff", Phone.Scroll) { SheetOver { CardSheet(card, onAnswer = {}) } }
+        shoot("09-edit-diff", Phone.SmallScroll) { SheetOver { CardSheet(card, onAnswer = {}) } }
+        shoot("09-edit-diff", Phone.SmallScroll, fontScale = 1.5f) { SheetOver { CardSheet(card, onAnswer = {}) } }
     }
 
     @Test

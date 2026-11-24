@@ -228,9 +228,19 @@ class PdfPages(private val copy: File) {
     }
 }
 
-/** A PDF, page by page, as wide as the screen. */
+/** A PDF of the tree, page by page, as wide as the screen. */
 @Composable
-fun PdfBody(path: String, name: String, size: Long, fallback: @Composable (String?) -> Unit) {
+fun PdfBody(path: String, name: String, size: Long, fallback: @Composable (String?) -> Unit) =
+    PdfBody(Raw.Path(path), name, size, gone = null, fallback = fallback)
+
+/**
+ * The same for any [Raw]: a file a chat names by its node id is copied and laid out as one of
+ * the tree is. [gone] is what to say of a file that is no longer there, where the instance's own
+ * refusal would name an id.
+ */
+@Composable
+fun PdfBody(what: Raw, name: String, size: Long, gone: String? = null, fallback: @Composable (String?) -> Unit) {
+    val path = what
     val context = LocalContext.current
     var pages by remember(path) { mutableStateOf<Fetched<PdfPages>>(Fetched.Loading()) }
     DisposableEffect(path) {
@@ -248,7 +258,7 @@ fun PdfBody(path: String, name: String, size: Long, fallback: @Composable (Strin
         pages = try {
             val api = context.lembas.instances.client() ?: throw ApiException(401, context.getString(R.string.assist_signed_out))
             context.lembas.gate.pass()
-            api.copyInto(api.rawFile(path), copy, PDF_MAX_BYTES, stepped { done, total -> pages = Fetched.Loading(done, total) })
+            api.copyInto(api.raw(what), copy, PDF_MAX_BYTES, stepped { done, total -> pages = Fetched.Loading(done, total) })
             withContext(Dispatchers.IO) { made = PdfPages(copy) }
             Fetched.Ready(checkNotNull(made))
         } catch (e: CancellationException) {
@@ -259,7 +269,13 @@ fun PdfBody(path: String, name: String, size: Long, fallback: @Composable (Strin
             made?.closeLater()
             copy.delete()
             // A password, or not a PDF after all: the renderer's own words are for a developer.
-            Fetched.Failed(if (e is ApiException || unreachable(e)) viewerSays(context, e) else null)
+            Fetched.Failed(
+                when {
+                    gone != null && e is ApiException && e.status == 404 -> gone
+                    e is ApiException || unreachable(e) -> viewerSays(context, e)
+                    else -> null
+                },
+            )
         }
     }
     when (val now = pages) {
@@ -468,6 +484,40 @@ fun MediaBody(what: Raw, size: Long, video: Boolean, fallback: @Composable (Stri
 
 /** What a player opened over a chat plays: which bytes, what it is called, how large, and whether there is a picture. */
 data class Playing(val what: Raw, val title: String, val size: Long, val video: Boolean)
+
+/** A document a chat names, to be laid out over it: a PDF an agent showed. */
+data class Reading(val what: Raw, val title: String, val size: Long)
+
+/**
+ * A PDF over the whole screen, for a file a chat names by its node id: its pages as the tree's
+ * viewer lays them out, from a copy in the private cache. One that is no longer there says so
+ * ([gone]); one this phone cannot lay out says that it can still be downloaded. Back or the cross
+ * closes it.
+ */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+fun DocumentDialog(reading: Reading, onClose: () -> Unit, gone: String) {
+    val palette = LocalPalette.current
+    val unreadable: @Composable (String?) -> Unit = { note ->
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text(note ?: stringResource(R.string.files_not_shown), color = palette.inkMuted, modifier = Modifier.padding(32.dp))
+        }
+    }
+    Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnClickOutside = false)) {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    navigationIcon = { IconButton(onClick = onClose) { Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.close)) } },
+                    title = { Text(reading.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                )
+            },
+        ) { padding ->
+            Box(Modifier.padding(padding).fillMaxSize()) {
+                PdfBody(reading.what, reading.title, reading.size, gone = gone, fallback = unreadable)
+            }
+        }
+    }
+}
 
 /** How a player's file was found before it was handed to the player. */
 private sealed interface Probed {

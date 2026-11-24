@@ -15,14 +15,18 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.FolderOpen
+import androidx.compose.material.icons.filled.FolderZip
 import androidx.compose.material.icons.filled.HourglassEmpty
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.ViewInAr
@@ -59,8 +63,9 @@ import eu.llembas.android.ui.theme.LocalPalette
 import eu.llembas.android.ui.viewer.playTime
 import kotlinx.coroutines.delay
 
-// What a model made, in the reply: a card for a file (a picture drawn, a video or a track with
-// Play, a 3D model or anything else as what it is) and a card for a generation still under way.
+// What a model made or an agent showed, in the reply: a card for a file (a picture drawn, a video
+// or a track with Play, a PDF with Open, a 3D model or anything else as what it is) and a card for
+// a generation still under way.
 // The file is one of the person's Files, so each card leads there, and out of the app the ways
 // a file leaves it: saved where the person chooses, shared, or opened with another app. The
 // cards are drawn only where a chat provides [LocalChatMedia] -- the chat's own screen, which
@@ -73,6 +78,9 @@ interface MediaActions {
 
     /** Play sound or video the person attached. */
     fun play(attachment: Attachment) {}
+
+    /** Lay a document's pages out over the chat (a PDF). */
+    fun view(media: GeneratedMedia) {}
 
     /** The folder of the person's Files the file is in. */
     fun openInFiles(media: GeneratedMedia) {}
@@ -96,21 +104,39 @@ val LocalChatMedia = compositionLocalOf<ChatMedia?> { null }
 
 private val CardShape = RoundedCornerShape(16.dp)
 
-/** The word for what was asked for: a picture, a video, music, a 3D model; the server's own word for anything else. */
-@Composable
-internal fun mediaKind(kind: String): String = when (kind) {
-    "image", "image_edit" -> stringResource(R.string.media_image)
-    "video" -> stringResource(R.string.media_video)
-    "music" -> stringResource(R.string.media_music)
-    "model3d" -> stringResource(R.string.media_model)
-    else -> kind
+/** The string for a kind this app has a word for; null for any other. */
+internal fun mediaKindWord(kind: String): Int? = when (kind) {
+    "image", "image_edit" -> R.string.media_image
+    "video" -> R.string.media_video
+    "music" -> R.string.media_music
+    "audio" -> R.string.media_audio
+    "model3d" -> R.string.media_model
+    "pdf" -> R.string.media_pdf
+    "archive" -> R.string.media_archive
+    "text" -> R.string.media_text
+    "binary" -> R.string.media_binary
+    else -> null
 }
 
-private fun mediaIcon(kind: String): ImageVector = when (kind) {
+/**
+ * The word for what a file is: a picture, a video, music, audio, a 3D model, a PDF, an archive,
+ * a text file, a file. A kind this app does not know is the server's own word for a generated
+ * file and "File" for one an agent showed ([shown]): a shown file always says what it is.
+ */
+@Composable
+internal fun mediaKind(kind: String, shown: Boolean = false): String =
+    mediaKindWord(kind)?.let { stringResource(it) } ?: if (shown) stringResource(R.string.media_binary) else kind
+
+/** The mark of a kind; `binary` and a kind this app does not know are a file. */
+internal fun mediaIcon(kind: String): ImageVector = when (kind) {
     "image", "image_edit" -> Icons.Filled.Image
     "video" -> Icons.Filled.Movie
-    "music" -> Icons.Filled.MusicNote
-    else -> Icons.Filled.ViewInAr
+    "music", "audio" -> Icons.Filled.MusicNote
+    "model3d" -> Icons.Filled.ViewInAr
+    "pdf" -> Icons.Filled.PictureAsPdf
+    "archive" -> Icons.Filled.FolderZip
+    "text" -> Icons.Filled.Description
+    else -> Icons.AutoMirrored.Filled.InsertDriveFile
 }
 
 /** What is known of a file, in one line: what it is, how long, how large, its size in pixels. */
@@ -118,7 +144,7 @@ private fun mediaIcon(kind: String): ImageVector = when (kind) {
 internal fun mediaFacts(media: GeneratedMedia): String {
     val context = LocalContext.current
     return listOfNotNull(
-        mediaKind(media.kind).ifBlank { null },
+        mediaKind(media.kind, media.shown).ifBlank { null },
         media.seconds.takeIf { it > 0 }?.let { playTime((it * 1000).toInt()) },
         media.size.takeIf { it > 0 }?.let { Formatter.formatShortFileSize(context, it) },
         if (media.width > 0 && media.height > 0) "${media.width} × ${media.height}" else null,
@@ -126,45 +152,33 @@ internal fun mediaFacts(media: GeneratedMedia): String {
 }
 
 /**
- * A file a tool call made. A picture is drawn -- from its attachment where the call has one
- * ([image]), else from the file itself; a video or a track is its name with Play (48 dp), which
- * opens the player over the chat; a 3D model and anything this app does not know is what it is.
- * Under each, four buttons of one size: Open in Files, Download, Share, Open with.
+ * A file a tool call made, or one an agent showed. A picture is drawn -- from its attachment
+ * where the call has one ([image]), else from the file itself; a video or a track is its name
+ * with Play (48 dp), which opens the player over the chat; a PDF is its name with Open, which
+ * lays its pages out over the chat; a 3D model, an archive and anything this app does not know
+ * is its name and what it is. Under each, four buttons of one size: Open in Files, Download,
+ * Share, Open with.
+ *
+ * A file that was shown is always named: its picture has its name and facts under it, so one
+ * that cannot be drawn on this phone (too large, a format the phone does not read) is still a
+ * name, a kind in words and the ways to the file.
  */
 @Composable
 fun MediaCard(media: GeneratedMedia, image: GeneratedImage?, actions: MediaActions, modifier: Modifier = Modifier) {
-    val palette = LocalPalette.current
     Column(modifier.widthIn(max = 480.dp).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         when (media.view) {
-            MediaView.Picture -> if (image != null && image.id.isNotBlank()) GeneratedPicture(image) else GeneratedPicture(media)
-
-            MediaView.Video, MediaView.Sound, MediaView.Details -> Row(
-                Modifier.fillMaxWidth().border(1.dp, palette.border, CardShape).padding(horizontal = 12.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                if (media.view == MediaView.Details) {
-                    Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
-                        Icon(mediaIcon(media.kind), contentDescription = null, tint = palette.inkMuted)
-                    }
-                } else {
-                    FilledIconButton(
-                        onClick = { actions.play(media) },
-                        colors = IconButtonDefaults.filledIconButtonColors(containerColor = palette.accent, contentColor = palette.accentInk),
-                        modifier = Modifier.size(48.dp),
-                    ) { Icon(Icons.Filled.PlayArrow, contentDescription = stringResource(R.string.play)) }
-                }
-                Spacer(Modifier.width(12.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(media.title, style = MaterialTheme.typography.bodyLarge, color = palette.ink, maxLines = 1, overflow = TextOverflow.MiddleEllipsis)
-                    Text(
-                        mediaFacts(media),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = palette.inkMuted,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+            MediaView.Picture -> {
+                // A result that names no node has no picture to ask for: its row stands in, so the card is never empty.
+                val drawable = (image != null && image.id.isNotBlank()) || media.nodeId.isNotBlank()
+                if (image != null && image.id.isNotBlank()) GeneratedPicture(image) else GeneratedPicture(media)
+                if (media.shown && drawable) {
+                    Column(Modifier.fillMaxWidth().padding(horizontal = 4.dp)) { MediaWords(media) }
+                } else if (!drawable) {
+                    MediaRow(media, actions)
                 }
             }
+
+            MediaView.Video, MediaView.Sound, MediaView.Document, MediaView.Details -> MediaRow(media, actions)
         }
         // Four buttons of 48 dp: nothing here depends on how long a word is in any language.
         Row {
@@ -173,6 +187,44 @@ fun MediaCard(media: GeneratedMedia, image: GeneratedImage?, actions: MediaActio
             CardButton(Icons.Filled.Share, R.string.report_share) { actions.share(media) }
             CardButton(Icons.AutoMirrored.Filled.OpenInNew, R.string.files_open_with) { actions.openWith(media) }
         }
+    }
+}
+
+/** The file's name on one line (its middle gives) and what is known of it on the next. */
+@Composable
+private fun MediaWords(media: GeneratedMedia) {
+    val palette = LocalPalette.current
+    Text(media.title, style = MaterialTheme.typography.bodyLarge, color = palette.ink, maxLines = 1, overflow = TextOverflow.MiddleEllipsis)
+    Text(mediaFacts(media), style = MaterialTheme.typography.bodySmall, color = palette.inkMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+}
+
+/**
+ * A file as a row: a mark of 48 dp -- Play for sound and video, Open for a PDF, else the kind's
+ * icon -- and the file's words, which give.
+ */
+@Composable
+private fun MediaRow(media: GeneratedMedia, actions: MediaActions) {
+    val palette = LocalPalette.current
+    Row(
+        Modifier.fillMaxWidth().border(1.dp, palette.border, CardShape).padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        val filled = IconButtonDefaults.filledIconButtonColors(containerColor = palette.accent, contentColor = palette.accentInk)
+        when (media.view) {
+            MediaView.Video, MediaView.Sound -> FilledIconButton(onClick = { actions.play(media) }, colors = filled, modifier = Modifier.size(48.dp)) {
+                Icon(Icons.Filled.PlayArrow, contentDescription = stringResource(R.string.play))
+            }
+
+            MediaView.Document -> FilledIconButton(onClick = { actions.view(media) }, colors = filled, modifier = Modifier.size(48.dp)) {
+                Icon(mediaIcon(media.kind), contentDescription = stringResource(R.string.viewer_open))
+            }
+
+            MediaView.Picture, MediaView.Details -> Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
+                Icon(mediaIcon(media.kind), contentDescription = null, tint = palette.inkMuted)
+            }
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) { MediaWords(media) }
     }
 }
 
