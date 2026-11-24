@@ -365,3 +365,52 @@ class RangeReader(private val length: Long, private val block: Int = BLOCK, priv
         const val BLOCK = 512 * 1024
     }
 }
+
+/** How much of a file's beginning says what it is. */
+const val SNIFF_BYTES = 16
+
+private fun ByteArray.begins(at: Int, vararg bytes: Int): Boolean =
+    size >= at + bytes.size && bytes.indices.all { (this[at + it].toInt() and 0xFF) == bytes[it] }
+
+private fun ByteArray.says(at: Int, word: String): Boolean = size >= at + word.length && word.indices.all { this[at + it].toInt() == word[it].code }
+
+/**
+ * What a file is by its first bytes ([head], [SNIFF_BYTES] of them are enough), for the kinds a
+ * chat hands out: pictures, sound, video, a PDF, a 3D model, the archives. Null for anything
+ * else -- text has no mark, and a guess is worse than none.
+ */
+fun sniffType(head: ByteArray): String? = when {
+    head.begins(0, 0x89, 0x50, 0x4E, 0x47) -> "image/png"
+    head.begins(0, 0xFF, 0xD8, 0xFF) -> "image/jpeg"
+    head.says(0, "GIF8") -> "image/gif"
+    head.says(0, "RIFF") && head.says(8, "WEBP") -> "image/webp"
+    head.says(0, "RIFF") && head.says(8, "WAVE") -> "audio/wav"
+    head.says(0, "BM") -> "image/bmp"
+    head.says(0, "%PDF-") -> "application/pdf"
+    head.says(0, "OggS") -> "audio/ogg"
+    head.says(0, "fLaC") -> "audio/flac"
+    head.says(0, "ID3") || head.begins(0, 0xFF, 0xFB) || head.begins(0, 0xFF, 0xF3) -> "audio/mpeg"
+    head.says(4, "ftyp") -> "video/mp4"
+    head.begins(0, 0x1A, 0x45, 0xDF, 0xA3) -> "video/webm"
+    head.says(0, "glTF") -> "model/gltf-binary"
+    head.says(0, "PK\u0003\u0004") -> "application/zip"
+    head.begins(0, 0x1F, 0x8B) -> "application/gzip"
+    head.says(0, "7z") && head.begins(2, 0xBC, 0xAF) -> "application/x-7z-compressed"
+    else -> null
+}
+
+/**
+ * The type a copy is offered to another app as ("Open with"): what its bytes say, else what its
+ * name's extension says ([named], the platform's table), else anything. A zip is the one mark
+ * that many kinds of document carry inside, so there a known extension is the better word. The
+ * type the instance said is not asked: it is not the phone's own reading.
+ */
+fun openType(head: ByteArray, named: String?): String {
+    val sniffed = sniffType(head)
+    val byName = named?.ifBlank { null }
+    return when {
+        sniffed == null -> byName ?: "*/*"
+        sniffed == "application/zip" && byName != null -> byName
+        else -> sniffed
+    }
+}

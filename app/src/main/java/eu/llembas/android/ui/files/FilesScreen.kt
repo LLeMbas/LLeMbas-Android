@@ -439,7 +439,7 @@ fun FilesScreen(onBack: () -> Unit, start: String? = null, model: FilesViewModel
                 model.clearSelection()
             }
 
-            override fun openWith(entry: FileEntry) = transfers.openWith(entry.path, entry.name, entry.mime)
+            override fun openWith(entry: FileEntry) = transfers.openWith(entry.path, entry.name)
         }
     }
 

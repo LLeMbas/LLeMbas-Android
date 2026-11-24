@@ -199,7 +199,7 @@ fun ChatScreen(
 
             override fun share(media: GeneratedMedia) = transfers.share(media.raw, media.title, media.mime)
 
-            override fun openWith(media: GeneratedMedia) = transfers.openWith(media.raw, media.title, media.mime)
+            override fun openWith(media: GeneratedMedia) = transfers.openWith(media.raw, media.title)
 
             override fun cancel(job: MediaJob) = model.cancelJob(job)
         }

@@ -459,6 +459,8 @@ STRINGS: dict[str, str] = {
     "diff_show_all": "Show all %1$s lines",
     "diff_show_less": "Show less",
     "diff_more": "%1$s more lines are not shown here.",
+    "diff_endings": "The line endings change from %1$s to %2$s.",
+    "diff_cut": "This change is too long to compare here. Only its beginning is shown.",
     "media_gone": "That file no longer exists.",
     "job_queued": "Queued",
     "job_running": "Running",

@@ -201,6 +201,9 @@ class LembasAssistSession(context: Context) :
             up = true
             AssistPresence.shown()
         }
+        // The sheet is the app in front: what it draws of the account (a reply's picture) may be
+        // asked for, unless the phone is locked. Said each time; the gate keeps it as one.
+        context.lembas.gate.sessionShown()
         AssistLink.sheetShown(SystemClock.elapsedRealtime())
         // One sheet, never two: a sheet the wake word opened as a screen of the app, because
         // this one was slow to come, goes now that this one is here.
@@ -230,6 +233,7 @@ class LembasAssistSession(context: Context) :
             up = false
             AssistPresence.hidden()
         }
+        context.lembas.gate.sessionHidden()
         controller.close()
         scope.cancel()
         scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)

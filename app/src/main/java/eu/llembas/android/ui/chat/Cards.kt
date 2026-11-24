@@ -37,6 +37,7 @@ import eu.llembas.android.api.CardAnswer
 import eu.llembas.android.api.CardItem
 import eu.llembas.android.api.LembasJson
 import eu.llembas.android.api.Plan
+import eu.llembas.android.api.showsDetail
 import eu.llembas.android.ui.theme.LocalPalette
 
 /** The sentinel the web card's "Something else" row submits (`interaction.OTHER`). */
@@ -73,6 +74,7 @@ private fun Approval(card: Card, onAnswer: (CardAnswer) -> Unit) {
     var refusing by remember { mutableStateOf(false) }
     Text(stringResource(R.string.card_approval), style = MaterialTheme.typography.titleMedium)
     card.items.forEach { item ->
+        val views = diffViews(item.diffs)
         // A subagent asks, not the chat's own turn: said first, as the page says it.
         val subagent = item.subagent
         if (subagent != null) {
@@ -100,11 +102,12 @@ private fun Approval(card: Card, onAnswer: (CardAnswer) -> Unit) {
             if (approvalTexts(listOf(item), edits).isNotEmpty()) {
                 Text(stringResource(R.string.card_edit_runs), style = MaterialTheme.typography.bodySmall, color = palette.inkMuted)
             }
-        } else if (item.detail.isNotBlank() && item.diffs.isEmpty()) {
+        } else if (item.detail.isNotBlank() && showsDetail(item, views)) {
             Text(item.detail, fontFamily = FontFamily.Monospace)
         }
-        // An edit says what it would change: the diff stands where the call's arguments would, as text.
-        if (item.diffs.isNotEmpty()) CardDiffs(item.diffs)
+        // An edit says what it would change: the diff stands where the call's arguments would,
+        // as text. Diffs that say nothing (the same text twice) leave the arguments in view.
+        if (item.diffs.isNotEmpty()) CardDiffs(item.diffs, views)
         if (item.reason.isNotBlank()) Text(item.reason, style = MaterialTheme.typography.bodySmall, color = palette.inkFaint)
     }
     // A corrected command goes with an allow, never with a refusal, and only when it was corrected.

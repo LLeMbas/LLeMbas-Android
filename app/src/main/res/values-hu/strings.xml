@@ -425,6 +425,8 @@
     <string name="diff_show_all">Mind a(z) %1$s sor megjelenítése</string>
     <string name="diff_show_less">Kevesebb megjelenítése</string>
     <string name="diff_more">További %1$s sor itt nem látható.</string>
+    <string name="diff_endings">A sorvégek megváltoznak: %1$s helyett %2$s.</string>
+    <string name="diff_cut">Ez a változás túl hosszú ahhoz, hogy itt össze lehessen hasonlítani. Csak az eleje látható.</string>
     <string name="media_gone">Ez a fájl már nem létezik.</string>
     <string name="job_queued">Sorban áll</string>
     <string name="job_running">Fut</string>

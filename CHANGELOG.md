@@ -23,11 +23,20 @@ What is said here of shown files and of an edit's diff needs an instance newer t
   sign and by colour, with a little unchanged text around them; a new file and a deleted one
   say so. Long lines scroll sideways inside their own box; a long change is folded to its first
   lines with "Show all". Both texts are drawn as plain text. Allow and Deny are as they were.
+  A character that cannot be seen or that changes the direction of a line, in a line or in a
+  path, is written as its code point (`<U+202E>`), so what the card shows is what is written. A
+  file whose line endings change says so once instead of showing every line twice. A very long
+  change is compared only at its beginning and says so, and is worked out beside the screen,
+  not in it. The call's arguments stay in view when there is no change to show.
 
 ### Changed
 
 - **A picture in a chat is fetched only while the app is in front of an unlocked phone**, like
-  every other file of the account; one that comes into view behind the lock waits.
+  every other file of the account; one that comes into view behind the lock waits. The
+  assistant's sheet counts as the app in front, so a picture in it is fetched as before.
+- **"Open with" offers a file as what it is.** The type handed to the other app is read from the
+  file's own first bytes, or from its name's extension where the bytes carry no mark, and no
+  longer taken from what the instance said of it.
 - Pinned to the server's `dev` at `809b87b`. A linked computer's files and the editor's two
   models are read from the instance and not shown anywhere yet: this app has no browser for a
   computer's files and no screen for the editor's settings.

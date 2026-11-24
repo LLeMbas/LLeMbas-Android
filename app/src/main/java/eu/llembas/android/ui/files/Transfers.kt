@@ -8,12 +8,15 @@ import android.content.Intent
 import android.net.Uri
 import android.provider.DocumentsContract
 import android.provider.OpenableColumns
+import android.webkit.MimeTypeMap
 import androidx.activity.result.contract.ActivityResultContract
 import androidx.core.content.FileProvider
 import eu.llembas.android.api.ApiClient
 import eu.llembas.android.api.ApiException
 import eu.llembas.android.api.FileKinds
 import eu.llembas.android.api.FileListing
+import eu.llembas.android.api.SNIFF_BYTES
+import eu.llembas.android.api.openType
 import eu.llembas.android.share.SharedSource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -185,9 +188,24 @@ suspend fun ApiClient.copyInto(request: okhttp3.Request, file: File, most: Long 
 
 /** Hand [files] (cache copies) to another app: "Open with" for one, Share for one or several. Read-only, for this one grant. */
 object Handover {
-    fun view(context: Context, file: File, mime: String): Intent {
+    /**
+     * "Open with" for the copy [file]. What it is offered as is read from the copy itself
+     * ([openType]: its first bytes, else its name's extension) -- never the type the instance
+     * said, which for a file an agent showed is one more thing a model had a hand in.
+     */
+    fun view(context: Context, file: File): Intent {
         val uri = FileCache.uri(context, file)
-        val intent = Intent(Intent.ACTION_VIEW).setDataAndType(uri, mime.ifBlank { "*/*" }).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        // A copy that cannot be read again is offered by its name alone.
+        val head = try {
+            file.inputStream().use { stream ->
+                val bytes = ByteArray(SNIFF_BYTES)
+                bytes.copyOf(stream.read(bytes).coerceAtLeast(0))
+            }
+        } catch (e: IOException) {
+            ByteArray(0)
+        }
+        val named = MimeTypeMap.getSingleton().getMimeTypeFromExtension(file.extension.lowercase())
+        val intent = Intent(Intent.ACTION_VIEW).setDataAndType(uri, openType(head, named)).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         return Intent.createChooser(intent, null)
     }
 

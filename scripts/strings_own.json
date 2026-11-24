@@ -432,7 +432,9 @@
     "diff_counts": "Přidané řádky: %1$s, odebrané: %2$s",
     "diff_show_all": "Zobrazit všechny řádky (%1$s)",
     "diff_show_less": "Zobrazit méně",
-    "diff_more": "Další řádky, které se zde nezobrazují: %1$s."
+    "diff_more": "Další řádky, které se zde nezobrazují: %1$s.",
+    "diff_endings": "Konce řádků se mění z %1$s na %2$s.",
+    "diff_cut": "Tato změna je příliš dlouhá na to, aby se zde porovnala. Zobrazen je jen její začátek."
   },
   "de": {
     "about_version": "LLeMbas für Android %1$s",
@@ -868,7 +870,9 @@
     "diff_counts": "Zeilen hinzugefügt: %1$s, entfernt: %2$s",
     "diff_show_all": "Alle %1$s Zeilen anzeigen",
     "diff_show_less": "Weniger anzeigen",
-    "diff_more": "%1$s weitere Zeilen werden hier nicht angezeigt."
+    "diff_more": "%1$s weitere Zeilen werden hier nicht angezeigt.",
+    "diff_endings": "Die Zeilenenden ändern sich von %1$s zu %2$s.",
+    "diff_cut": "Diese Änderung ist zu lang, um hier verglichen zu werden. Nur ihr Anfang wird angezeigt."
   },
   "es": {
     "about_version": "LLeMbas para Android %1$s",
@@ -1303,7 +1307,9 @@
     "diff_counts": "Líneas añadidas: %1$s, eliminadas: %2$s",
     "diff_show_all": "Mostrar las %1$s líneas",
     "diff_show_less": "Mostrar menos",
-    "diff_more": "Aquí no se muestran %1$s líneas más."
+    "diff_more": "Aquí no se muestran %1$s líneas más.",
+    "diff_endings": "Los finales de línea cambian de %1$s a %2$s.",
+    "diff_cut": "Este cambio es demasiado largo para compararlo aquí. Solo se muestra su comienzo."
   },
   "fr": {
     "about_version": "LLeMbas pour Android %1$s",
@@ -1739,7 +1745,9 @@
     "diff_counts": "Lignes ajoutées : %1$s, supprimées : %2$s",
     "diff_show_all": "Afficher les %1$s lignes",
     "diff_show_less": "Afficher moins",
-    "diff_more": "%1$s lignes de plus ne sont pas affichées ici."
+    "diff_more": "%1$s lignes de plus ne sont pas affichées ici.",
+    "diff_endings": "Les fins de ligne passent de %1$s à %2$s.",
+    "diff_cut": "Cette modification est trop longue pour être comparée ici. Seul son début est affiché."
   },
   "hu": {
     "about_version": "LLeMbas Androidra %1$s",
@@ -2175,7 +2183,9 @@
     "diff_counts": "Hozzáadott sorok: %1$s, eltávolított: %2$s",
     "diff_show_all": "Mind a(z) %1$s sor megjelenítése",
     "diff_show_less": "Kevesebb megjelenítése",
-    "diff_more": "További %1$s sor itt nem látható."
+    "diff_more": "További %1$s sor itt nem látható.",
+    "diff_endings": "A sorvégek megváltoznak: %1$s helyett %2$s.",
+    "diff_cut": "Ez a változás túl hosszú ahhoz, hogy itt össze lehessen hasonlítani. Csak az eleje látható."
   },
   "it": {
     "about_version": "LLeMbas per Android %1$s",
@@ -2610,7 +2620,9 @@
     "diff_counts": "Righe aggiunte: %1$s, rimosse: %2$s",
     "diff_show_all": "Mostra tutte le %1$s righe",
     "diff_show_less": "Mostra meno",
-    "diff_more": "Altre %1$s righe non sono mostrate qui."
+    "diff_more": "Altre %1$s righe non sono mostrate qui.",
+    "diff_endings": "I fine riga cambiano da %1$s a %2$s.",
+    "diff_cut": "Questa modifica è troppo lunga per essere confrontata qui. Ne è mostrato solo l’inizio."
   },
   "pl": {
     "about_version": "LLeMbas na Androida %1$s",
@@ -3045,7 +3057,9 @@
     "diff_counts": "Dodane wiersze: %1$s, usunięte: %2$s",
     "diff_show_all": "Pokaż wszystkie wiersze (%1$s)",
     "diff_show_less": "Pokaż mniej",
-    "diff_more": "Dalsze wiersze, których tu nie pokazano: %1$s."
+    "diff_more": "Dalsze wiersze, których tu nie pokazano: %1$s.",
+    "diff_endings": "Końce wierszy zmieniają się z %1$s na %2$s.",
+    "diff_cut": "Ta zmiana jest zbyt długa, by ją tu porównać. Pokazano tylko jej początek."
   },
   "sk": {
     "about_version": "LLeMbas pre Android %1$s",
@@ -3480,6 +3494,8 @@
     "diff_counts": "Pridané riadky: %1$s, odobraté: %2$s",
     "diff_show_all": "Zobraziť všetky riadky (%1$s)",
     "diff_show_less": "Zobraziť menej",
-    "diff_more": "Ďalšie riadky, ktoré sa tu nezobrazujú: %1$s."
+    "diff_more": "Ďalšie riadky, ktoré sa tu nezobrazujú: %1$s.",
+    "diff_endings": "Konce riadkov sa menia z %1$s na %2$s.",
+    "diff_cut": "Táto zmena je príliš dlhá na to, aby sa tu porovnala. Zobrazený je len jej začiatok."
   }
 }

@@ -91,13 +91,14 @@ class TransferViewModel(app: Application) : AndroidViewModel(app) {
         _state.update { it.copy(notice = app.getString(R.string.files_downloaded)) }
     }
 
-    fun openWith(path: String, name: String, mime: String) = openWith(Raw.Path(path), name, mime)
+    fun openWith(path: String, name: String) = openWith(Raw.Path(path), name)
 
-    fun openWith(what: Raw, name: String, mime: String) = start { api, progress ->
+    /** A copy for another app to open; its type is read from the copy ([Handover.view]), not taken from the instance. */
+    fun openWith(what: Raw, name: String) = start { api, progress ->
         FileCache.sweepShared(app)
         turn()
         val copy = api.copyInto(api.raw(what), FileCache.shared(app, name), progress = progress)
-        _state.update { it.copy(launch = Handover.view(app, copy, mime)) }
+        _state.update { it.copy(launch = Handover.view(app, copy)) }
     }
 
     /** One thing that is not named by a path (a generated file by its id), shared as itself. */

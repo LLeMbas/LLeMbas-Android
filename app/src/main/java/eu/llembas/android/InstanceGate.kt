@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -20,11 +21,13 @@ import java.util.concurrent.atomic.AtomicInteger
  * is not touched, so what the person started finishes; the next one waits here, and goes on by
  * itself when the app is in front of an unlocked phone again.
  *
- * The process has one ([LembasApp.gate]). It hears of the app's activities starting and stopping
- * and of the screen going off and the phone being unlocked; [locked] is asked each time.
+ * The process has one ([LembasApp.gate]). It hears of the app's activities starting and stopping,
+ * of the assistant's sheet showing and hiding (a session's window, which is no activity), and of
+ * the screen going off and the phone being unlocked; [locked] is asked each time.
  */
 class InstanceGate(private val locked: () -> Boolean) {
     private val started = AtomicInteger(0)
+    private val sheet = AtomicBoolean(false)
     private val state = MutableStateFlow(false)
 
     /** Whether a request may start now, as it was last looked at. */
@@ -40,9 +43,25 @@ class InstanceGate(private val locked: () -> Boolean) {
         look()
     }
 
+    /**
+     * The assistant's sheet is up. It is a window of the system's session and no activity, so it
+     * says so itself: the app is in front while it shows, as while an activity is started. Told
+     * once however often the system shows a sheet that is already up. The lock still shuts the
+     * gate: a sheet over the lock screen asks the instance for nothing.
+     */
+    fun sessionShown() {
+        sheet.set(true)
+        look()
+    }
+
+    fun sessionHidden() {
+        sheet.set(false)
+        look()
+    }
+
     /** Looks again (the screen went off, the phone was unlocked) and says whether a request may start. */
     fun look(): Boolean {
-        val now = started.get() > 0 && !locked()
+        val now = (started.get() > 0 || sheet.get()) && !locked()
         state.value = now
         return now
     }

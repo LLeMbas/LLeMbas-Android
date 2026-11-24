@@ -147,7 +147,8 @@ class ScreenShots {
     @Test
     fun editDiffCard() {
         // An edit's approval card with its diff: a changed file with one line wider than the phone
-        // (it scrolls in its own box), a new file long enough to fold, and a file that goes. The
+        // (it scrolls in its own box), a new file long enough to fold, a file that goes, and one
+        // whose line endings change with a character in it that cannot be seen. The
         // card itself must not be wider than the phone, at a small one's width and large type too.
         val long = "    return loaf.heat(240, minutes=timer.MINUTES, rack=\"middle\", steam=True, turn_after=20)  # <b>hotter</b>, as asked"
         val card = Card(
@@ -171,6 +172,8 @@ class ScreenShots {
                         ),
                         FileDiff(path = "src/bakery/timer.py", oldText = null, newText = (1..30).joinToString("\n") { "STEP_$it = ${it * 5}" } + "\n"),
                         FileDiff(path = "src/bakery/old.py", oldText = "x = 1\ny = 2\n", newText = "", deleted = true),
+                        // Line endings that change are said once; a direction override in a line is written out.
+                        FileDiff(path = "src/bakery/notes.txt", oldText = "keep warm\nserve\n", newText = "keep warm\r\nserve\u202E now\r\n"),
                     ),
                 ),
             ),

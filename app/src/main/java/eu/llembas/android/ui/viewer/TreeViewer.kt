@@ -182,7 +182,7 @@ fun TreeFileViewer(path: String, onClose: () -> Unit, startEditing: Boolean = fa
         object : FileActions {
             override fun download() = saveTo.launch(CreateFile.Ask(name, file?.mime.orEmpty()))
 
-            override fun openWith() = transfers.openWith(path, name, file?.mime.orEmpty())
+            override fun openWith() = transfers.openWith(path, name)
 
             override fun share() = transfers.share(listOf(FileEntry(name = name, path = path, mime = file?.mime.orEmpty())))
         }

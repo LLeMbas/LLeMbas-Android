@@ -425,6 +425,8 @@
     <string name="diff_show_all">Zobrazit všechny řádky (%1$s)</string>
     <string name="diff_show_less">Zobrazit méně</string>
     <string name="diff_more">Další řádky, které se zde nezobrazují: %1$s.</string>
+    <string name="diff_endings">Konce řádků se mění z %1$s na %2$s.</string>
+    <string name="diff_cut">Tato změna je příliš dlouhá na to, aby se zde porovnala. Zobrazen je jen její začátek.</string>
     <string name="media_gone">Tento soubor už neexistuje.</string>
     <string name="job_queued">Ve frontě</string>
     <string name="job_running">Běží</string>

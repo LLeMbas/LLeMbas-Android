@@ -425,6 +425,8 @@
     <string name="diff_show_all">Mostra tutte le %1$s righe</string>
     <string name="diff_show_less">Mostra meno</string>
     <string name="diff_more">Altre %1$s righe non sono mostrate qui.</string>
+    <string name="diff_endings">I fine riga cambiano da %1$s a %2$s.</string>
+    <string name="diff_cut">Questa modifica è troppo lunga per essere confrontata qui. Ne è mostrato solo l’inizio.</string>
     <string name="media_gone">Questo file non esiste più.</string>
     <string name="job_queued">In coda</string>
     <string name="job_running">In esecuzione</string>

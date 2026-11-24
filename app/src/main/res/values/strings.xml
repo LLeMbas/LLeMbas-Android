@@ -427,6 +427,8 @@
     <string name="diff_show_all">Show all %1$s lines</string>
     <string name="diff_show_less">Show less</string>
     <string name="diff_more">%1$s more lines are not shown here.</string>
+    <string name="diff_endings">The line endings change from %1$s to %2$s.</string>
+    <string name="diff_cut">This change is too long to compare here. Only its beginning is shown.</string>
     <string name="media_gone">That file no longer exists.</string>
     <string name="job_queued">Queued</string>
     <string name="job_running">Running</string>

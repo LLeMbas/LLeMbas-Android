@@ -3,6 +3,8 @@ package eu.llembas.android
 import eu.llembas.android.api.AskFrame
 import eu.llembas.android.api.DIFF_FOLD
 import eu.llembas.android.api.DIFF_MOST
+import eu.llembas.android.api.DIFF_TEXT_CHARS
+import eu.llembas.android.api.DIFF_TEXT_LINES
 import eu.llembas.android.api.DeviceList
 import eu.llembas.android.api.DiffLine
 import eu.llembas.android.api.DiffSign
@@ -12,17 +14,31 @@ import eu.llembas.android.api.GeneratedMedia
 import eu.llembas.android.api.LembasJson
 import eu.llembas.android.api.MediaView
 import eu.llembas.android.api.Raw
+import eu.llembas.android.api.TextLines
 import eu.llembas.android.api.ToolCall
 import eu.llembas.android.api.diffLines
 import eu.llembas.android.api.hunks
+import eu.llembas.android.api.openType
+import eu.llembas.android.api.showsDetail
+import eu.llembas.android.api.sniffType
+import eu.llembas.android.api.textLines
 import eu.llembas.android.api.view
+import eu.llembas.android.api.visibly
 import eu.llembas.android.ui.chat.DIFF_LINE_MOST
 import eu.llembas.android.ui.chat.approvalTexts
 import eu.llembas.android.ui.chat.diffRow
 import eu.llembas.android.ui.chat.mediaKindWord
 import eu.llembas.android.ui.chat.offersAlways
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.json.boolean
+import kotlinx.serialization.json.int
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -35,6 +51,7 @@ import org.junit.Test
  * diff on its approval card, and the shapes that are parsed and not drawn yet (a linked
  * computer's files, an editor's two models).
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 class ShownMediaTest {
     private fun contract(name: String): String = requireNotNull(javaClass.classLoader!!.getResource("$name.json")) {
         "contract/$name.json is missing"
@@ -237,18 +254,164 @@ class ShownMediaTest {
         assertEquals(short.lines, short.shown(open = false))
         assertEquals(0, short.beyond)
 
-        // Two texts too long to compare line against line are not compared: the old goes, the new comes.
-        val a = (1..1500).map { "old $it" }
-        val b = (1..1500).map { "new $it" }
-        val both = diffLines(a, b)
+        // Two middles too long to compare line against line are not compared: the old goes, the
+        // new comes. They share every line, in the other order -- compared, some would be "same".
+        val a = (1..1500).map { "line $it" }
+        val both = diffLines(a, a.reversed())
         assertEquals(3000, both.size)
-        assertEquals(1500, both.count { it.sign == DiffSign.Removed })
+        assertTrue(both.none { it.sign == DiffSign.Same })
         assertTrue(both.take(1500).all { it.sign == DiffSign.Removed })
+        assertTrue(both.drop(1500).all { it.sign == DiffSign.Added })
+        // The same two, short enough, are compared: something is found to be the same.
+        val few = (1..50).map { "line $it" }
+        assertTrue(diffLines(few, few.reversed()).any { it.sign == DiffSign.Same })
 
         // One line of any length is one bounded line of the card; a tab is spaces.
         val row = diffRow(DiffLine(DiffSign.Added, "x".repeat(5000)))
         assertEquals(2 + DIFF_LINE_MOST + 1, row.length)
-        assertEquals("      a", diffRow(DiffLine(DiffSign.Same, "\ta\r")))
+        assertEquals("  " + "    a", diffRow(DiffLine(DiffSign.Same, "\ta")))
+    }
+
+    @Test
+    fun aTextIsCutBeforeItIsComparedNotAfter() {
+        // Two megabytes of newlines: only the first lines are ever split off.
+        val newlines = "\n".repeat(2_000_000)
+        val cut = textLines(newlines)
+        assertEquals(DIFF_TEXT_LINES, cut.lines.size)
+        assertTrue(cut.cut)
+        // One line of two megabytes: only its beginning is kept.
+        val one = textLines("x".repeat(2_000_000))
+        assertEquals(1, one.lines.size)
+        assertEquals(DIFF_TEXT_CHARS, one.lines.single().length)
+        assertTrue(one.cut)
+        // A text within both bounds is whole, and says so.
+        assertEquals(TextLines(listOf("a", "b"), cut = false), textLines("a\nb\n"))
+        assertEquals(TextLines(listOf("a", "b"), cut = false), textLines("a\nb"))
+        assertEquals(TextLines(listOf("a"), cut = true), textLines("a\nb\n", mostLines = 1))
+        assertEquals(TextLines(listOf("a"), cut = true), textLines("a\nbcd", mostChars = 2))
+        assertEquals(TextLines(listOf("a", "b"), cut = true), textLines("a\nbcd", mostChars = 3))
+
+        // A new file of that size is a card of bounded size that says it is not all there.
+        val huge = FileDiff(path = "huge.txt", oldText = null, newText = (1..100_000).joinToString("\n") { "row $it" }).view()
+        assertTrue(huge.cut)
+        assertEquals(DIFF_TEXT_LINES, huge.added)
+        assertEquals(DIFF_TEXT_LINES, huge.lines.size)
+        assertTrue(huge.says)
+        assertFalse(edit().diffs[0].view().cut)
+    }
+
+    @Test
+    fun aChangeOfLineEndingsIsSaidOnceNotAsEveryLine() {
+        val crlf = FileDiff(path = "a.txt", oldText = "one\ntwo\nthree\n", newText = "one\r\ntwo\r\nthree\r\n").view()
+        assertTrue(crlf.lines.isEmpty())
+        assertEquals(0 to 0, crlf.added to crlf.removed)
+        assertEquals("LF" to "CRLF", crlf.endings)
+        assertTrue(crlf.says)
+        // With a real change beside it, only that line goes and comes.
+        val both = FileDiff(path = "a.txt", oldText = "one\r\ntwo\r\n", newText = "one\nTWO\n").view()
+        assertEquals("CRLF" to "LF", both.endings)
+        assertEquals(listOf(DiffSign.Same, DiffSign.Removed, DiffSign.Added), both.lines.map { it.sign })
+        assertEquals(listOf("one", "two", "TWO"), both.lines.map { it.text })
+        // The same endings, a new file, a file of one line: nothing to say of endings.
+        assertNull(edit().diffs[0].view().endings)
+        assertNull(edit().diffs[1].view().endings)
+        assertNull(FileDiff(path = "p", oldText = "a", newText = "a\r\nb\r\n").view().endings)
+    }
+
+    @Test
+    fun whatCannotBeSeenIsWrittenAsItsCodePoint() {
+        // A direction override makes a line read as something it is not; a line separator breaks it in two.
+        assertEquals("+ if (admin<U+202E>) {", diffRow(DiffLine(DiffSign.Added, "if (admin\u202E) {")))
+        assertEquals("- a<U+2028>b", diffRow(DiffLine(DiffSign.Removed, "a\u2028b")))
+        assertEquals("a<U+200B>b<U+FEFF><U+2066><U+0000><U+000D><U+0085>", visibly("a\u200Bb\uFEFF\u2066\u0000\r\u0085"))
+        // A path is read too: it names what is changed.
+        assertEquals("src/<U+202E>yp.nevo", visibly("src/\u202Eyp.nevo"))
+        // Ordinary text, other scripts and wide characters are left as they are.
+        listOf("def bake(loaf):", "žltý kôň — ünïcödé", "日本語 \uD83C\uDF5E", "").forEach { assertEquals(it, visibly(it)) }
+    }
+
+    @Test
+    fun theArgumentsStayInViewWhenTheDiffsSayNothing() {
+        val item = edit()
+        // Diffs that say something stand in the arguments' place, once they are worked out and while they are.
+        assertFalse(showsDetail(item, item.diffs.map { it.view() }))
+        assertFalse(showsDetail(item, null))
+        // The same text twice, or an entry with nothing in it: the card would say "+0 -0" and nothing else.
+        val same = item.copy(diffs = listOf(FileDiff(path = "a.txt", oldText = "a\n", newText = "a\n"), FileDiff()))
+        assertTrue(same.diffs.map { it.view() }.none { it.says })
+        assertTrue(showsDetail(same, same.diffs.map { it.view() }))
+        // A card without diffs is as it always was.
+        assertTrue(showsDetail(item.copy(diffs = emptyList()), emptyList()))
+        assertTrue(showsDetail(item.copy(diffs = emptyList()), null))
+    }
+
+    // --- The gate and the assistant's sheet ---------------------------------------------------------
+
+    @Test
+    fun theAssistantsSheetIsTheAppInFrontAndTheLockStillShutsTheGate() = runTest {
+        var locked = false
+        val gate = InstanceGate { locked }
+        // No activity: the sheet is a session's window. A picture in it waits as a chat's does...
+        val fetched = mutableListOf<String>()
+        val picture = launch {
+            gate.passLater()
+            fetched += "picture"
+        }
+        runCurrent()
+        assertTrue(fetched.isEmpty())
+        // ...until the sheet shows, which no activity's start would ever say.
+        gate.sessionShown()
+        runCurrent()
+        assertEquals(listOf("picture"), fetched)
+        picture.join()
+        // Shown again while up, hidden once: shut.
+        gate.sessionShown()
+        gate.sessionHidden()
+        assertFalse(gate.open.value)
+
+        // Over the lock screen the sheet opens nothing; the unlock does.
+        locked = true
+        gate.sessionShown()
+        assertFalse(gate.open.value)
+        locked = false
+        assertTrue(gate.look())
+        // An activity of the app in front keeps the gate open when the sheet goes.
+        gate.activityStarted()
+        gate.sessionHidden()
+        assertTrue(gate.open.value)
+        gate.activityStopped()
+        assertFalse(gate.open.value)
+    }
+
+    // --- Open with ----------------------------------------------------------------------------------
+
+    private fun bytes(vararg values: Int) = ByteArray(values.size) { values[it].toByte() }
+
+    @Test
+    fun aFileIsOfferedAsWhatItsBytesSayNotAsWhatItWasCalled() {
+        val png = bytes(0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A)
+        val pdf = "%PDF-1.7\n".toByteArray()
+        val zip = bytes(0x50, 0x4B, 0x03, 0x04, 0x14, 0x00)
+        assertEquals("image/png", sniffType(png))
+        assertEquals("application/pdf", sniffType(pdf))
+        assertEquals("image/jpeg", sniffType(bytes(0xFF, 0xD8, 0xFF, 0xE0)))
+        assertEquals("video/mp4", sniffType(bytes(0, 0, 0, 0x20) + "ftypisom".toByteArray()))
+        assertEquals("audio/wav", sniffType("RIFF".toByteArray() + bytes(0, 0, 0, 0) + "WAVE".toByteArray()))
+        assertEquals("image/webp", sniffType("RIFF".toByteArray() + bytes(0, 0, 0, 0) + "WEBP".toByteArray()))
+        assertNull(sniffType("just words".toByteArray()))
+        assertNull(sniffType(ByteArray(0)))
+        assertNull(sniffType(bytes(0x89)))
+
+        // The bytes decide, whatever the name says.
+        assertEquals("application/pdf", openType(pdf, "image/png"))
+        assertEquals("image/png", openType(png, null))
+        // No mark in the bytes: the name's extension, else anything.
+        assertEquals("text/plain", openType("just words".toByteArray(), "text/plain"))
+        assertEquals("*/*", openType("just words".toByteArray(), null))
+        assertEquals("*/*", openType(ByteArray(0), ""))
+        // A zip is what many documents are inside: a known extension is the better word there.
+        assertEquals("application/epub+zip", openType(zip, "application/epub+zip"))
+        assertEquals("application/zip", openType(zip, null))
     }
 
     // --- Parsed, and not drawn yet ------------------------------------------------------------------
@@ -280,14 +443,48 @@ class ShownMediaTest {
         assertNull(unset.main.model)
     }
 
+    private fun fixture(name: String) = LembasJson.parseToJsonElement(contract(name)).jsonObject
+
+    private fun kotlinx.serialization.json.JsonObject.word(key: String) = getValue(key).jsonPrimitive.content
+
     @Test
-    fun theShapesNothingUsesYetAreRead() {
-        // A linked computer's files and a message's editor context: no screen and no model of
-        // them here yet, and the app's reader takes each as the server wrote it.
-        listOf(
-            "device_fs_roots", "device_fs_listing", "device_fs_stat", "device_fs_content", "device_fs_content_withheld", "device_fs_written",
-            "device_fs_conflict", "device_fs_batch", "device_fs_deleted", "device_fs_no_trash", "device_fs_search", "device_fs_search_content",
-            "message_editor",
-        ).forEach { name -> assertTrue(name, LembasJson.parseToJsonElement(contract(name)).jsonObject.isNotEmpty()) }
+    fun aComputersFilesAndAMessagesEditorContextSayWhatTheApiSays() {
+        // No screen and no model of these here yet. The fields a browser would stand on are
+        // where App-API puts them, so a pin that moves them fails here.
+        val roots = fixture("device_fs_roots")
+        assertEquals("", roots.word("path"))
+        assertTrue(roots.getValue("entries").jsonArray.isNotEmpty())
+
+        val listing = fixture("device_fs_listing")
+        assertEquals("/home/dev/project", listing.word("path"))
+        val entries = listing.getValue("entries").jsonArray.map { it.jsonObject }
+        val keys = setOf("name", "path", "kind", "size", "mtime", "updated_at", "file_kind", "link", "outside", "protected", "runs_code", "writable")
+        entries.forEach { assertEquals(keys, it.keys) }
+        assertTrue(entries.map { it.word("kind") }.containsAll(listOf("dir", "file")))
+        assertTrue(entries.single { it.word("name") == "shared" }.getValue("outside").jsonPrimitive.boolean)
+        assertTrue(entries.single { it.word("name") == ".env" }.getValue("protected").jsonPrimitive.boolean)
+
+        val content = fixture("device_fs_content")
+        assertTrue(content.word("sha").startsWith("sha256:"))
+        assertTrue(content.word("text").isNotEmpty())
+        val withheld = fixture("device_fs_content_withheld")
+        assertEquals("", withheld.word("text"))
+        assertTrue(withheld.getValue("withheld").jsonObject.word("reason") in setOf("not_text", "too_large"))
+
+        val conflict = fixture("device_fs_conflict")
+        assertEquals("changed", conflict.word("reason"))
+        assertTrue(conflict.getValue("conflict").jsonPrimitive.boolean)
+        assertTrue(conflict.word("sha").startsWith("sha256:"))
+        assertEquals("no_trash", fixture("device_fs_no_trash").word("reason"))
+        assertTrue(fixture("device_fs_written").word("sha").startsWith("sha256:"))
+
+        val batch = fixture("device_fs_batch")
+        assertFalse(batch.getValue("atomic").jsonPrimitive.boolean)
+        assertTrue(batch.getValue("results").jsonArray.all { "ok" in it.jsonObject && "path" in it.jsonObject })
+
+        val editor = fixture("message_editor")
+        assertEquals("/home/dev/project/src/oven.py", editor.word("path"))
+        assertEquals(2, editor.getValue("selection").jsonObject.getValue("start").jsonPrimitive.int)
+        assertEquals("warning", editor.getValue("diagnostics").jsonArray.single().jsonObject.word("severity"))
     }
 }
