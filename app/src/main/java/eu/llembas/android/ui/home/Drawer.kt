@@ -780,13 +780,7 @@ private data class FolderNaming(val folder: Folder? = null, val then: Chat? = nu
 private class ChatRowActions(val open: (String) -> Unit, val archive: (Chat) -> Unit, val pin: (Chat, Boolean) -> Unit, val move: (Chat) -> Unit)
 
 @Composable
-private fun InstanceSwitcherSheet(
-    instances: List<Instance>,
-    activeId: String?,
-    defaultId: String?,
-    onPick: (Instance) -> Unit,
-    onAdd: () -> Unit,
-) {
+private fun InstanceSwitcherSheet(instances: List<Instance>, activeId: String?, defaultId: String?, onPick: (Instance) -> Unit, onAdd: () -> Unit) {
     val palette = LocalPalette.current
     LazyColumn(Modifier.fillMaxWidth(), contentPadding = PaddingValues(bottom = 24.dp)) {
         item {

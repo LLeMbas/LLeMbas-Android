@@ -83,19 +83,14 @@ data class PerInstancePrefs(
  * tests exercise default fallback, multi-account ids and removal directly.
  */
 object InstanceLogic {
-    fun pickDefault(instances: List<Instance>, defaultId: String?): Instance? =
-        instances.firstOrNull { it.id == defaultId } ?: instances.firstOrNull()
+    fun pickDefault(instances: List<Instance>, defaultId: String?): Instance? = instances.firstOrNull { it.id == defaultId } ?: instances.firstOrNull()
 
     fun pickActive(instances: List<Instance>, activeId: String?, defaultId: String?): Instance? =
         instances.firstOrNull { it.id == activeId } ?: pickDefault(instances, defaultId)
 
     /** Adding [added] replaces any existing entry with the same id, makes it active, and sets it
      *  as default only when no surviving default exists yet. */
-    fun afterAdd(
-        instances: List<Instance>,
-        added: Instance,
-        currentDefault: String?,
-    ): Triple<List<Instance>, String, String> {
+    fun afterAdd(instances: List<Instance>, added: Instance, currentDefault: String?): Triple<List<Instance>, String, String> {
         val next = instances.filter { it.id != added.id } + added
         val keptDefault = next.firstOrNull { it.id == currentDefault }?.id ?: added.id
         return Triple(next, added.id, keptDefault)
@@ -103,12 +98,7 @@ object InstanceLogic {
 
     /** Removing [removedId] promotes the surviving default (or first) for active, and the
      *  surviving active (or first) for default, or null when no instance remains. */
-    fun afterRemove(
-        instances: List<Instance>,
-        removedId: String,
-        currentActive: String?,
-        currentDefault: String?,
-    ): Triple<List<Instance>, String?, String?> {
+    fun afterRemove(instances: List<Instance>, removedId: String, currentActive: String?, currentDefault: String?): Triple<List<Instance>, String?, String?> {
         val remaining = instances.filter { it.id != removedId }
         val nextDefault = remaining.firstOrNull { it.id == currentDefault }?.id
             ?: remaining.firstOrNull { it.id == currentActive }?.id
@@ -170,14 +160,13 @@ data class Prefs(
     /** Per-instance choices, keyed by [Instance.id]. */
     val perInstance: Map<String, PerInstancePrefs> = emptyMap(),
 ) {
-    fun forInstance(id: String?): PerInstancePrefs =
-        id?.let { perInstance[it] } ?: PerInstancePrefs(
-            assistantModel = assistantModel,
-            lastAssistChat = lastAssistChat,
-            lastAssistTitle = lastAssistTitle,
-            lastAssistAt = lastAssistAt,
-            accountLanguage = accountLanguage,
-        )
+    fun forInstance(id: String?): PerInstancePrefs = id?.let { perInstance[it] } ?: PerInstancePrefs(
+        assistantModel = assistantModel,
+        lastAssistChat = lastAssistChat,
+        lastAssistTitle = lastAssistTitle,
+        lastAssistAt = lastAssistAt,
+        accountLanguage = accountLanguage,
+    )
 
     fun withInstance(id: String?, change: (PerInstancePrefs) -> PerInstancePrefs): Prefs {
         val updated = change(forInstance(id))
