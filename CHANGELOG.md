@@ -3,6 +3,25 @@
 What changed in each release of LLeMbas for Android. Versions follow SemVer; until 1.0.0 the app
 is in alpha and releases come off `main`.
 
+## [1.0.0-beta.16] — 2026-11-26
+
+### Added
+
+- **Default instance and quick drawer switcher.** Choose a **Default** account
+  or instance in Settings → Instances (marked with a badge and opened on cold
+  starts, as well as used by Assistant, Widget, and Share actions). Switch
+  between saved accounts and instances directly from the navigation drawer or
+  add another account with quick-pick chips for existing servers.
+- **Per-account actions in Settings.** Every saved account row now offers
+  *Set as default* and *Sign out* from its overflow menu (not only the active
+  account).
+
+### Changed
+
+- **Per-instance preferences isolation.** Assistant model, last assistant chat,
+  and account language are now stored per instance rather than leaking across
+  accounts when switching.
+
 ## [1.0.0-beta.15] — 2026-11-24
 
 What is said here of shown files and of an edit's diff needs an instance newer than LLeMbas
