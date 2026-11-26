@@ -45,6 +45,7 @@ import eu.llembas.android.auth.Prefs
 import eu.llembas.android.push.Notifications
 import eu.llembas.android.push.Push
 import eu.llembas.android.ui.chat.ChatScreen
+import eu.llembas.android.ui.files.FileCache
 import eu.llembas.android.ui.files.FilesScreen
 import eu.llembas.android.ui.home.ArchivedScreen
 import eu.llembas.android.ui.home.ChatsViewModel
@@ -85,6 +86,9 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+        if (savedInstanceState == null && intent?.getStringExtra(Notifications.EXTRA_INSTANCE).isNullOrBlank()) {
+            lifecycleScope.launch { lembas.instances.resetToDefault() }
+        }
         take(intent)
         followLanguage()
         // At most once a day, and only while Settings › About says so (update/ReleaseCheck.kt).
@@ -189,6 +193,8 @@ class MainActivity : ComponentActivity() {
         val scope = rememberCoroutineScope()
         val chats: ChatsViewModel = viewModel()
         val list by chats.state.collectAsStateWithLifecycle()
+        val instances by lembas.instances.instances.collectAsState(initial = emptyList())
+        val defaultInstance by lembas.instances.defaultInstance.collectAsState(initial = null)
         val entry by nav.currentBackStackEntryAsState()
         val route = entry?.destination?.route
         val current = entry?.arguments?.getString("id")?.takeIf { route == "chat/{id}" }
@@ -206,8 +212,16 @@ class MainActivity : ComponentActivity() {
         // The account's language, which the app follows unless Settings › Language says
         // otherwise. Read once per instance in use; kept, so the next start has it at once.
         LaunchedEffect(instance.id) {
+            val cached = lembas.instances.prefs.first().forInstance(instance.id).accountLanguage
+            if (cached.isNotBlank()) {
+                lembas.instances.savePrefs { it.copy(accountLanguage = cached) }
+            }
             runCatching { lembas.instances.clientFor(instance).me() }.onSuccess { me ->
-                me.accountLanguage?.let { language -> lembas.instances.savePrefs { it.copy(accountLanguage = language) } }
+                me.accountLanguage?.let { language ->
+                    lembas.instances.savePrefs { p ->
+                        p.withInstance(instance.id) { it.copy(accountLanguage = language) }.copy(accountLanguage = language)
+                    }
+                }
             }
         }
         // The list is read again each time the drawer opens, so a new title or a finished
@@ -276,6 +290,16 @@ class MainActivity : ComponentActivity() {
 
                 override fun settings() = over("settings")
 
+                override fun useInstance(instance: Instance) {
+                    scope.launch {
+                        drawer.close()
+                        lembas.instances.use(instance.id)
+                        FileCache.clear(this@MainActivity)
+                    }
+                }
+
+                override fun addInstance() = over("add")
+
                 override fun more() = chats.more()
 
                 override fun retry() = chats.load()
@@ -292,7 +316,15 @@ class MainActivity : ComponentActivity() {
             // The drawer opens by a swipe only from a chat: elsewhere the swipe is Back's.
             gesturesEnabled = drawer.isOpen || route == "new" || route == "new-agent" || route == "chat/{id}",
             drawerContent = {
-                DrawerContent(list, current, listOf(instance.name, instance.email).filter { it.isNotBlank() }.joinToString(" · "), actions)
+                DrawerContent(
+                    list,
+                    current,
+                    listOf(instance.name, instance.email).filter { it.isNotBlank() }.joinToString(" · "),
+                    actions,
+                    instances = instances,
+                    activeInstance = instance,
+                    defaultInstanceId = defaultInstance?.id,
+                )
             },
         ) {
             NavHost(nav, startDestination = "new") {
@@ -403,7 +435,7 @@ class MainActivity : ComponentActivity() {
                 }
                 // Signing in to one more instance makes it the one in use, which starts a
                 // fresh navigation for it (the `key` above).
-                composable("add") { SignInScreen(onDone = { nav.popBackStack() }) }
+                composable("add") { SignInScreen(onDone = { nav.popBackStack() }, onCancel = { nav.popBackStack() }) }
             }
         }
     }

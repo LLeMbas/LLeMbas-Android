@@ -463,6 +463,7 @@
     <string name="settings_instances">Instanzen</string>
     <string name="sign_out">Abmelden</string>
     <string name="add_instance">Instanz hinzufügen</string>
+    <string name="instance_default">Standard</string>
     <string name="settings_theme">Design</string>
     <string name="theme_system">Wie das System</string>
     <string name="theme_moria">Moria (dunkel)</string>

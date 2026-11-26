@@ -65,7 +65,59 @@ object TokenCipher {
 private val Context.store by preferencesDataStore(name = "instances")
 private val INSTANCES = stringPreferencesKey("instances")
 private val ACTIVE = stringPreferencesKey("active")
+private val DEFAULT = stringPreferencesKey("default")
 private val PREFS = stringPreferencesKey("prefs")
+
+/** Choices kept per instance (assistant model, last assistant chat, account language). */
+@Serializable
+data class PerInstancePrefs(
+    val assistantModel: String = "",
+    val lastAssistChat: String = "",
+    val lastAssistTitle: String = "",
+    val lastAssistAt: Long = 0,
+    val accountLanguage: String = "",
+)
+
+/**
+ * Pure selection and mutation rules for [InstanceStore]: kept free of Android types so unit
+ * tests exercise default fallback, multi-account ids and removal directly.
+ */
+object InstanceLogic {
+    fun pickDefault(instances: List<Instance>, defaultId: String?): Instance? =
+        instances.firstOrNull { it.id == defaultId } ?: instances.firstOrNull()
+
+    fun pickActive(instances: List<Instance>, activeId: String?, defaultId: String?): Instance? =
+        instances.firstOrNull { it.id == activeId } ?: pickDefault(instances, defaultId)
+
+    /** Adding [added] replaces any existing entry with the same id, makes it active, and sets it
+     *  as default only when no surviving default exists yet. */
+    fun afterAdd(
+        instances: List<Instance>,
+        added: Instance,
+        currentDefault: String?,
+    ): Triple<List<Instance>, String, String> {
+        val next = instances.filter { it.id != added.id } + added
+        val keptDefault = next.firstOrNull { it.id == currentDefault }?.id ?: added.id
+        return Triple(next, added.id, keptDefault)
+    }
+
+    /** Removing [removedId] promotes the surviving default (or first) for active, and the
+     *  surviving active (or first) for default, or null when no instance remains. */
+    fun afterRemove(
+        instances: List<Instance>,
+        removedId: String,
+        currentActive: String?,
+        currentDefault: String?,
+    ): Triple<List<Instance>, String?, String?> {
+        val remaining = instances.filter { it.id != removedId }
+        val nextDefault = remaining.firstOrNull { it.id == currentDefault }?.id
+            ?: remaining.firstOrNull { it.id == currentActive }?.id
+            ?: remaining.firstOrNull()?.id
+        val nextActive = remaining.firstOrNull { it.id == currentActive }?.id
+            ?: nextDefault
+        return Triple(remaining, nextActive, nextDefault)
+    }
+}
 
 /**
  * What the person chose in Settings, for this phone. [language]: "" the account's language (the
@@ -115,7 +167,35 @@ data class Prefs(
     val updateCheckedAt: Long = 0,
     /** The last version a notification announced, so it is announced once. */
     val updateNotified: String = "",
+    /** Per-instance choices, keyed by [Instance.id]. */
+    val perInstance: Map<String, PerInstancePrefs> = emptyMap(),
 ) {
+    fun forInstance(id: String?): PerInstancePrefs =
+        id?.let { perInstance[it] } ?: PerInstancePrefs(
+            assistantModel = assistantModel,
+            lastAssistChat = lastAssistChat,
+            lastAssistTitle = lastAssistTitle,
+            lastAssistAt = lastAssistAt,
+            accountLanguage = accountLanguage,
+        )
+
+    fun withInstance(id: String?, change: (PerInstancePrefs) -> PerInstancePrefs): Prefs {
+        val updated = change(forInstance(id))
+        return if (id == null) {
+            copy(
+                assistantModel = updated.assistantModel,
+                lastAssistChat = updated.lastAssistChat,
+                lastAssistTitle = updated.lastAssistTitle,
+                lastAssistAt = updated.lastAssistAt,
+                accountLanguage = updated.accountLanguage,
+            )
+        } else {
+            copy(perInstance = perInstance + (id to updated))
+        }
+    }
+
+    fun withoutInstance(id: String): Prefs = if (id in perInstance) copy(perInstance = perInstance - id) else this
+
     companion object {
         const val VOICE_LEMBAS = "lembas"
         const val VOICE_PHONE = "phone"
@@ -129,9 +209,14 @@ class InstanceStore(private val context: Context) {
         prefs[INSTANCES]?.let { runCatching { LembasJson.decodeFromString(listSerializer, it) }.getOrNull() } ?: emptyList()
     }
 
+    val defaultInstance: Flow<Instance?> = context.store.data.map { prefs ->
+        val all = prefs[INSTANCES]?.let { runCatching { LembasJson.decodeFromString(listSerializer, it) }.getOrNull() } ?: emptyList()
+        InstanceLogic.pickDefault(all, prefs[DEFAULT])
+    }
+
     val active: Flow<Instance?> = context.store.data.map { prefs ->
         val all = prefs[INSTANCES]?.let { runCatching { LembasJson.decodeFromString(listSerializer, it) }.getOrNull() } ?: emptyList()
-        all.firstOrNull { it.id == prefs[ACTIVE] } ?: all.firstOrNull()
+        InstanceLogic.pickActive(all, prefs[ACTIVE], prefs[DEFAULT])
     }
 
     val prefs: Flow<Prefs> = context.store.data.map { p ->
@@ -140,7 +225,11 @@ class InstanceStore(private val context: Context) {
 
     suspend fun current(): Instance? = active.first()
 
+    suspend fun default(): Instance? = defaultInstance.first()
+
     suspend fun client(): ApiClient? = current()?.let { clientFor(it) }
+
+    suspend fun defaultClient(): ApiClient? = default()?.let { clientFor(it) }
 
     fun clientFor(instance: Instance): ApiClient = ApiClient(instance.base, TokenCipher.open(instance.sealedToken))
 
@@ -153,9 +242,11 @@ class InstanceStore(private val context: Context) {
             sealedToken = TokenCipher.seal(token),
         )
         context.store.edit { prefs ->
-            val all = prefs[INSTANCES]?.let { LembasJson.decodeFromString(listSerializer, it) } ?: emptyList()
-            prefs[INSTANCES] = LembasJson.encodeToString(listSerializer, all.filter { it.id != instance.id } + instance)
-            prefs[ACTIVE] = instance.id
+            val all = prefs[INSTANCES]?.let { runCatching { LembasJson.decodeFromString(listSerializer, it) }.getOrNull() } ?: emptyList()
+            val (next, activeId, defaultId) = InstanceLogic.afterAdd(all, instance, prefs[DEFAULT])
+            prefs[INSTANCES] = LembasJson.encodeToString(listSerializer, next)
+            prefs[ACTIVE] = activeId
+            prefs[DEFAULT] = defaultId
         }
         return instance
     }
@@ -164,11 +255,33 @@ class InstanceStore(private val context: Context) {
         context.store.edit { it[ACTIVE] = id }
     }
 
+    suspend fun setDefault(id: String) {
+        context.store.edit { prefs ->
+            val all = prefs[INSTANCES]?.let { runCatching { LembasJson.decodeFromString(listSerializer, it) }.getOrNull() } ?: emptyList()
+            if (all.any { it.id == id }) prefs[DEFAULT] = id
+        }
+    }
+
+    /** On a cold start with no notification target, switch active back to the default instance. */
+    suspend fun resetToDefault() {
+        context.store.edit { prefs ->
+            val all = prefs[INSTANCES]?.let { runCatching { LembasJson.decodeFromString(listSerializer, it) }.getOrNull() } ?: emptyList()
+            InstanceLogic.pickDefault(all, prefs[DEFAULT])?.let { prefs[ACTIVE] = it.id }
+        }
+    }
+
     suspend fun remove(id: String) {
         context.store.edit { prefs ->
-            val all = prefs[INSTANCES]?.let { LembasJson.decodeFromString(listSerializer, it) } ?: emptyList()
-            prefs[INSTANCES] = LembasJson.encodeToString(listSerializer, all.filter { it.id != id })
-            if (prefs[ACTIVE] == id) prefs.remove(ACTIVE)
+            val all = prefs[INSTANCES]?.let { runCatching { LembasJson.decodeFromString(listSerializer, it) }.getOrNull() } ?: emptyList()
+            val (remaining, nextActive, nextDefault) = InstanceLogic.afterRemove(all, id, prefs[ACTIVE], prefs[DEFAULT])
+            prefs[INSTANCES] = LembasJson.encodeToString(listSerializer, remaining)
+            if (nextActive != null) prefs[ACTIVE] = nextActive else prefs.remove(ACTIVE)
+            if (nextDefault != null) prefs[DEFAULT] = nextDefault else prefs.remove(DEFAULT)
+            prefs[PREFS]?.let { raw ->
+                runCatching { LembasJson.decodeFromString(Prefs.serializer(), raw) }.getOrNull()?.let { current ->
+                    prefs[PREFS] = LembasJson.encodeToString(Prefs.serializer(), current.withoutInstance(id))
+                }
+            }
         }
     }
 

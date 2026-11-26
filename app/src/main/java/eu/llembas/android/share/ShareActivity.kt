@@ -91,12 +91,14 @@ class ShareActivity :
         }
         lifecycleScope.launch {
             val store = lembas.instances
+            val instance = store.default()
             val prefs = store.prefs.first()
+            val own = prefs.forInstance(instance?.id)
             state.update {
                 it.copy(
-                    signedIn = store.current() != null,
-                    last = prefs.lastAssistChat.takeIf { id -> id.isNotBlank() && !prefs.assistantTemporary }
-                        ?.let { id -> LastAssist(id, prefs.lastAssistTitle, prefs.lastAssistAt) },
+                    signedIn = instance != null,
+                    last = own.lastAssistChat.takeIf { id -> id.isNotBlank() && !prefs.assistantTemporary }
+                        ?.let { id -> LastAssist(id, own.lastAssistTitle, own.lastAssistAt) },
                 )
             }
         }
@@ -142,7 +144,7 @@ class ShareActivity :
         lifecycleScope.launch {
             try {
                 turn()
-                val home = lembas.instances.client()?.files("/")?.path ?: return@launch
+                val home = lembas.instances.defaultClient()?.files("/")?.path ?: return@launch
                 state.update { it.copy(folder = it.folder ?: home) }
             } catch (e: CancellationException) {
                 throw e
@@ -167,7 +169,7 @@ class ShareActivity :
         state.update { it.copy(sending = true, error = null) }
         lifecycleScope.launch {
             try {
-                val api = lembas.instances.client() ?: run {
+                val api = lembas.instances.defaultClient() ?: run {
                     startActivity(Intent(this@ShareActivity, MainActivity::class.java))
                     finish()
                     return@launch
@@ -199,11 +201,12 @@ class ShareActivity :
         lifecycleScope.launch {
             try {
                 val store = lembas.instances
-                val api = store.client() ?: run {
+                val instance = store.default() ?: run {
                     startActivity(Intent(this@ShareActivity, MainActivity::class.java))
                     finish()
                     return@launch
                 }
+                val api = store.clientFor(instance)
                 val now = state.value
                 val into = if (toLast) now.last?.chatId else null
                 // What a first try already uploaded for this chat is not uploaded again.
@@ -223,23 +226,26 @@ class ShareActivity :
                     val prefs = store.prefs.first()
                     // The assistant's model while the instance still has it; a model that is
                     // gone is not asked for (the instance's default answers instead).
-                    val chosen = prefs.assistantModel
+                    val chosen = prefs.forInstance(instance.id).assistantModel
                     val gone = chosen.isNotBlank() && runCatching { api.models() }.getOrNull()?.let { it.named(chosen) == null } == true
                     turn()
                     val made = api.createChat(message, sent, model = chosen.takeIf { it.isNotBlank() && !gone })
-                    store.savePrefs {
-                        it.copy(
-                            lastAssistChat = made.chat.id,
-                            lastAssistTitle = ask.ifBlank { now.text.ifBlank { now.files.firstOrNull()?.name.orEmpty() } }.take(120),
-                            lastAssistAt = System.currentTimeMillis(),
-                        )
+                    store.savePrefs { p ->
+                        p.withInstance(instance.id) {
+                            it.copy(
+                                lastAssistChat = made.chat.id,
+                                lastAssistTitle = ask.ifBlank { now.text.ifBlank { now.files.firstOrNull()?.name.orEmpty() } }.take(120),
+                                lastAssistAt = System.currentTimeMillis(),
+                            )
+                        }
                     }
                     made.chat.id
                 }
                 startActivity(
                     Intent(this@ShareActivity, MainActivity::class.java)
                         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-                        .putExtra(Notifications.EXTRA_CHAT, chatId),
+                        .putExtra(Notifications.EXTRA_CHAT, chatId)
+                        .putExtra(Notifications.EXTRA_INSTANCE, instance.id),
                 )
                 finish()
             } catch (e: CancellationException) {
@@ -247,7 +253,10 @@ class ShareActivity :
             } catch (e: Exception) {
                 // The last chat deleted since: it is not offered again.
                 if (e is ApiException && e.status == 404 && toLast) {
-                    lembas.instances.savePrefs { it.copy(lastAssistChat = "", lastAssistTitle = "", lastAssistAt = 0) }
+                    val id = lembas.instances.default()?.id
+                    lembas.instances.savePrefs { p ->
+                        p.withInstance(id) { it.copy(lastAssistChat = "", lastAssistTitle = "", lastAssistAt = 0) }
+                    }
                     state.update { it.copy(last = null) }
                 }
                 state.update { it.copy(sending = false, error = if (e is SharedRefused) filesSay(e) else explain(e)) }

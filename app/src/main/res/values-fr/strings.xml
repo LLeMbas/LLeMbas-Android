@@ -463,6 +463,7 @@
     <string name="settings_instances">Instances</string>
     <string name="sign_out">Se déconnecter</string>
     <string name="add_instance">Ajouter une instance</string>
+    <string name="instance_default">Par défaut</string>
     <string name="settings_theme">Thème</string>
     <string name="theme_system">Comme le système</string>
     <string name="theme_moria">Moria (sombre)</string>

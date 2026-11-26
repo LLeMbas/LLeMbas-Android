@@ -463,6 +463,7 @@
     <string name="settings_instances">Instancje</string>
     <string name="sign_out">Wyloguj się</string>
     <string name="add_instance">Dodaj instancję</string>
+    <string name="instance_default">Domyślny</string>
     <string name="settings_theme">Motyw</string>
     <string name="theme_system">Jak system</string>
     <string name="theme_moria">Moria (ciemny)</string>

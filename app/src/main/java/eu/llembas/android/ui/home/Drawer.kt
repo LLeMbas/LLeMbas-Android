@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+
 package eu.llembas.android.ui.home
 
 import android.app.Application
@@ -7,6 +9,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -22,7 +25,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.DriveFileMove
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Archive
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CreateNewFolder
 import androidx.compose.material.icons.filled.Delete
@@ -39,6 +44,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Summarize
 import androidx.compose.material.icons.filled.Terminal
+import androidx.compose.material.icons.filled.UnfoldMore
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -46,6 +52,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -53,6 +60,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -83,6 +91,7 @@ import eu.llembas.android.api.ReplyFrame
 import eu.llembas.android.api.ReportsFrame
 import eu.llembas.android.api.SearchHit
 import eu.llembas.android.api.fit
+import eu.llembas.android.auth.Instance
 import eu.llembas.android.lembas
 import eu.llembas.android.ui.explain
 import eu.llembas.android.ui.signin.refusal
@@ -490,6 +499,8 @@ interface DrawerActions {
     fun archived() {}
     fun memory() {}
     fun settings() {}
+    fun useInstance(instance: Instance) {}
+    fun addInstance() {}
     fun more() {}
     fun retry() {}
     fun search(query: String) {}
@@ -511,9 +522,13 @@ fun DrawerContent(
     today: LocalDate = LocalDate.now(),
     zone: ZoneId = ZoneId.systemDefault(),
     initialQuery: String = "",
+    instances: List<Instance> = emptyList(),
+    activeInstance: Instance? = null,
+    defaultInstanceId: String? = null,
 ) {
     val palette = LocalPalette.current
     var query by rememberSaveable { mutableStateOf(initialQuery) }
+    var switchingInstance by remember { mutableStateOf(false) }
     LaunchedEffect(query) { actions.search(query) }
     val groups = remember(state.chats, state.folders, query, today) { groupChats(state.chats, query, today, zone, state.folders) }
     // The one dialog open at a time: a chat to file, a folder to name (new or renamed), one to delete.
@@ -617,8 +632,72 @@ fun DrawerContent(
                 }
             }
             HorizontalDivider(color = palette.border)
-            DrawerItem(Icons.Filled.Settings, stringResource(R.string.settings), subtitle = account.ifBlank { null }, onClick = actions::settings)
+            if (instances.isNotEmpty() && activeInstance != null) {
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 4.dp)
+                        .clip(RoundedCornerShape(20.dp))
+                        .clickable { switchingInstance = true }
+                        .heightIn(min = 52.dp)
+                        .padding(horizontal = 14.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            activeInstance.name.ifBlank { activeInstance.base },
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium,
+                            color = palette.ink,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        if (activeInstance.email.isNotBlank()) {
+                            Text(
+                                activeInstance.email,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = palette.inkMuted,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    Icon(
+                        Icons.Filled.UnfoldMore,
+                        contentDescription = stringResource(R.string.instance_switch),
+                        tint = palette.inkMuted,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+            }
+            DrawerItem(
+                Icons.Filled.Settings,
+                stringResource(R.string.settings),
+                subtitle = if (instances.isEmpty()) account.ifBlank { null } else null,
+                onClick = actions::settings,
+            )
             Spacer(Modifier.size(8.dp))
+        }
+    }
+    if (switchingInstance) {
+        ModalBottomSheet(
+            onDismissRequest = { switchingInstance = false },
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        ) {
+            InstanceSwitcherSheet(
+                instances = instances,
+                activeId = activeInstance?.id,
+                defaultId = defaultInstanceId,
+                onPick = { picked ->
+                    switchingInstance = false
+                    if (picked.id != activeInstance?.id) actions.useInstance(picked)
+                },
+                onAdd = {
+                    switchingInstance = false
+                    actions.addInstance()
+                },
+            )
         }
     }
     moving?.let { chat ->
@@ -699,6 +778,101 @@ private data class FolderNaming(val folder: Folder? = null, val then: Chat? = nu
 
 /** What a chat's row can do: open it, and from its long-press menu Pin, Move to folder, Archive. */
 private class ChatRowActions(val open: (String) -> Unit, val archive: (Chat) -> Unit, val pin: (Chat, Boolean) -> Unit, val move: (Chat) -> Unit)
+
+@Composable
+private fun InstanceSwitcherSheet(
+    instances: List<Instance>,
+    activeId: String?,
+    defaultId: String?,
+    onPick: (Instance) -> Unit,
+    onAdd: () -> Unit,
+) {
+    val palette = LocalPalette.current
+    LazyColumn(Modifier.fillMaxWidth(), contentPadding = PaddingValues(bottom = 24.dp)) {
+        item {
+            Text(
+                stringResource(R.string.settings_instances),
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(start = 24.dp, end = 24.dp, bottom = 8.dp),
+            )
+        }
+        items(instances, key = { it.id }) { item ->
+            val inUse = item.id == activeId
+            val isDefault = item.id == defaultId
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .clickable { onPick(item) }
+                    .heightIn(min = 64.dp)
+                    .padding(horizontal = 24.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            item.name.ifBlank { item.base },
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = palette.ink,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false),
+                        )
+                        if (isDefault) {
+                            Spacer(Modifier.width(8.dp))
+                            Surface(color = palette.accentSoft, shape = RoundedCornerShape(8.dp)) {
+                                Text(
+                                    stringResource(R.string.instance_default),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = palette.accent,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                )
+                            }
+                        }
+                    }
+                    if (item.email.isNotBlank()) {
+                        Text(
+                            item.email,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = palette.inkMuted,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                    Text(
+                        item.base,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = palette.inkFaint,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                if (inUse) {
+                    Spacer(Modifier.width(12.dp))
+                    Icon(
+                        Icons.Filled.CheckCircle,
+                        contentDescription = stringResource(R.string.instance_in_use),
+                        tint = palette.accent,
+                    )
+                }
+            }
+        }
+        item {
+            HorizontalDivider(color = palette.border, modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp))
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onAdd)
+                    .heightIn(min = 56.dp)
+                    .padding(horizontal = 24.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(Icons.Filled.Add, contentDescription = null, tint = palette.accent)
+                Spacer(Modifier.width(16.dp))
+                Text(stringResource(R.string.add_instance), style = MaterialTheme.typography.bodyLarge, color = palette.ink)
+            }
+        }
+    }
+}
 
 private fun LazyListScope.section(title: Int, chats: List<Chat>, current: String?, actions: ChatRowActions, key: String = "c") {
     if (chats.isEmpty()) return

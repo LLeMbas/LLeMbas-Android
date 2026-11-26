@@ -181,6 +181,9 @@ class AssistController(
     private var screenText: String? = null
     private var stt: Boolean? = null
 
+    /** The instance this assistant sheet speaks to (the default instance). */
+    private var targetId: String? = null
+
     /** The account's own default model, as the instance said it: what "Instance default" means. */
     private var accountDefault: String? = null
 
@@ -214,7 +217,7 @@ class AssistController(
         scope.launch { speaker.playing.collect { on -> _state.update { it.copy(speaking = on) } } }
         // Settings changed the assistant's model while this sheet lives: the next new chat has it.
         scope.launch {
-            context.lembas.instances.prefs.map { it.assistantModel }.distinctUntilChanged().drop(1).collect { chosen ->
+            context.lembas.instances.prefs.map { it.forInstance(targetId).assistantModel }.distinctUntilChanged().drop(1).collect { chosen ->
                 ready()
                 newChatModel = assistantModelFor(chosen, accountDefault, _state.value.models) ?: chosen.ifBlank { null }
                 _state.update { if (it.chatId == null) it.copy(modelId = newChatModel, modelIsRef = false) else it }
@@ -234,34 +237,39 @@ class AssistController(
     /** The choices kept in Settings, and which instance: nothing here leaves the phone. */
     private suspend fun loadLocal() {
         val store = context.lembas.instances
-        val instance = store.current()
+        val instance = store.default()
+        targetId = instance?.id
         val prefs = store.prefs.first()
+        val own = prefs.forInstance(instance?.id)
         _state.update {
             it.copy(
                 signedIn = instance != null,
                 instanceName = instance?.name?.ifBlank { instance.base }.orEmpty(),
                 voiceReply = prefs.readAloudSpoken,
                 canReadNotifications = prefs.notificationSummaries && NotificationAccess.granted(context),
-                last = prefs.lastAssistChat.takeIf { id -> id.isNotBlank() && !prefs.assistantTemporary }
-                    ?.let { id -> LastAssist(id, prefs.lastAssistTitle, prefs.lastAssistAt) },
+                last = own.lastAssistChat.takeIf { id -> id.isNotBlank() && !prefs.assistantTemporary }
+                    ?.let { id -> LastAssist(id, own.lastAssistTitle, own.lastAssistAt) },
             )
         }
         // Until the instance has said what it has, the choice in Settings stands as it is: a
         // question asked while the list could not be read still goes to the chosen model.
-        newChatModel = prefs.assistantModel.ifBlank { null }
+        newChatModel = own.assistantModel.ifBlank { null }
     }
 
     /** The instance's models and what it offers this account. */
     private suspend fun loadRemote() {
         val store = context.lembas.instances
         val prefs = store.prefs.first()
-        val api = store.current()?.let { store.clientFor(it) } ?: return
+        val instance = store.default() ?: return
+        targetId = instance.id
+        val api = store.clientFor(instance)
+        val own = prefs.forInstance(instance.id)
         try {
             val me = api.me()
             val models = api.models()
             stt = me.speechToText
             accountDefault = me.defaultModel
-            val chosen = assistantModelFor(prefs.assistantModel, me.defaultModel, models)
+            val chosen = assistantModelFor(own.assistantModel, me.defaultModel, models)
             newChatModel = chosen
             _state.update {
                 it.copy(
@@ -338,7 +346,7 @@ class AssistController(
         scope.launch {
             try {
                 _state.update { it.copy(busy = true, error = null) }
-                val text = context.lembas.instances.client()?.transcribe(wav, media = mediaFor())?.text.orEmpty()
+                val text = context.lembas.instances.defaultClient()?.transcribe(wav, media = mediaFor())?.text.orEmpty()
                 _state.update { it.copy(busy = false) }
                 if (text.isNotBlank()) ask(text, spoken = true)
             } catch (e: CancellationException) {
@@ -450,7 +458,7 @@ class AssistController(
      * while the phone is locked: the recording stays on the phone until it is unlocked.
      */
     private suspend fun writeDownAsSaid() {
-        val api = context.lembas.instances.client() ?: return
+        val api = context.lembas.instances.defaultClient() ?: return
         var sent = 0f
         while (scope.isActive) {
             delay(PARTIAL_EVERY_MS)
@@ -552,7 +560,7 @@ class AssistController(
             }
             try {
                 _state.update { it.copy(busy = true) }
-                val text = context.lembas.instances.client()?.transcribe(wav, media = mediaFor())?.text.orEmpty()
+                val text = context.lembas.instances.defaultClient()?.transcribe(wav, media = mediaFor())?.text.orEmpty()
                 _state.update { it.copy(busy = false, heard = "") }
                 if (text.isNotBlank()) askOrStop(text) else endConversation()
             } catch (e: Exception) {
@@ -614,7 +622,9 @@ class AssistController(
             _state.update { it.copy(conversation = talking) }
             try {
                 val store = context.lembas.instances
-                val api = store.client() ?: throw ApiException(401, "Not signed in.")
+                val instance = store.default() ?: throw ApiException(401, "Not signed in.")
+                targetId = instance.id
+                val api = store.clientFor(instance)
                 val prefs = store.prefs.first()
                 // A question typed the moment the sheet opened: the model is known first.
                 ready()
@@ -651,8 +661,10 @@ class AssistController(
                     replyId = made.reply?.id ?: return@launch
                     _state.update { it.copy(chatId = inChat) }
                     if (!prefs.assistantTemporary) {
-                        store.savePrefs {
-                            it.copy(lastAssistChat = inChat, lastAssistTitle = question.take(120), lastAssistAt = System.currentTimeMillis())
+                        store.savePrefs { p ->
+                            p.withInstance(targetId) {
+                                it.copy(lastAssistChat = inChat, lastAssistTitle = question.take(120), lastAssistAt = System.currentTimeMillis())
+                            }
                         }
                     }
                 }
@@ -697,7 +709,13 @@ class AssistController(
                     delay(TITLE_ASK_MS)
                     val title = runCatching { api.chat(chatId).chat.title }.getOrNull().orEmpty()
                     if (title.isNotBlank() && title != provisional) {
-                        context.lembas.instances.savePrefs { if (it.lastAssistChat == chatId) it.copy(lastAssistTitle = title.take(120)) else it }
+                        context.lembas.instances.savePrefs { p ->
+                            if (p.forInstance(targetId).lastAssistChat == chatId) {
+                                p.withInstance(targetId) { it.copy(lastAssistTitle = title.take(120)) }
+                            } else {
+                                p
+                            }
+                        }
                         _state.update { s -> s.copy(last = s.last?.let { l -> if (l.chatId == chatId) l.copy(title = title.take(120)) else l }) }
                         break
                     }
@@ -712,7 +730,7 @@ class AssistController(
         scope.launch {
             _state.update { it.copy(busy = true, error = null) }
             try {
-                val api = context.lembas.instances.client() ?: return@launch
+                val api = context.lembas.instances.defaultClient() ?: return@launch
                 val detail = api.chat(last.chatId)
                 val question = detail.messages.lastOrNull { it.isUser }
                 val answer = detail.messages.lastOrNull { !it.isUser }
@@ -730,7 +748,9 @@ class AssistController(
             } catch (e: Exception) {
                 // A chat deleted since is simply not offered again.
                 if (e is ApiException && e.status == 404) {
-                    context.lembas.instances.savePrefs { it.copy(lastAssistChat = "", lastAssistTitle = "", lastAssistAt = 0) }
+                    context.lembas.instances.savePrefs { p ->
+                        p.withInstance(targetId) { it.copy(lastAssistChat = "", lastAssistTitle = "", lastAssistAt = 0) }
+                    }
                     _state.update { it.copy(last = null) }
                 } else {
                     _state.update { it.copy(error = context.explain(e)) }
@@ -746,7 +766,7 @@ class AssistController(
         val chat = _state.value.chatId ?: return
         scope.launch {
             try {
-                context.lembas.instances.client()?.answer(chat, card.id, answer)
+                context.lembas.instances.defaultClient()?.answer(chat, card.id, answer)
             } catch (e: ApiException) {
                 // First answer wins: a 409 is somebody answering elsewhere already.
                 if (e.status != 409) _state.update { it.copy(error = context.explain(e)) }
@@ -779,9 +799,9 @@ class AssistController(
         newChatModel = id
         _state.update { it.copy(modelId = id, modelIsRef = false) }
         scope.launch {
-            context.lembas.instances.savePrefs { it.copy(assistantModel = id) }
+            context.lembas.instances.savePrefs { p -> p.withInstance(targetId) { it.copy(assistantModel = id) } }
             val chat = _state.value.chatId ?: return@launch
-            runCatching { context.lembas.instances.client()?.updateChat(chat, JsonObject(mapOf("model" to JsonPrimitive(id)))) }
+            runCatching { context.lembas.instances.defaultClient()?.updateChat(chat, JsonObject(mapOf("model" to JsonPrimitive(id)))) }
                 .onFailure { e -> _state.update { it.copy(error = context.explain(e)) } }
         }
     }
@@ -813,7 +833,7 @@ class AssistController(
         // Never aloud over the lock screen: an answer is the account's.
         if (words.isBlank() || locked()) return false
         return try {
-            val api = context.lembas.instances.client() ?: return false
+            val api = context.lembas.instances.defaultClient() ?: return false
             speaker.playToEnd(api.speech(words, mediaFor()).audio)
         } catch (e: Exception) {
             _state.update { it.copy(error = context.explain(e)) }
@@ -825,7 +845,10 @@ class AssistController(
      *  start activities differently. */
     fun appIntent(): Intent = Intent(context, MainActivity::class.java)
         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-        .apply { _state.value.chatId?.let { putExtra(Notifications.EXTRA_CHAT, it) } }
+        .apply {
+            _state.value.chatId?.let { putExtra(Notifications.EXTRA_CHAT, it) }
+            targetId?.let { putExtra(Notifications.EXTRA_INSTANCE, it) }
+        }
 
     fun close() {
         following?.cancel()

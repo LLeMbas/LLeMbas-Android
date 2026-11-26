@@ -463,6 +463,7 @@
     <string name="settings_instances">Instance</string>
     <string name="sign_out">Odhlásit se</string>
     <string name="add_instance">Přidat instanci</string>
+    <string name="instance_default">Výchozí</string>
     <string name="settings_theme">Vzhled</string>
     <string name="theme_system">Podle systému</string>
     <string name="theme_moria">Moria (temná)</string>

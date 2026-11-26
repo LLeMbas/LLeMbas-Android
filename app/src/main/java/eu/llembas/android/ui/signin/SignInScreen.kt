@@ -6,14 +6,17 @@ import android.app.Application
 import android.net.Uri
 import android.os.Build
 import androidx.browser.customtabs.CustomTabsIntent
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
@@ -22,8 +25,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -137,11 +142,13 @@ class SignInViewModel(app: Application) : AndroidViewModel(app) {
 }
 
 @Composable
-fun SignInScreen(onDone: () -> Unit = {}, model: SignInViewModel = viewModel()) {
+fun SignInScreen(onDone: () -> Unit = {}, onCancel: (() -> Unit)? = null, model: SignInViewModel = viewModel()) {
     val state by model.state.collectAsStateWithLifecycle()
     LaunchedEffect(state) { if (state == SignInState.Done) onDone() }
     var address by rememberSaveable { mutableStateOf("") }
     val context = LocalContext.current
+    val knownBases by context.lembas.instances.instances.collectAsState(initial = emptyList())
+    val distinctBases = knownBases.map { it.base }.distinct()
     Column(
         modifier = Modifier.fillMaxSize().safeDrawingPadding().imePadding().padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
@@ -166,11 +173,28 @@ fun SignInScreen(onDone: () -> Unit = {}, model: SignInViewModel = viewModel()) 
                     keyboardActions = KeyboardActions(onGo = { if (address.isNotBlank()) model.start(address) }),
                     modifier = Modifier.fillMaxWidth().widthIn(max = 420.dp),
                 )
+                if (distinctBases.isNotEmpty() && onCancel != null) {
+                    Row(
+                        modifier = Modifier.widthIn(max = 420.dp).horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        distinctBases.forEach { base ->
+                            OutlinedButton(onClick = { address = base }) {
+                                Text(base.removePrefix("https://").removePrefix("http://"))
+                            }
+                        }
+                    }
+                }
                 if (s is SignInState.Failed) {
                     Text(s.message, color = MaterialTheme.colorScheme.error, modifier = Modifier.widthIn(max = 420.dp))
                 }
-                Button(onClick = { model.start(address) }, enabled = address.isNotBlank()) {
-                    Text(stringResource(R.string.signin_continue))
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    if (onCancel != null) {
+                        TextButton(onClick = onCancel) { Text(stringResource(R.string.cancel)) }
+                    }
+                    Button(onClick = { model.start(address) }, enabled = address.isNotBlank()) {
+                        Text(stringResource(R.string.signin_continue))
+                    }
                 }
             }
 

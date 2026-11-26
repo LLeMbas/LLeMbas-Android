@@ -465,6 +465,9 @@
     <string name="settings_instances">Instances</string>
     <string name="sign_out">Sign out</string>
     <string name="add_instance">Add an instance</string>
+    <string name="instance_default">Default</string>
+    <string name="instance_set_default">Set as default</string>
+    <string name="instance_switch">Switch instance</string>
     <string name="settings_theme">Theme</string>
     <string name="theme_system">As the system</string>
     <string name="theme_moria">Moria (dark)</string>

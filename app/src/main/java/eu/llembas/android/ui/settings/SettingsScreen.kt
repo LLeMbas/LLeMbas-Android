@@ -43,6 +43,7 @@ import androidx.compose.material.icons.filled.Hearing
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Navigation
 import androidx.compose.material.icons.filled.Notifications
@@ -54,11 +55,14 @@ import androidx.compose.material.icons.filled.RecordVoiceOver
 import androidx.compose.material.icons.filled.Science
 import androidx.compose.material.icons.filled.ScreenLockPortrait
 import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Update
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -135,6 +139,7 @@ import kotlinx.coroutines.launch
 /** What the settings page does; every action has a do-nothing default for the screenshots. */
 interface SettingsActions {
     fun use(instance: Instance) {}
+    fun setDefault(instance: Instance) {}
     fun add() {}
 
     /** The instance's MCP servers and their sign-ins. */
@@ -176,6 +181,7 @@ data class WakeTestShown(val running: Boolean = false, val done: Boolean = false
 data class SettingsState(
     val instances: List<Instance> = emptyList(),
     val active: Instance? = null,
+    val defaultInstance: Instance? = null,
     val prefs: Prefs = Prefs(),
     val hasDistributor: Boolean = false,
     val pushNote: String? = null,
@@ -217,6 +223,7 @@ fun SettingsScreen(onBack: () -> Unit, onAddInstance: () -> Unit, onMcp: () -> U
     val scope = rememberCoroutineScope()
     val instances by store.instances.collectAsState(initial = emptyList())
     val active by store.active.collectAsState(initial = null)
+    val defaultInstance by store.defaultInstance.collectAsState(initial = null)
     val prefs by store.prefs.collectAsState(initial = Prefs())
     val wakeState by WakeStatus.state.collectAsState()
     val assistantConnected by AssistLink.connected.collectAsState()
@@ -231,11 +238,12 @@ fun SettingsScreen(onBack: () -> Unit, onAddInstance: () -> Unit, onMcp: () -> U
         }
         clock = SystemClock.elapsedRealtime()
     }
-    // The instance's models, for the assistant's: asked for each time Settings opens on an instance.
+    // The default instance's models, for the assistant's: asked for each time Settings opens on an instance.
+    val assistInstance = defaultInstance ?: active
     var models by remember { mutableStateOf(emptyList<ModelInfo>()) }
-    LaunchedEffect(active?.id) {
+    LaunchedEffect(assistInstance?.id) {
         models = try {
-            store.client()?.models().orEmpty()
+            assistInstance?.let { store.clientFor(it).models() }.orEmpty()
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -265,6 +273,10 @@ fun SettingsScreen(onBack: () -> Unit, onAddInstance: () -> Unit, onMcp: () -> U
                     // Copies of one instance's files are not kept around while another is in use.
                     FileCache.clear(context)
                 }
+            }
+
+            override fun setDefault(instance: Instance) {
+                scope.launch { store.setDefault(instance.id) }
             }
 
             override fun add() = onAddInstance()
@@ -313,7 +325,10 @@ fun SettingsScreen(onBack: () -> Unit, onAddInstance: () -> Unit, onMcp: () -> U
             }
 
             override fun assistantModel(id: String) {
-                scope.launch { store.savePrefs { it.copy(assistantModel = id) } }
+                scope.launch {
+                    val target = (store.default() ?: store.current())?.id
+                    store.savePrefs { p -> p.withInstance(target) { it.copy(assistantModel = id) } }
+                }
             }
 
             override fun voiceInput(value: String) {
@@ -437,6 +452,7 @@ fun SettingsScreen(onBack: () -> Unit, onAddInstance: () -> Unit, onMcp: () -> U
         SettingsState(
             instances = instances,
             active = active,
+            defaultInstance = defaultInstance,
             prefs = prefs,
             hasDistributor = distributors.isNotEmpty(),
             pushNote = pushNote,
@@ -517,21 +533,41 @@ fun SettingsContent(state: SettingsState, actions: SettingsActions, onBack: () -
                     state.instances.forEachIndexed { i, instance ->
                         if (i > 0) Rule()
                         val inUse = instance.id == state.active?.id
+                        val isDefault = instance.id == (state.defaultInstance?.id ?: state.instances.firstOrNull()?.id)
+                        var menuOpen by remember(instance.id) { mutableStateOf(false) }
                         Row(
-                            Modifier.fillMaxWidth().clickable { actions.use(instance) }.heightIn(min = 72.dp).padding(horizontal = 16.dp, vertical = 12.dp),
+                            Modifier
+                                .fillMaxWidth()
+                                .clickable { actions.use(instance) }
+                                .heightIn(min = 72.dp)
+                                .padding(start = 16.dp, end = 4.dp, top = 12.dp, bottom = 12.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Initial(instance.name.ifBlank { instance.base })
                             Spacer(Modifier.width(16.dp))
                             Column(Modifier.weight(1f)) {
-                                Text(
-                                    instance.name.ifBlank {
-                                        instance.base
-                                    },
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        instance.name.ifBlank {
+                                            instance.base
+                                        },
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.weight(1f, fill = false),
+                                    )
+                                    if (isDefault) {
+                                        Spacer(Modifier.width(8.dp))
+                                        Surface(color = palette.accentSoft, shape = RoundedCornerShape(8.dp)) {
+                                            Text(
+                                                stringResource(R.string.instance_default),
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = palette.accent,
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                            )
+                                        }
+                                    }
+                                }
                                 Text(
                                     instance.email,
                                     style = MaterialTheme.typography.bodyMedium,
@@ -548,8 +584,33 @@ fun SettingsContent(state: SettingsState, actions: SettingsActions, onBack: () -
                                 )
                             }
                             if (inUse) {
-                                Spacer(Modifier.width(12.dp))
+                                Spacer(Modifier.width(8.dp))
                                 Icon(Icons.Filled.CheckCircle, contentDescription = stringResource(R.string.instance_in_use), tint = palette.accent)
+                            }
+                            Box {
+                                IconButton(onClick = { menuOpen = true }) {
+                                    Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.more), tint = palette.inkMuted)
+                                }
+                                DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                                    if (!isDefault) {
+                                        DropdownMenuItem(
+                                            text = { Text(stringResource(R.string.instance_set_default)) },
+                                            leadingIcon = { Icon(Icons.Filled.Star, contentDescription = null) },
+                                            onClick = {
+                                                menuOpen = false
+                                                actions.setDefault(instance)
+                                            },
+                                        )
+                                    }
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.sign_out), color = palette.danger) },
+                                        leadingIcon = { Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null, tint = palette.danger) },
+                                        onClick = {
+                                            menuOpen = false
+                                            actions.signOut(instance)
+                                        },
+                                    )
+                                }
                             }
                         }
                     }
@@ -1207,7 +1268,8 @@ fun WakeChoices(which: WakeChoice, prefs: Prefs, onPick: ((SettingsActions) -> U
  */
 @Composable
 private fun assistantModelLabel(state: SettingsState): String {
-    val chosen = state.prefs.assistantModel
+    val target = (state.defaultInstance ?: state.active)?.id
+    val chosen = state.prefs.forInstance(target).assistantModel
     val model = state.assistantModels.named(chosen)
     // While the list is not read yet, or could not be: the choice as it was saved.
     return when {
@@ -1226,7 +1288,8 @@ private fun assistantModelLabel(state: SettingsState): String {
 @Composable
 fun AssistantModelChoices(state: SettingsState, onPick: (String) -> Unit) {
     // A choice saved before models had refs is an id: it still finds its model.
-    val chosen = state.assistantModels.named(state.prefs.assistantModel)?.key.orEmpty()
+    val target = (state.defaultInstance ?: state.active)?.id
+    val chosen = state.assistantModels.named(state.prefs.forInstance(target).assistantModel)?.key.orEmpty()
     val choices = listOf(
         Choice(INSTANCE_DEFAULT, stringResource(R.string.assistant_model_default), stringResource(R.string.assistant_model_default_line), chosen.isEmpty()),
     ) + state.assistantModels.distinctBy { it.key }.map { Choice(it.key, it.titleAmong(state.assistantModels), null, it.key == chosen) }

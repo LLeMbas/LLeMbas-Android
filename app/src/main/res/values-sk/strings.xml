@@ -463,6 +463,7 @@
     <string name="settings_instances">Inštancie</string>
     <string name="sign_out">Odhlásiť sa</string>
     <string name="add_instance">Pridať inštanciu</string>
+    <string name="instance_default">Predvolené</string>
     <string name="settings_theme">Vzhľad</string>
     <string name="theme_system">Podľa systému</string>
     <string name="theme_moria">Moria (tmavá)</string>

@@ -463,6 +463,7 @@
     <string name="settings_instances">Példányok</string>
     <string name="sign_out">Kijelentkezés</string>
     <string name="add_instance">Példány hozzáadása</string>
+    <string name="instance_default">Alapértelmezett</string>
     <string name="settings_theme">Téma</string>
     <string name="theme_system">A rendszer szerint</string>
     <string name="theme_moria">Moria (sötét)</string>
